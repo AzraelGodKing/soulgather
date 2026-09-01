@@ -22,6 +22,9 @@
   var MAX_DT = 8 * 60 * 60;
   var TOAST_MS = 5200;
   var AWAY_MIN_DT = 2;
+  var TITHE_MIN = 25;
+  var TITHE_FRAC = 0.1;
+  var TITHE_SECS = 60;
 
   function producerCost(owned) {
     var n = Math.max(0, Math.floor(owned));
@@ -110,6 +113,16 @@
     );
   }
 
+  function titheCost(souls) {
+    var n = Number(souls) || 0;
+    if (n < 0) n = 0;
+    return Math.max(TITHE_MIN, Math.floor(n * TITHE_FRAC));
+  }
+
+  function titheMult(on) {
+    return on ? 2 : 1;
+  }
+
   function edictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 1 * Math.pow(2, n);
@@ -118,6 +131,17 @@
   function memoryCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 2 * Math.pow(2, n);
+  }
+
+  function echoCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= 1) return Infinity;
+    return 3;
+  }
+
+  function seatCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 5 * Math.pow(2, n);
   }
 
   function siphonCost(level) {
@@ -157,7 +181,7 @@
     return "1";
   }
 
-  var CHRONICLE_ORDER = ["soul", "shade", "spirits", "well", "vessels", "throne", "rite", "wellDraw", "tribute", "aspect"];
+  var CHRONICLE_ORDER = ["soul", "shade", "spirits", "well", "vessels", "throne", "rite", "wellDraw", "tribute", "aspect", "echo", "seat"];
 
   var CHRONICLE_LINES = {
     soul: "The first soul was drawn.",
@@ -169,7 +193,9 @@
     rite: "The first rite was cut.",
     wellDraw: "The well began to draw.",
     tribute: "Tribute was laid. The GodKing remembers.",
-    aspect: "An aspect was sworn."
+    aspect: "An aspect was sworn.",
+    echo: "An echo was spoken.",
+    seat: "A seat was raised."
   };
 
   function formatGoalNum(n) {
@@ -309,6 +335,12 @@
     if (normalizeAspect(state.aspect)) {
       if (markChronicle("aspect")) added = true;
     }
+    if ((Number(state.echoLevel) || 0) >= 1) {
+      if (markChronicle("echo")) added = true;
+    }
+    if ((Number(state.seatLevel) || 0) >= 1) {
+      if (markChronicle("seat")) added = true;
+    }
     return added;
   }
 
@@ -342,6 +374,8 @@
       favorEarned: 0,
       edictLevel: 0,
       memoryLevel: 0,
+      echoLevel: 0,
+      seatLevel: 0,
       buyMode: "1",
       siphonLevel: 0,
       levyLevel: 0,
@@ -349,7 +383,11 @@
       unlockedWellDraws: false,
       aspect: "",
       lastTick: Date.now(),
-      chronicle: []
+      chronicle: [],
+      titheLeft: 0,
+      runStartedAt: Date.now(),
+      allTimeSouls: 0,
+      tributesLaid: 0
     };
   }
 
@@ -372,15 +410,23 @@
     );
   }
 
+  function titheActive() {
+    return (Number(state.titheLeft) || 0) > 0;
+  }
+
+  function rateMult() {
+    return currentMult() * titheMult(titheActive());
+  }
+
   function clickPower() {
-    return (1 + state.wellDepth) * currentMult();
+    return (1 + state.wellDepth) * rateMult();
   }
 
   function shadeSoulsPerSec() {
     return (
       state.shades *
       SHADE_SOULS_PER_SEC *
-      currentMult() *
+      rateMult() *
       siphonMult(state.siphonLevel) *
       harvestMult(normalizeAspect(state.aspect) === "harvest")
     );
@@ -396,26 +442,24 @@
     return (
       state.spirits *
       SPIRIT_SHADES_PER_SEC *
-      currentMult() *
+      rateMult() *
       levyMult(state.levyLevel) *
       bindingMult(normalizeAspect(state.aspect) === "binding")
     );
   }
 
   function spiritsPerSec() {
-    return state.vessels * VESSEL_SPIRITS_PER_SEC * currentMult();
+    return state.vessels * VESSEL_SPIRITS_PER_SEC * rateMult();
   }
 
-  function applyDt(dt) {
-    if (dt <= 0 || !isFinite(dt)) return;
-    dt = clamp(dt, 0, MAX_DT);
-
+  function applyRates(dt) {
     var dSouls = shadeSoulsPerSec() * dt;
     if (state.wellDraws) {
       dSouls += clickPower() * dt;
     }
     state.souls += dSouls;
     state.lifetimeSouls += dSouls;
+    state.allTimeSouls += dSouls;
 
     var dShades = shadesPerSec() * dt;
     state.shades += dShades;
@@ -424,6 +468,26 @@
     var dSpirits = spiritsPerSec() * dt;
     state.spirits += dSpirits;
     state.lifetimeSpirits += dSpirits;
+  }
+
+  function applyDt(dt) {
+    if (dt <= 0 || !isFinite(dt)) return;
+    dt = clamp(dt, 0, MAX_DT);
+
+    var left = Number(state.titheLeft) || 0;
+    if (left < 0) left = 0;
+
+    if (left > 0 && dt > left) {
+      applyRates(left);
+      state.titheLeft = 0;
+      applyRates(dt - left);
+    } else {
+      applyRates(dt);
+      if (left > 0) {
+        state.titheLeft = left - dt;
+        if (state.titheLeft < 0) state.titheLeft = 0;
+      }
+    }
 
     checkUnlock();
   }
@@ -471,6 +535,7 @@
     var power = clickPower();
     state.souls += power;
     state.lifetimeSouls += power;
+    state.allTimeSouls += power;
     checkUnlock();
     save();
     pulseGather();
@@ -570,6 +635,27 @@
     render();
   }
 
+  function buyEcho() {
+    if ((Number(state.echoLevel) || 0) >= 1) return;
+    var cost = echoCost(state.echoLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.echoLevel = 1;
+    markChronicle("echo");
+    save();
+    render();
+  }
+
+  function buySeat() {
+    var cost = seatCost(state.seatLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.seatLevel += 1;
+    markChronicle("seat");
+    save();
+    render();
+  }
+
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
     if (state.souls < cost) return;
@@ -599,6 +685,19 @@
     state.wellDraws = true;
     state.unlockedWellDraws = true;
     syncChronicle();
+    save();
+    render();
+  }
+
+  function payTithe() {
+    if (!state.unlockedWell) return;
+    if (titheActive()) return;
+    if ((Number(state.souls) || 0) < TITHE_MIN) return;
+    var cost = titheCost(state.souls);
+    if (state.souls < cost) return;
+    state.souls -= cost;
+    state.titheLeft = TITHE_SECS;
+    showToast("The GodKing takes his cut.");
     save();
     render();
   }
@@ -643,6 +742,8 @@
     "favorEarned",
     "edictLevel",
     "memoryLevel",
+    "echoLevel",
+    "seatLevel",
     "buyMode",
     "siphonLevel",
     "levyLevel",
@@ -650,7 +751,11 @@
     "unlockedWellDraws",
     "aspect",
     "lastTick",
-    "chronicle"
+    "chronicle",
+    "titheLeft",
+    "runStartedAt",
+    "allTimeSouls",
+    "tributesLaid"
   ];
 
   function serializeState() {
@@ -675,6 +780,8 @@
       favorEarned: state.favorEarned,
       edictLevel: state.edictLevel,
       memoryLevel: state.memoryLevel,
+      echoLevel: state.echoLevel,
+      seatLevel: state.seatLevel,
       buyMode: state.buyMode,
       siphonLevel: state.siphonLevel,
       levyLevel: state.levyLevel,
@@ -682,7 +789,11 @@
       unlockedWellDraws: state.unlockedWellDraws,
       aspect: normalizeAspect(state.aspect),
       lastTick: Date.now(),
-      chronicle: state.chronicle || []
+      chronicle: state.chronicle || [],
+      titheLeft: Number(state.titheLeft) || 0,
+      runStartedAt: Number(state.runStartedAt) || Date.now(),
+      allTimeSouls: Number(state.allTimeSouls) || 0,
+      tributesLaid: Number(state.tributesLaid) || 0
     };
   }
 
@@ -720,6 +831,9 @@
     }
     state.edictLevel = Number(data.edictLevel) || 0;
     state.memoryLevel = Number(data.memoryLevel) || 0;
+    state.echoLevel = Number(data.echoLevel) || 0;
+    if (state.echoLevel > 1) state.echoLevel = 1;
+    state.seatLevel = Number(data.seatLevel) || 0;
     state.buyMode = normalizeBuyMode(data.buyMode);
     state.siphonLevel = Number(data.siphonLevel) || 0;
     state.levyLevel = Number(data.levyLevel) || 0;
@@ -728,6 +842,16 @@
     state.aspect = normalizeAspect(data.aspect);
     state.lastTick = Number(data.lastTick) || Date.now();
     state.chronicle = normalizeChronicle(data.chronicle);
+    state.titheLeft = Number(data.titheLeft) || 0;
+    if (state.titheLeft < 0) state.titheLeft = 0;
+    state.runStartedAt = Number(data.runStartedAt) || Date.now();
+    if (data.allTimeSouls == null) {
+      state.allTimeSouls = Number(data.lifetimeSouls) || 0;
+    } else {
+      state.allTimeSouls = Number(data.allTimeSouls) || 0;
+    }
+    if (state.allTimeSouls < 0) state.allTimeSouls = 0;
+    state.tributesLaid = Math.max(0, Math.floor(Number(data.tributesLaid) || 0));
   }
 
   function adoptSave(data) {
@@ -856,6 +980,7 @@
     syncChronicle();
     save();
     render();
+    showToast("The well's memory is bound.");
   }
 
   function hideUnlockCards() {
@@ -896,19 +1021,38 @@
     var keptEarned = (Number(state.favorEarned) || 0) + gain;
     var keptEdict = state.edictLevel;
     var keptMemory = state.memoryLevel;
+    var keptEcho = Number(state.echoLevel) || 0;
+    if (keptEcho > 1) keptEcho = 1;
+    var keptSeat = Number(state.seatLevel) || 0;
     var keptBuy = state.buyMode;
     var keptChronicle = (state.chronicle || []).slice();
+    var keptAllTime = Number(state.allTimeSouls) || 0;
+    var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
     state.favorEarned = keptEarned;
     state.edictLevel = keptEdict;
     state.memoryLevel = keptMemory;
+    state.echoLevel = keptEcho;
+    state.seatLevel = keptSeat;
     state.buyMode = keptBuy;
     state.chronicle = keptChronicle;
     state.aspect = "";
+    state.allTimeSouls = keptAllTime;
+    state.tributesLaid = keptTributes;
+    state.titheLeft = 0;
+    state.runStartedAt = Date.now();
     if (keptMemory > 0) {
       state.shades = keptMemory;
       state.unlockedWell = true;
+    }
+    state.thrones = keptSeat;
+    if (keptSeat >= 1) {
+      state.unlockedThrones = true;
+    }
+    if (keptEcho >= 1) {
+      state.wellDraws = true;
+      state.unlockedWellDraws = true;
     }
     hideToast(true);
     hideUnlockCards();
@@ -1003,6 +1147,7 @@
     if (els.ritesPanel) els.ritesPanel.classList.add("is-hidden");
     if (els.levyRow) els.levyRow.classList.add("is-hidden");
     if (els.wellDrawsRow) els.wellDrawsRow.classList.add("is-hidden");
+    if (els.titheRow) els.titheRow.classList.add("is-hidden");
   }
 
   function hideAspects() {
@@ -1043,13 +1188,42 @@
     }
   }
 
+  function pad2(n) {
+    return n < 10 ? "0" + n : String(n);
+  }
+
+  function formatElapsed(ms) {
+    var sec = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    if (h > 0) return h + ":" + pad2(m) + ":" + pad2(s);
+    return pad2(m) + ":" + pad2(s);
+  }
+
+  function renderStats() {
+    var start = Number(state.runStartedAt) || Date.now();
+    var elapsed = formatElapsed(Date.now() - start);
+    if (els.statEmptying) {
+      els.statEmptying.textContent = "This emptying: " + elapsed;
+    }
+    if (els.statAllTime) {
+      els.statAllTime.textContent = "All-time souls: " + fmt(state.allTimeSouls);
+    }
+    if (els.statTributes) {
+      els.statTributes.textContent = "Tributes laid: " + fmt(state.tributesLaid);
+    }
+  }
+
   function showToast(message) {
     if (!els.toast) return;
+    window.clearTimeout(toastTimer);
+    els.toast.classList.remove("is-visible");
+    void els.toast.offsetWidth;
     els.toast.textContent = message;
     els.toast.classList.remove("is-hidden");
     void els.toast.offsetWidth;
     els.toast.classList.add("is-visible");
-    window.clearTimeout(toastTimer);
     toastTimer = window.setTimeout(function () {
       hideToast(false);
     }, TOAST_MS);
@@ -1078,7 +1252,7 @@
     var F = SoulgatherFormat;
     if (!els.soulsCount) return;
 
-    var mult = currentMult();
+    var mult = rateMult();
     var gain = favorGain(state.lifetimeSouls);
 
     els.soulsCount.textContent = F.formatNumber(state.souls);
@@ -1176,7 +1350,7 @@
       els.throneCard.classList.toggle("can-buy", canThroneOne && thronePlan.can);
     }
 
-    var ritesOpen = !!state.unlockedWell || state.shades >= 1;
+    var ritesOpen = !!state.unlockedWell || state.shades >= 1 || !!state.wellDraws;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
@@ -1218,6 +1392,31 @@
           if (els.wellDrawsBuy) {
             els.wellDrawsBuy.disabled = state.souls < WELL_DRAWS_COST;
             els.wellDrawsBuy.textContent = "Let the Well Draw";
+          }
+        }
+      }
+
+      var titheOpen = !!state.unlockedWell;
+      if (els.titheRow) {
+        els.titheRow.classList.toggle("is-hidden", !titheOpen);
+        els.titheRow.classList.toggle("is-burning", titheOpen && titheActive());
+      }
+      if (titheOpen) {
+        var tLeft = Number(state.titheLeft) || 0;
+        var tCost = titheCost(state.souls);
+        if (els.titheEffect) {
+          els.titheEffect.textContent = titheActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 60s";
+        }
+        if (els.titheCost) {
+          els.titheCost.textContent = F.formatNumber(tCost) + " Souls";
+        }
+        if (els.titheBuy) {
+          if (titheActive()) {
+            els.titheBuy.disabled = true;
+            els.titheBuy.textContent = "The tithe burns \u2014 " + Math.ceil(tLeft) + "s";
+          } else {
+            els.titheBuy.disabled = state.souls < TITHE_MIN;
+            els.titheBuy.textContent = "Pay the Tithe";
           }
         }
       }
@@ -1285,7 +1484,7 @@
       if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(gain) + " Favor";
       if (els.tributeMult) {
         els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + gain, 0, state.edictLevel)
+          prodMult(state.favorEarned + gain, state.seatLevel, state.edictLevel)
         );
       }
     }
@@ -1318,12 +1517,43 @@
       if (els.memoryBuy) {
         els.memoryBuy.disabled = state.favor < mCost;
       }
+
+      if (state.echoLevel >= 1) {
+        if (els.echoEffect) els.echoEffect.textContent = "The Well Draws at tribute";
+        if (els.echoCost) els.echoCost.textContent = "—";
+        if (els.echoBuy) {
+          els.echoBuy.disabled = true;
+          els.echoBuy.textContent = "The well remembers.";
+        }
+      } else {
+        var xCost = echoCost(state.echoLevel);
+        if (els.echoEffect) els.echoEffect.textContent = "The Well Draws at tribute";
+        if (els.echoCost) els.echoCost.textContent = F.formatNumber(xCost) + " Favor";
+        if (els.echoBuy) {
+          els.echoBuy.disabled = !isFinite(xCost) || state.favor < xCost;
+          els.echoBuy.textContent = "Speak the Echo";
+        }
+      }
+
+      var stCost = seatCost(state.seatLevel);
+      var seatN = state.seatLevel;
+      if (els.seatEffect) {
+        els.seatEffect.textContent =
+          "+" +
+          F.formatNumber(seatN) +
+          (seatN === 1 ? " Throne at tribute" : " Thrones at tribute");
+      }
+      if (els.seatCost) els.seatCost.textContent = F.formatNumber(stCost) + " Favor";
+      if (els.seatBuy) {
+        els.seatBuy.disabled = state.favor < stCost;
+      }
     }
 
     if (els.nextGoal) {
       els.nextGoal.textContent = nextGoal(state);
     }
     renderChronicle();
+    renderStats();
   }
 
   function tick(now) {
@@ -1381,6 +1611,12 @@
     els.memoryEffect = document.getElementById("memory-effect");
     els.memoryCost = document.getElementById("memory-cost");
     els.memoryBuy = document.getElementById("memory-buy");
+    els.echoEffect = document.getElementById("echo-effect");
+    els.echoCost = document.getElementById("echo-cost");
+    els.echoBuy = document.getElementById("echo-buy");
+    els.seatEffect = document.getElementById("seat-effect");
+    els.seatCost = document.getElementById("seat-cost");
+    els.seatBuy = document.getElementById("seat-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -1393,6 +1629,10 @@
     els.wellDrawsEffect = document.getElementById("well-draws-effect");
     els.wellDrawsCost = document.getElementById("well-draws-cost");
     els.wellDrawsBuy = document.getElementById("well-draws-buy");
+    els.titheRow = document.getElementById("tithe-row");
+    els.titheEffect = document.getElementById("tithe-effect");
+    els.titheCost = document.getElementById("tithe-cost");
+    els.titheBuy = document.getElementById("tithe-buy");
     els.aspectsPanel = document.getElementById("aspects-panel");
     els.aspectsSworn = document.getElementById("aspects-sworn");
     els.aspectHarvestRow = document.getElementById("aspect-harvest-row");
@@ -1405,6 +1645,9 @@
     els.resetBtn = document.getElementById("reset-btn");
     els.nextGoal = document.getElementById("next-goal");
     els.chronicleList = document.getElementById("chronicle-list");
+    els.statEmptying = document.getElementById("stat-emptying");
+    els.statAllTime = document.getElementById("stat-alltime");
+    els.statTributes = document.getElementById("stat-tributes");
 
     els.gatherBtn.addEventListener("click", harvest);
     els.wellBuy.addEventListener("click", buyWell);
@@ -1416,9 +1659,12 @@
     els.tributeFootBtn.addEventListener("click", layTribute);
     els.edictBuy.addEventListener("click", buyEdict);
     els.memoryBuy.addEventListener("click", buyMemory);
+    if (els.echoBuy) els.echoBuy.addEventListener("click", buyEcho);
+    if (els.seatBuy) els.seatBuy.addEventListener("click", buySeat);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
+    if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.aspectHarvestBuy) {
       els.aspectHarvestBuy.addEventListener("click", function () {
         swearAspect("harvest");
@@ -1501,6 +1747,7 @@
   function boot() {
     bind();
     load();
+    if (!state.runStartedAt) state.runStartedAt = Date.now();
     checkUnlock();
     if (state.unlockedWell) revealWell();
     if (state.unlockedSpirits) revealSpirits(false);
@@ -1534,6 +1781,8 @@
     bulkCost: bulkCost,
     edictCost: edictCost,
     memoryCost: memoryCost,
+    echoCost: echoCost,
+    seatCost: seatCost,
     siphonCost: siphonCost,
     levyCost: levyCost,
     siphonMult: siphonMult,
@@ -1542,6 +1791,8 @@
     bindingMult: bindingMult,
     throneWeight: throneWeight,
     normalizeAspect: normalizeAspect,
-    nextGoal: nextGoal
+    nextGoal: nextGoal,
+    titheCost: titheCost,
+    titheMult: titheMult
   };
 })();

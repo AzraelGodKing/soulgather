@@ -1,3 +1,4 @@
-shot-*.png
-*.png
 .DS_Store
+*.log
+.idea
+shot-*.png

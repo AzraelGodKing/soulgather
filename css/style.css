@@ -1,4 +1,4 @@
-/* Soulgather v0.5 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v0.7 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -854,6 +854,10 @@ body::before {
   align-self: center;
 }
 
+.rite-row#tithe-row.is-burning .rite-name {
+  color: var(--crimson-hot);
+}
+
 /* ----- Aspects (quiet swear; Reliquary language) ----- */
 .aspects {
   margin-top: 28px;
@@ -993,11 +997,24 @@ body::before {
 
 .toast.is-hidden {
   display: none;
+  animation: none;
 }
 
 .toast.is-visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+  animation: toast-in 0.4s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* ----- Chronicle ----- */
@@ -1061,6 +1078,18 @@ body::before {
   margin-left: -1.15em;
   color: var(--ash);
   opacity: 0.8;
+}
+
+.chronicle-stats {
+  margin: 10px 0 0;
+  color: var(--ash);
+  font-style: italic;
+  letter-spacing: 0.03em;
+  line-height: 1.55;
+}
+
+.chronicle-stats div {
+  margin: 2px 0;
 }
 
 /* ----- Footer ----- */

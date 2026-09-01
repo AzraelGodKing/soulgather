@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v0.5 economy smoke test.
+ * Soulgather v0.7 economy smoke test.
  * Duplicates the in-game formulas (classic scripts, no ES modules in the page).
  */
 
@@ -82,6 +82,17 @@ function memoryCost(level) {
   return 2 * Math.pow(2, n);
 }
 
+function echoCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  if (n >= 1) return Infinity;
+  return 3;
+}
+
+function seatCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 5 * Math.pow(2, n);
+}
+
 function siphonCost(level) {
   const n = Math.max(0, Math.floor(level));
   return Math.floor(50 * Math.pow(3, n));
@@ -94,6 +105,16 @@ function levyCost(level) {
 
 function siphonMult(level) {
   return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
+function titheCost(souls) {
+  let n = Number(souls) || 0;
+  if (n < 0) n = 0;
+  return Math.max(25, Math.floor(n * 0.1));
+}
+
+function titheMult(on) {
+  return on ? 2 : 1;
 }
 
 let failed = 0;
@@ -154,6 +175,12 @@ assertEqual("edictCost(3)", edictCost(3), 8);
 
 assertEqual("memoryCost(0)", memoryCost(0), 2);
 assertEqual("memoryCost(1)", memoryCost(1), 4);
+
+assertEqual("echoCost(0)", echoCost(0), 3);
+assertEqual("echoCost(1)", echoCost(1), Infinity);
+assertEqual("seatCost(0)", seatCost(0), 5);
+assertEqual("seatCost(1)", seatCost(1), 10);
+assertEqual("seatCost(2)", seatCost(2), 20);
 
 assertEqual("siphonCost(0)", siphonCost(0), 50);
 assertEqual("siphonCost(1)", siphonCost(1), 150);
@@ -306,6 +333,12 @@ const fakeSave = {
 const roundTripped = JSON.parse(JSON.stringify(fakeSave));
 assertEqual("round-trip keep aspect", roundTripped.aspect, "harvest");
 assertEqual("round-trip keep favorEarned", roundTripped.favorEarned, 2);
+
+assertEqual("titheCost(100)", titheCost(100), 25);
+assertEqual("titheCost(400)", titheCost(400), 40);
+assertEqual("titheCost(10)", titheCost(10), 25);
+assertEqual("titheMult(true)", titheMult(true), 2);
+assertEqual("titheMult(false)", titheMult(false), 1);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

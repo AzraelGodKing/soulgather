@@ -162,6 +162,18 @@
         </div>
         <button type="button" class="card-buy" id="well-draws-buy" disabled>Let the Well Draw</button>
       </div>
+
+      <div class="rite-row is-hidden" id="tithe-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">The Tithe</h3>
+          <p class="rite-flavor">A cut for the GodKing. The well runs hotter.</p>
+          <p class="rite-stats">
+            <span id="tithe-effect">Burst ×2 · 60s</span>
+            · Cost: <span id="tithe-cost">25 Souls</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="tithe-buy" disabled>Pay the Tithe</button>
+      </div>
     </section>
 
 
@@ -245,15 +257,44 @@
         </div>
         <button type="button" class="card-buy" id="memory-buy" disabled>Deepen Memory</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Echoes</h3>
+          <p class="edict-flavor">The well remembers thirst.</p>
+          <p class="edict-stats">
+            Effect: <span id="echo-effect">The Well Draws at tribute</span>
+            · Cost: <span id="echo-cost">3 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="echo-buy" disabled>Speak the Echo</button>
+      </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Seats</h3>
+          <p class="edict-flavor">A seat waits empty.</p>
+          <p class="edict-stats">
+            Effect: <span id="seat-effect">+0 Throne at tribute</span>
+            · Cost: <span id="seat-cost">5 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="seat-buy" disabled>Raise the Seat</button>
+      </div>
     </section>
 
     <details class="chronicle" id="chronicle">
       <summary>Chronicle</summary>
+      <div class="chronicle-stats" id="chronicle-stats">
+        <div id="stat-emptying">This emptying: 00:00</div>
+        <div id="stat-alltime">All-time souls: 0</div>
+        <div id="stat-tributes">Tributes laid: 0</div>
+      </div>
       <ol class="chronicle-list" id="chronicle-list"></ol>
     </details>
 
     <footer class="foot">
-      <span>Soulgather v0.5 · prototype</span>
+      <span>Soulgather v0.7 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
