@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soulgather — For the GodKing</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="masthead">
+      <h1>Soulgather</h1>
+      <p class="subtitle">For the GodKing</p>
+      <div class="rule" aria-hidden="true"></div>
+    </header>
+
+    <section class="souls-display" aria-live="polite">
+      <div class="souls-count" id="souls-count">0</div>
+      <div class="souls-label">Souls</div>
+      <div class="souls-rate" id="souls-rate">0 / sec</div>
+      <div class="souls-favor is-hidden" id="souls-favor">Blessing ×1.0</div>
+      <div class="next-goal" id="next-goal">Bind a Shade to wake the well.</div>
+    </section>
+
+    <section class="gather">
+      <button type="button" class="gather-btn" id="gather-btn" aria-label="Draw from the Well">
+        <svg class="sigil" viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <radialGradient id="wellFill" cx="50%" cy="45%" r="55%">
+              <stop offset="0%" stop-color="#2a1018" stop-opacity="0.9"/>
+              <stop offset="70%" stop-color="#0c060a" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="100" cy="100" r="92" fill="url(#wellFill)" stroke="#c9a227" stroke-width="1.2" opacity="0.7"/>
+          <circle cx="100" cy="100" r="74" fill="none" stroke="#8a7018" stroke-width="0.8" opacity="0.5"/>
+          <circle cx="100" cy="100" r="52" fill="none" stroke="#c9a227" stroke-width="1" opacity="0.55"/>
+          <circle cx="100" cy="100" r="18" fill="#1a080c" stroke="#e8c547" stroke-width="1.4" opacity="0.85"/>
+          <!-- original eight-spoke well sigil -->
+          <g stroke="#e8dcc8" stroke-width="1.1" fill="none" opacity="0.55">
+            <line x1="100" y1="28" x2="100" y2="82"/>
+            <line x1="100" y1="118" x2="100" y2="172"/>
+            <line x1="28" y1="100" x2="82" y2="100"/>
+            <line x1="118" y1="100" x2="172" y2="100"/>
+            <line x1="48" y1="48" x2="82" y2="82"/>
+            <line x1="118" y1="118" x2="152" y2="152"/>
+            <line x1="152" y1="48" x2="118" y2="82"/>
+            <line x1="82" y1="118" x2="48" y2="152"/>
+          </g>
+          <polygon points="100,88 106,100 100,112 94,100" fill="#c9a227" opacity="0.8"/>
+        </svg>
+        <span class="gather-copy">
+          <span class="verb">Draw from</span>
+          <span class="noun">the Well</span>
+        </span>
+      </button>
+    </section>
+
+    <div class="buy-mode-row">
+      <div class="buy-mode" id="buy-mode" role="group" aria-label="Buy amount">
+        <button type="button" class="buy-mode-btn is-on" data-mode="1" aria-pressed="true">1</button>
+        <button type="button" class="buy-mode-btn" data-mode="10" aria-pressed="false">10</button>
+        <button type="button" class="buy-mode-btn" data-mode="max" aria-pressed="false">Max</button>
+      </div>
+    </div>
+
+    <section class="producers" aria-label="Bindings">
+      <article class="card is-upgrade is-hidden" id="well-card">
+        <h2 class="card-name">Well Depth</h2>
+        <div class="card-owned" id="well-owned">0</div>
+        <p class="card-flavor">Carve the well deeper.</p>
+        <div class="card-stats">
+          <div>Draw: <span id="well-power">1 soul / click</span></div>
+          <div>Deepen cost: <span id="well-cost">25 Souls</span></div>
+        </div>
+        <button type="button" class="card-buy" id="well-buy" disabled>Deepen the Well</button>
+      </article>
+
+      <article class="card" id="shade-card">
+        <h2 class="card-name">Shades</h2>
+        <div class="card-owned" id="shade-owned">0</div>
+        <p class="card-flavor">Unbound echoes that siphon the well.</p>
+        <div class="card-stats">
+          <div>Siphon: <span id="shade-prod">0 souls / sec</span></div>
+          <div>Bind cost: <span id="shade-cost">10 Souls</span></div>
+        </div>
+        <button type="button" class="card-buy" id="shade-buy" disabled>Bind a Shade</button>
+      </article>
+
+      <article class="card is-hidden" id="spirit-card">
+        <h2 class="card-name">Bound Spirits</h2>
+        <div class="card-owned" id="spirit-owned">0</div>
+        <p class="card-flavor">A will shackled to gather more shades.</p>
+        <div class="card-stats">
+          <div>Levy: <span id="spirit-prod">0 shades / sec</span></div>
+          <div>Bind cost: <span id="spirit-cost">10 Shades</span></div>
+        </div>
+        <button type="button" class="card-buy" id="spirit-buy" disabled>Bind a Spirit</button>
+      </article>
+
+      <article class="card is-hidden" id="vessel-card">
+        <h2 class="card-name">Vessels</h2>
+        <div class="card-owned" id="vessel-owned">0</div>
+        <p class="card-flavor">Hollow relics that house bound wills.</p>
+        <div class="card-stats">
+          <div>House: <span id="vessel-prod">0 spirits / sec</span></div>
+          <div>Bind cost: <span id="vessel-cost">10 Spirits</span></div>
+        </div>
+        <button type="button" class="card-buy" id="vessel-buy" disabled>Bind a Vessel</button>
+      </article>
+
+      <article class="card is-hidden" id="throne-card">
+        <h2 class="card-name">Thrones</h2>
+        <div class="card-owned" id="throne-owned">0</div>
+        <p class="card-flavor">A seat for the GodKing’s harvest.</p>
+        <div class="card-stats">
+          <div>Blessing: <span id="throne-prod">+0% production</span></div>
+          <div>Raise cost: <span id="throne-cost">10 Vessels</span></div>
+        </div>
+        <button type="button" class="card-buy" id="throne-buy" disabled>Raise a Throne</button>
+      </article>
+    </section>
+
+    <section class="rites is-hidden" id="rites-panel">
+      <div class="rites-head">
+        <h2 class="rites-name">Rites</h2>
+        <p class="rites-flavor">Paid in souls. Forgotten when the well is emptied.</p>
+      </div>
+
+      <div class="rite-row" id="siphon-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Rite of Siphon</h3>
+          <p class="rite-flavor">Teach the echoes to drink deeper.</p>
+          <p class="rite-stats">
+            <span id="siphon-effect">Siphon ×1</span>
+            · Cost: <span id="siphon-cost">50 Souls</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="siphon-buy" disabled>Cut the Rite</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="levy-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Rite of Levy</h3>
+          <p class="rite-flavor">The shackled will learns to gather.</p>
+          <p class="rite-stats">
+            <span id="levy-effect">Levy ×1</span>
+            · Cost: <span id="levy-cost">15 Shades</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="levy-buy" disabled>Cut the Rite</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="well-draws-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">The Well Draws</h3>
+          <p class="rite-flavor">The GodKing’s well drinks without a hand.</p>
+          <p class="rite-stats">
+            <span id="well-draws-effect">Idle draw</span>
+            · Cost: <span id="well-draws-cost">50 Souls</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="well-draws-buy" disabled>Let the Well Draw</button>
+      </div>
+    </section>
+
+
+    <section class="aspects is-hidden" id="aspects-panel">
+      <div class="aspects-head">
+        <h2 class="aspects-name">Aspects</h2>
+        <p class="aspects-flavor">Swear to the GodKing. One will per emptying.</p>
+        <p class="aspects-sworn is-hidden" id="aspects-sworn">This emptying: Harvest.</p>
+      </div>
+
+      <div class="aspect-row" id="aspect-harvest-row">
+        <div class="aspect-copy">
+          <h3 class="aspect-name">Harvest</h3>
+          <p class="aspect-flavor">The well is a mouth.</p>
+          <p class="aspect-stats">Shade souls ×1.5</p>
+        </div>
+        <button type="button" class="card-buy" id="aspect-harvest-buy">Swear Harvest</button>
+      </div>
+
+      <div class="aspect-row" id="aspect-binding-row">
+        <div class="aspect-copy">
+          <h3 class="aspect-name">Binding</h3>
+          <p class="aspect-flavor">Every will a chain.</p>
+          <p class="aspect-stats">Spirit shades ×1.5</p>
+        </div>
+        <button type="button" class="card-buy" id="aspect-binding-buy">Swear Binding</button>
+      </div>
+
+      <div class="aspect-row" id="aspect-dominion-row">
+        <div class="aspect-copy">
+          <h3 class="aspect-name">Dominion</h3>
+          <p class="aspect-flavor">A seat for every harvest.</p>
+          <p class="aspect-stats">Thrones bless +15% each</p>
+        </div>
+        <button type="button" class="card-buy" id="aspect-dominion-buy">Swear Dominion</button>
+      </div>
+    </section>
+
+    <section class="tribute is-hidden" id="tribute-panel">
+      <div class="tribute-copy">
+        <p class="tribute-flavor">Empty the well. The GodKing remembers.</p>
+        <p class="tribute-meta">
+          Favor <span id="tribute-favor">0</span>
+          · Offering <span id="tribute-gain">0</span>
+          · Blessing <span id="tribute-mult">×1.0</span>
+        </p>
+      </div>
+      <button type="button" class="tribute-lay" id="tribute-btn">Lay Tribute</button>
+    </section>
+
+    <section class="reliquary is-hidden" id="reliquary-panel">
+      <div class="reliquary-head">
+        <h2 class="reliquary-name">Reliquary</h2>
+        <p class="reliquary-flavor">Edicts paid in Favor. His harvest endures.</p>
+        <p class="reliquary-meta">
+          Favor on hand <span id="reliquary-favor">0</span>
+          · Earned <span id="reliquary-earned">0</span>
+        </p>
+      </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">GodKing’s Edict</h3>
+          <p class="edict-flavor">His word multiplies the harvest.</p>
+          <p class="edict-stats">
+            Effect: <span id="edict-effect">+0% production</span>
+            · Cost: <span id="edict-cost">1 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="edict-buy" disabled>Speak the Edict</button>
+      </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Deeper Memory</h3>
+          <p class="edict-flavor">The well remembers a shade.</p>
+          <p class="edict-stats">
+            Effect: <span id="memory-effect">+0 Shade at tribute</span>
+            · Cost: <span id="memory-cost">2 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="memory-buy" disabled>Deepen Memory</button>
+      </div>
+    </section>
+
+    <details class="chronicle" id="chronicle">
+      <summary>Chronicle</summary>
+      <ol class="chronicle-list" id="chronicle-list"></ol>
+    </details>
+
+    <footer class="foot">
+      <span>Soulgather v0.5 · prototype</span>
+      <div class="foot-actions">
+        <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
+        <button type="button" class="reset-btn" id="reset-btn">Reset</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast is-hidden" id="toast" role="status"></div>
+
+  <script src="js/format.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
