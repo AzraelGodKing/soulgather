@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.1 economy smoke test.
+ * Soulgather v1.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -165,6 +165,23 @@ function ashenCost(level) {
 function depthCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 4 * Math.pow(2, n);
+}
+
+function quietCourtCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 8 * Math.pow(2, n);
+}
+
+function normalizeVow(raw) {
+  if (raw === "stillness" || raw === "poverty" || raw === "hunger") return raw;
+  return "";
+}
+
+function vowExtraFavor(vow, hungerPaid) {
+  const v = normalizeVow(vow);
+  if (v === "stillness" || v === "poverty") return 1;
+  if (v === "hunger") return hungerPaid ? 1 : 0;
+  return 0;
 }
 
 function siphonCost(level) {
@@ -352,6 +369,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedCensers && censers < 1) {
     return "Raise a Censer. They burn what the well discards.";
+  }
+  if (favorEarned >= 1 && sworn && view.vow === "") {
+    return "A vow may be sworn.";
   }
   if (favorEarned >= 1) {
     return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
@@ -545,6 +565,10 @@ assertEqual("kindleCost(0)", kindleCost(0), 4);
 assertEqual("ashenCost(0)", ashenCost(0), 3);
 assertEqual("depthCost(0)", depthCost(0), 4);
 assertEqual("depthCost(1)", depthCost(1), 8);
+assertEqual("quietCourtCost(0)", quietCourtCost(0), 8);
+assertEqual("quietCourtCost(1)", quietCourtCost(1), 16);
+assertEqual("vowExtraFavor stillness", vowExtraFavor("stillness"), 1);
+assertEqual("vowExtraFavor none", vowExtraFavor(""), 0);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 
 assertEqual("crownCost(0)", crownCost(0), 6);
@@ -582,6 +606,54 @@ assertEqual(
     favorEarned: 1,
   }),
   "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual(
+  "nextGoal vow does not steal aspect",
+  nextGoal({
+    favorEarned: 1,
+    vow: "",
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+assertEqual(
+  "nextGoal vow hint after aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    lifetimeSouls: 0,
+    favorEarned: 1,
+    aspect: "harvest",
+    vow: "",
+  }),
+  "A vow may be sworn."
+);
+assertEqual(
+  "nextGoal vow does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    lifetimeSouls: 25000,
+    favorEarned: 1,
+    aspect: "harvest",
+    vow: "",
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal sworn vow",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    lifetimeSouls: 0,
+    favorEarned: 1,
+    aspect: "harvest",
+    vow: "stillness",
+  }),
+  "The well gathers. Another Tribute at 25000 lifetime Souls this run."
 );
 
 if (failed > 0) {

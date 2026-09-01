@@ -248,6 +248,11 @@
     return 4 * Math.pow(2, n);
   }
 
+  function quietCourtCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 8 * Math.pow(2, n);
+  }
+
   function siphonCost(level) {
     return N.cost(50, 3, level);
   }
@@ -314,6 +319,27 @@
     return "";
   }
 
+  var VOW_IDS = { stillness: "stillness", poverty: "poverty", hunger: "hunger" };
+  var VOW_NAMES = {
+    stillness: "Stillness",
+    poverty: "Poverty",
+    hunger: "Hunger"
+  };
+
+  function normalizeVow(raw) {
+    if (raw === "stillness") return "stillness";
+    if (raw === "poverty") return "poverty";
+    if (raw === "hunger") return "hunger";
+    return "";
+  }
+
+  function vowExtraFavor(vow, hungerPaid) {
+    var v = normalizeVow(vow);
+    if (v === "stillness" || v === "poverty") return 1;
+    if (v === "hunger") return hungerPaid ? 1 : 0;
+    return 0;
+  }
+
   function normalizeBuyMode(mode) {
     if (mode === "10" || mode === "max" || mode === "1") return mode;
     return "1";
@@ -344,7 +370,12 @@
     "giftThousand",
     "giftLantern",
     "giftCenser",
-    "giftFetter"
+    "giftFetter",
+    "giftTenThousand",
+    "giftThrone",
+    "giftCrown",
+    "vow",
+    "quietCourt"
   ];
 
   var CHRONICLE_LINES = {
@@ -372,7 +403,12 @@
     giftThousand: "A thousand souls. The well returned a greater gift.",
     giftLantern: "The first lantern. The well returned ten souls.",
     giftCenser: "The first censer. Ash remains in the smoke.",
-    giftFetter: "The first fetter. Two shades were given."
+    giftFetter: "The first fetter. Two shades were given.",
+    giftTenThousand: "Ten thousand souls. The well returned a greater gift.",
+    giftThrone: "The first throne. A vessel was returned.",
+    giftCrown: "The crown was generous.",
+    vow: "A vow was sworn.",
+    quietCourt: "The Quiet Court was seated."
   };
 
   function formatGoalNum(n) {
@@ -448,6 +484,9 @@
     }
     if (view.unlockedCensers && censers < 1) {
       return "Raise a Censer. They burn what the well discards.";
+    }
+    if (favorEarned >= 1 && sworn && !normalizeVow(view.vow)) {
+      return "A vow may be sworn.";
     }
     if (favorEarned >= 1) {
       return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
@@ -571,6 +610,12 @@
     if (N.cmp(state.fetters, 1) >= 0) {
       if (markChronicle("fetter")) added = true;
     }
+    if (normalizeVow(state.vow)) {
+      if (markChronicle("vow")) added = true;
+    }
+    if ((Number(state.quietCourtLevel) || 0) >= 1) {
+      if (markChronicle("quietCourt")) added = true;
+    }
     return added;
   }
 
@@ -649,8 +694,14 @@
       bonusFirstLantern: false,
       bonusFirstCenser: false,
       bonusFirstFetter: false,
+      bonusTenThousandSouls: false,
+      bonusFirstThrone: false,
+      giftCrown: false,
       crownWeight: 0,
       longMemoryLevel: 0,
+      quietCourtLevel: 0,
+      vow: "",
+      vowHungerPaid: false,
       runStartedAt: Date.now(),
       allTimeSouls: N.fromNumber(0),
       tributesLaid: 0
@@ -896,6 +947,7 @@
   }
 
   function harvest() {
+    if (normalizeVow(state.vow) === "stillness") return;
     var power = clickPower();
     state.souls = N.add(state.souls, power);
     state.lifetimeSouls = N.add(state.lifetimeSouls, power);
@@ -973,11 +1025,12 @@
 
   function buyThrone() {
     if (!state.unlockedThrones) return;
+    if (normalizeVow(state.vow) === "poverty") return;
     var plan = purchasePlan(state.thrones, state.vessels);
     if (!plan.can || plan.k < 1) return;
     state.vessels = N.sub(state.vessels, plan.cost);
     state.thrones += plan.k;
-    syncChronicle();
+    checkUnlock();
     save();
     render();
   }
@@ -1141,15 +1194,25 @@
     render();
   }
 
+  function currentTitheCost() {
+    var cost = titheCost(state.souls);
+    if (normalizeVow(state.vow) === "hunger") {
+      cost = N.mul(cost, 2);
+    }
+    return cost;
+  }
+
   function payTithe() {
     if (!state.unlockedWell) return;
     if (titheActive()) return;
-    if (N.cmp(state.souls, TITHE_MIN) < 0) return;
-    var cost = titheCost(state.souls);
+    var cost = currentTitheCost();
     if (N.cmp(state.souls, cost) < 0) return;
     state.souls = N.sub(state.souls, cost);
     state.titheLeft = TITHE_SECS;
     state.tithePaid = true;
+    if (normalizeVow(state.vow) === "hunger") {
+      state.vowHungerPaid = true;
+    }
     checkUnlock();
     showToast("The GodKing takes his cut.");
     save();
@@ -1293,6 +1356,28 @@
       granted = true;
     }
 
+    if (
+      !state.bonusTenThousandSouls &&
+      (N.cmp(state.lifetimeSouls, 10000) >= 0 || N.cmp(state.allTimeSouls, 10000) >= 0)
+    ) {
+      state.bonusTenThousandSouls = true;
+      state.souls = N.add(state.souls, 500);
+      markChronicle("giftTenThousand");
+      showToast("The well returns five hundred souls.");
+      granted = true;
+    }
+
+    if (!state.bonusFirstThrone && (Number(state.thrones) || 0) >= 1) {
+      state.bonusFirstThrone = true;
+      state.vessels = N.add(state.vessels, 1);
+      if (!state.unlockedVessels) {
+        state.unlockedVessels = true;
+      }
+      markChronicle("giftThrone");
+      showToast("A vessel is returned.");
+      granted = true;
+    }
+
     if (granted) save();
   }
 
@@ -1302,6 +1387,12 @@
     if (!isFinite(cost) || state.favor < cost) return;
     state.favor -= cost;
     state.crownWeight += 1;
+    if (!state.giftCrown) {
+      state.giftCrown = true;
+      state.favor += 1;
+      markChronicle("giftCrown");
+      showToast("The crown was generous.");
+    }
     save();
     render();
   }
@@ -1312,6 +1403,17 @@
     if (!isFinite(cost) || state.favor < cost) return;
     state.favor -= cost;
     state.longMemoryLevel += 1;
+    save();
+    render();
+  }
+
+  function buyQuietCourt() {
+    if (!crownUnlocked()) return;
+    var cost = quietCourtCost(state.quietCourtLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.quietCourtLevel += 1;
+    markChronicle("quietCourt");
     save();
     render();
   }
@@ -1327,6 +1429,18 @@
     if (!a) return;
     state.aspect = a;
     markChronicle("aspect");
+    save();
+    render();
+  }
+
+  function swearVow(id) {
+    if ((Number(state.favorEarned) || 0) < 1) return;
+    if (normalizeVow(state.vow)) return;
+    var v = normalizeVow(id);
+    if (!v) return;
+    state.vow = v;
+    state.vowHungerPaid = false;
+    markChronicle("vow");
     save();
     render();
   }
@@ -1405,8 +1519,14 @@
     "bonusFirstLantern",
     "bonusFirstCenser",
     "bonusFirstFetter",
+    "bonusTenThousandSouls",
+    "bonusFirstThrone",
+    "giftCrown",
     "crownWeight",
     "longMemoryLevel",
+    "quietCourtLevel",
+    "vow",
+    "vowHungerPaid",
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
@@ -1483,8 +1603,14 @@
       bonusFirstLantern: !!state.bonusFirstLantern,
       bonusFirstCenser: !!state.bonusFirstCenser,
       bonusFirstFetter: !!state.bonusFirstFetter,
+      bonusTenThousandSouls: !!state.bonusTenThousandSouls,
+      bonusFirstThrone: !!state.bonusFirstThrone,
+      giftCrown: !!state.giftCrown,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
+      quietCourtLevel: Number(state.quietCourtLevel) || 0,
+      vow: normalizeVow(state.vow),
+      vowHungerPaid: !!state.vowHungerPaid,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
       allTimeSouls: dumpNum(state.allTimeSouls),
       tributesLaid: Number(state.tributesLaid) || 0
@@ -1577,8 +1703,18 @@
     state.bonusFirstLantern = !!data.bonusFirstLantern;
     state.bonusFirstCenser = !!data.bonusFirstCenser;
     state.bonusFirstFetter = !!data.bonusFirstFetter;
+    state.bonusTenThousandSouls = !!data.bonusTenThousandSouls;
+    state.bonusFirstThrone = !!data.bonusFirstThrone;
     state.crownWeight = Math.max(0, Math.floor(Number(data.crownWeight) || 0));
+    if (data.giftCrown == null) {
+      state.giftCrown = state.crownWeight >= 1;
+    } else {
+      state.giftCrown = !!data.giftCrown;
+    }
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
+    state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
+    state.vow = normalizeVow(data.vow);
+    state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
     if (data.allTimeSouls == null) {
       state.allTimeSouls = N.load(data.lifetimeSouls);
@@ -1733,6 +1869,7 @@
     hideRites();
     hideMarks();
     hideAspects();
+    hideVows();
     hideCrown();
   }
 
@@ -1760,12 +1897,14 @@
     );
     if (!ok) return;
     markChronicle("tribute");
-    var extraFavor = 0;
+    var firstTributeBonus = 0;
     if (!state.bonusFirstTribute) {
       state.bonusFirstTribute = true;
-      extraFavor = 1;
+      firstTributeBonus = 1;
       markChronicle("giftTribute");
     }
+    var vowBonus = vowExtraFavor(state.vow, state.vowHungerPaid);
+    var extraFavor = firstTributeBonus + vowBonus;
     var keptFavor = (Number(state.favor) || 0) + gain + extraFavor;
     var keptEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
     var keptEdict = state.edictLevel;
@@ -1790,6 +1929,10 @@
     var keptBonusFirstLantern = !!state.bonusFirstLantern;
     var keptBonusFirstCenser = !!state.bonusFirstCenser;
     var keptBonusFirstFetter = !!state.bonusFirstFetter;
+    var keptBonusTenThousandSouls = !!state.bonusTenThousandSouls;
+    var keptBonusFirstThrone = !!state.bonusFirstThrone;
+    var keptGiftCrown = !!state.giftCrown;
+    var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -1816,6 +1959,10 @@
     state.bonusFirstLantern = keptBonusFirstLantern;
     state.bonusFirstCenser = keptBonusFirstCenser;
     state.bonusFirstFetter = keptBonusFirstFetter;
+    state.bonusTenThousandSouls = keptBonusTenThousandSouls;
+    state.bonusFirstThrone = keptBonusFirstThrone;
+    state.giftCrown = keptGiftCrown;
+    state.quietCourtLevel = keptQuietCourt;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -1823,6 +1970,8 @@
     state.autobind = false;
     state.autobindSpirits = false;
     state.autobindVessels = false;
+    state.vow = "";
+    state.vowHungerPaid = false;
     state.runStartedAt = Date.now();
     if (keptMemory > 0) {
       state.shades = N.fromNumber(keptMemory);
@@ -1852,6 +2001,10 @@
       state.wellDepth = keptDepth;
       state.unlockedWell = true;
     }
+    if (keptQuietCourt >= 1) {
+      state.autobind = true;
+      state.unlockedAutobind = true;
+    }
     hideToast(true);
     hideUnlockCards();
     checkUnlock();
@@ -1864,7 +2017,7 @@
     if (state.unlockedCensers) revealCensers(false);
     save();
     render();
-    if (extraFavor > 0) {
+    if (firstTributeBonus > 0) {
       showToast("The GodKing's first remembrance is generous.");
     }
   }
@@ -2008,6 +2161,13 @@
     }
   }
 
+  function hideVows() {
+    if (els.vowsPanel) {
+      els.vowsPanel.classList.add("is-hidden");
+      els.vowsPanel.classList.remove("is-sworn");
+    }
+  }
+
   function hideCrown() {
     if (els.crownPanel) els.crownPanel.classList.add("is-hidden");
   }
@@ -2131,6 +2291,12 @@
 
     els.soulsCount.textContent = F.formatNumber(state.souls);
     els.soulsRate.textContent = F.formatRate(soulsPerSec());
+
+    if (els.gatherBtn) {
+      var still = normalizeVow(state.vow) === "stillness";
+      els.gatherBtn.disabled = still;
+      els.gatherBtn.setAttribute("aria-disabled", still ? "true" : "false");
+    }
 
     if (els.soulsAsh) {
       var showAsh =
@@ -2280,9 +2446,10 @@
       els.throneOwned.textContent = F.formatNumber(state.thrones);
       els.throneProd.textContent = "+" + thronePct + "% production";
       els.throneCost.textContent = F.formatNumber(thronePlan.cost) + " Vessels";
-      els.throneBuy.disabled = !thronePlan.can;
+      var throneBlocked = normalizeVow(state.vow) === "poverty";
+      els.throneBuy.disabled = !thronePlan.can || throneBlocked;
       els.throneBuy.textContent = bindLabel("Raise a Throne", "Raise", thronePlan.k, "Throne", "Thrones");
-      els.throneCard.classList.toggle("can-buy", thronePlan.can);
+      els.throneCard.classList.toggle("can-buy", thronePlan.can && !throneBlocked);
     }
 
     var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws;
@@ -2338,7 +2505,7 @@
       }
       if (titheOpen) {
         var tLeft = Number(state.titheLeft) || 0;
-        var tCost = titheCost(state.souls);
+        var tCost = currentTitheCost();
         if (els.titheEffect) {
           els.titheEffect.textContent = titheActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 60s";
         }
@@ -2350,7 +2517,7 @@
             els.titheBuy.disabled = true;
             els.titheBuy.textContent = "The tithe burns \u2014 " + Math.ceil(tLeft) + "s";
           } else {
-            els.titheBuy.disabled = N.cmp(state.souls, TITHE_MIN) < 0;
+            els.titheBuy.disabled = N.cmp(state.souls, tCost) < 0;
             els.titheBuy.textContent = "Pay the Tithe";
           }
         }
@@ -2504,8 +2671,48 @@
       }
     }
 
+    var vowsOpen = (Number(state.favorEarned) || 0) >= 1;
+    var swornVow = normalizeVow(state.vow);
+    if (els.vowsPanel) {
+      els.vowsPanel.classList.toggle("is-hidden", !vowsOpen);
+      els.vowsPanel.classList.toggle("is-sworn", vowsOpen && !!swornVow);
+    }
+    if (vowsOpen) {
+      if (els.vowsSworn) {
+        if (swornVow) {
+          els.vowsSworn.textContent = "This emptying: " + (VOW_NAMES[swornVow] || swornVow) + ".";
+          els.vowsSworn.classList.remove("is-hidden");
+        } else {
+          els.vowsSworn.classList.add("is-hidden");
+        }
+      }
+      var vowRows = [
+        { id: "stillness", el: els.vowStillnessRow, btn: els.vowStillnessBuy },
+        { id: "poverty", el: els.vowPovertyRow, btn: els.vowPovertyBuy },
+        { id: "hunger", el: els.vowHungerRow, btn: els.vowHungerBuy }
+      ];
+      var vi;
+      for (vi = 0; vi < vowRows.length; vi++) {
+        var vrow = vowRows[vi];
+        if (vrow.el) {
+          vrow.el.classList.toggle("is-sworn", swornVow === vrow.id);
+          vrow.el.classList.toggle("is-dim", !!swornVow && swornVow !== vrow.id);
+        }
+        if (vrow.btn) {
+          if (swornVow) {
+            vrow.btn.classList.add("is-hidden");
+            vrow.btn.disabled = true;
+          } else {
+            vrow.btn.classList.remove("is-hidden");
+            vrow.btn.disabled = false;
+          }
+        }
+      }
+    }
+
     var tributeOffer = gain;
     if (gain >= 1 && !state.bonusFirstTribute) tributeOffer += 1;
+    if (gain >= 1) tributeOffer += vowExtraFavor(state.vow, state.vowHungerPaid);
     var tributeReady = gain >= 1;
     if (els.tributePanel) {
       els.tributePanel.classList.toggle("is-hidden", !tributeReady);
@@ -2659,6 +2866,17 @@
       if (els.crownMemoryBuy) {
         els.crownMemoryBuy.disabled = state.favor < lmCost;
       }
+
+      var qcCost = quietCourtCost(state.quietCourtLevel);
+      var qcN = Number(state.quietCourtLevel) || 0;
+      if (els.crownCourtEffect) {
+        els.crownCourtEffect.textContent =
+          qcN >= 1 ? "Autobind Shades at tribute" : "Autobind Shades at tribute";
+      }
+      if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
+      if (els.crownCourtBuy) {
+        els.crownCourtBuy.disabled = state.favor < qcCost;
+      }
     }
 
     if (els.nextGoal) {
@@ -2791,6 +3009,9 @@
     els.crownMemoryEffect = document.getElementById("crown-memory-effect");
     els.crownMemoryCost = document.getElementById("crown-memory-cost");
     els.crownMemoryBuy = document.getElementById("crown-memory-buy");
+    els.crownCourtEffect = document.getElementById("crown-court-effect");
+    els.crownCourtCost = document.getElementById("crown-court-cost");
+    els.crownCourtBuy = document.getElementById("crown-court-buy");
     els.marksPanel = document.getElementById("marks-panel");
     els.markEmberEffect = document.getElementById("mark-ember-effect");
     els.markEmberCost = document.getElementById("mark-ember-cost");
@@ -2811,6 +3032,14 @@
     els.aspectBindingBuy = document.getElementById("aspect-binding-buy");
     els.aspectDominionRow = document.getElementById("aspect-dominion-row");
     els.aspectDominionBuy = document.getElementById("aspect-dominion-buy");
+    els.vowsPanel = document.getElementById("vows-panel");
+    els.vowsSworn = document.getElementById("vows-sworn");
+    els.vowStillnessRow = document.getElementById("vow-stillness-row");
+    els.vowStillnessBuy = document.getElementById("vow-stillness-buy");
+    els.vowPovertyRow = document.getElementById("vow-poverty-row");
+    els.vowPovertyBuy = document.getElementById("vow-poverty-buy");
+    els.vowHungerRow = document.getElementById("vow-hunger-row");
+    els.vowHungerBuy = document.getElementById("vow-hunger-buy");
     els.toast = document.getElementById("toast");
     els.resetBtn = document.getElementById("reset-btn");
     els.nextGoal = document.getElementById("next-goal");
@@ -2847,6 +3076,7 @@
     if (els.autobindVesselsBuy) els.autobindVesselsBuy.addEventListener("click", toggleAutobindVessels);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
+    if (els.crownCourtBuy) els.crownCourtBuy.addEventListener("click", buyQuietCourt);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -2875,6 +3105,21 @@
     if (els.aspectDominionBuy) {
       els.aspectDominionBuy.addEventListener("click", function () {
         swearAspect("dominion");
+      });
+    }
+    if (els.vowStillnessBuy) {
+      els.vowStillnessBuy.addEventListener("click", function () {
+        swearVow("stillness");
+      });
+    }
+    if (els.vowPovertyBuy) {
+      els.vowPovertyBuy.addEventListener("click", function () {
+        swearVow("poverty");
+      });
+    }
+    if (els.vowHungerBuy) {
+      els.vowHungerBuy.addEventListener("click", function () {
+        swearVow("hunger");
       });
     }
     els.resetBtn.addEventListener("click", resetGame);
@@ -2934,7 +3179,7 @@
       }
 
       if ((ev.key === "t" || ev.key === "T") && !otherButton) {
-        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, TITHE_MIN) >= 0) {
+        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, currentTitheCost()) >= 0) {
           ev.preventDefault();
           payTithe();
         }
@@ -2953,6 +3198,7 @@
         if (buttonEl && !isGather) return;
         if (isGather && ev.key === "Enter") return;
         if (ev.key === " ") ev.preventDefault();
+        if (normalizeVow(state.vow) === "stillness") return;
         harvest();
       }
     });
@@ -3014,6 +3260,9 @@
     depthCost: depthCost,
     crownCost: crownCost,
     longMemCost: longMemCost,
+    quietCourtCost: quietCourtCost,
+    vowExtraFavor: vowExtraFavor,
+    normalizeVow: normalizeVow,
     siphonCost: siphonCost,
     levyCost: levyCost,
     siphonMult: siphonMult,

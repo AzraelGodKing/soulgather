@@ -335,6 +335,41 @@
       </div>
     </section>
 
+    <section class="vows is-hidden" id="vows-panel">
+      <div class="vows-head">
+        <h2 class="vows-name">Vows</h2>
+        <p class="vows-flavor">A trial this emptying. He does not require it.</p>
+        <p class="vows-sworn is-hidden" id="vows-sworn">This emptying: Stillness.</p>
+      </div>
+
+      <div class="vow-row" id="vow-stillness-row">
+        <div class="vow-copy">
+          <h3 class="vow-name">Stillness</h3>
+          <p class="vow-flavor">The hand stays. The well works.</p>
+          <p class="vow-stats">No click. +1 Favor at tribute</p>
+        </div>
+        <button type="button" class="card-buy" id="vow-stillness-buy">Swear Stillness</button>
+      </div>
+
+      <div class="vow-row" id="vow-poverty-row">
+        <div class="vow-copy">
+          <h3 class="vow-name">Poverty</h3>
+          <p class="vow-flavor">No seat until he remembers.</p>
+          <p class="vow-stats">No thrones. +1 Favor at tribute</p>
+        </div>
+        <button type="button" class="card-buy" id="vow-poverty-buy">Swear Poverty</button>
+      </div>
+
+      <div class="vow-row" id="vow-hunger-row">
+        <div class="vow-copy">
+          <h3 class="vow-name">Hunger</h3>
+          <p class="vow-flavor">Give twice. Be remembered.</p>
+          <p class="vow-stats">Tithe ×2. Pay once for +1 Favor</p>
+        </div>
+        <button type="button" class="card-buy" id="vow-hunger-buy">Swear Hunger</button>
+      </div>
+    </section>
+
     <section class="tribute is-hidden" id="tribute-panel">
       <div class="tribute-copy">
         <p class="tribute-flavor">Empty the well. The GodKing remembers.</p>
@@ -474,6 +509,18 @@
         </div>
         <button type="button" class="card-buy" id="crown-memory-buy" disabled>Lengthen Memory</button>
       </div>
+
+      <div class="crown-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Quiet Court</h3>
+          <p class="crown-upgrade-flavor">They bind in his sleep.</p>
+          <p class="crown-stats">
+            Effect: <span id="crown-court-effect">Autobind Shades at tribute</span>
+            · Cost: <span id="crown-court-cost">8 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="crown-court-buy" disabled>Seat the Court</button>
+      </div>
     </section>
 
     <details class="chronicle" id="chronicle">
@@ -487,7 +534,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.1 · prototype</span>
+      <span>Soulgather v1.2 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
