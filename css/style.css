@@ -1226,6 +1226,15 @@ body::before {
 @media (max-width: 640px) {
   .wrap {
     padding: 24px 16px 40px;
+    max-width: 100%;
+  }
+
+  .producers {
+    grid-template-columns: 1fr;
+  }
+
+  .gather {
+    justify-content: center;
   }
 
   .gather-btn {
@@ -1241,39 +1250,104 @@ body::before {
       "flavor"
       "stats"
       "buy";
+    max-width: 100%;
   }
 
-  .card-owned,
-  .card-buy {
+  .card-owned {
     justify-self: start;
     text-align: left;
   }
 
+  .card-buy,
+  .tribute-lay {
+    justify-self: stretch;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .tribute {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .edict-row,
   .rite-row,
   .aspect-row {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .edict-row .card-buy,
   .rite-row .card-buy,
   .aspect-row .card-buy {
-    justify-self: start;
+    justify-self: stretch;
+    width: 100%;
   }
 
   .foot {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .foot-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .memory-xfer {
+    max-width: 100%;
   }
 
   .memory-body {
+    position: static;
     right: auto;
-    left: 0;
+    left: auto;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 8px;
+  }
+
+  .chronicle,
+  .chronicle-list,
+  .chronicle-stats,
+  .card-flavor,
+  .card-stats,
+  .tribute-meta,
+  .rite-stats,
+  .edict-stats,
+  .aspect-stats {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
+
+/* Narrow phones (~360–400px): keep the void look, kill overflow. */
+@media (max-width: 420px) {
+  .wrap {
+    padding: 20px 12px 32px;
+  }
+
+  .masthead h1 {
+    letter-spacing: 0.1em;
+  }
+
+  .producers {
+    grid-template-columns: 1fr;
+  }
+
+  .gather {
+    justify-content: center;
+  }
+
+  .card {
+    padding: 16px 14px 14px;
+  }
+
+  .edict-row,
+  .rite-row,
+  .aspect-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
