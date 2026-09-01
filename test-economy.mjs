@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.5 economy smoke test.
+ * Soulgather v1.6 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -263,6 +263,16 @@ function hymnMult(on) {
 
 function hymnLeftAfterTribute() {
   return 45;
+}
+
+function veilMult(on) {
+  return on ? 2 : 1;
+}
+
+function veilCost(ash) {
+  const n = N.max(N.from(ash), 0);
+  const cut = N.floor(N.div(N.mul(n, 15), 100));
+  return N.max(N.fromNumber(20), cut);
 }
 
 function choirEdictCost(level) {
@@ -747,6 +757,11 @@ assertEqual("hymnMult(false)", hymnMult(false), 1);
 assertEqual("choirEdictCost(0)", choirEdictCost(0), 5);
 assertEqual("choirEdictCost(1)", choirEdictCost(1), 10);
 assertEqual("hymnLeft after tribute", hymnLeftAfterTribute(), 45);
+
+assertEqual("veilMult(true)", veilMult(true), 2);
+assertEqual("veilMult(false)", veilMult(false), 1);
+assertEqual("veilCost(20)", veilCost(20), 20);
+assertEqual("veilCost(200)", veilCost(200), 30);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

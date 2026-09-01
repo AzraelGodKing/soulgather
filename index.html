@@ -223,6 +223,18 @@
         <button type="button" class="card-buy" id="night-tithe-buy" disabled>Pay the Night's Tithe</button>
       </div>
 
+      <div class="rite-row is-hidden" id="veil-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">The Veil Thins</h3>
+          <p class="rite-flavor">The well's mouth is near.</p>
+          <p class="rite-stats">
+            <span id="veil-effect">Burst ×2 · 20s</span>
+            · Cost: <span id="veil-cost">20 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="veil-buy" disabled>Thin the Veil</button>
+      </div>
+
       <div class="rite-row is-hidden" id="choir-row">
         <div class="rite-copy">
           <h3 class="rite-name">Choir of Ash</h3>
@@ -266,6 +278,17 @@
           </p>
         </div>
         <button type="button" class="card-buy" id="autobind-vessels-buy" aria-pressed="false">Autobind Vessels</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="autobind-lanterns-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Autobind Lanterns</h3>
+          <p class="rite-flavor">The lights kindle themselves.</p>
+          <p class="rite-stats">
+            <span id="autobind-lanterns-effect">Idle bind</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="autobind-lanterns-buy" aria-pressed="false">Autobind Lanterns</button>
       </div>
     </section>
 
@@ -601,7 +624,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.5 · prototype</span>
+      <span>Soulgather v1.6 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
