@@ -110,6 +110,18 @@
         <button type="button" class="card-buy" id="spirit-buy" disabled>Bind a Spirit</button>
       </article>
 
+
+      <article class="card is-hidden" id="fetter-card">
+        <h2 class="card-name">Fetters</h2>
+        <div class="card-owned" id="fetter-owned">0</div>
+        <p class="card-flavor">A chain that teaches the will to pull.</p>
+        <div class="card-stats">
+          <div>Bind: <span id="fetter-prod">Spirit shades ×1</span></div>
+          <div>Bind cost: <span id="fetter-cost">20 Shades</span></div>
+        </div>
+        <button type="button" class="card-buy" id="fetter-buy" disabled>Bind a Fetter</button>
+      </article>
+
       <article class="card is-hidden" id="vessel-card">
         <h2 class="card-name">Vessels</h2>
         <div class="card-owned" id="vessel-owned">0</div>
@@ -196,6 +208,29 @@
           </p>
         </div>
         <button type="button" class="card-buy" id="tithe-buy" disabled>Pay the Tithe</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="night-tithe-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Night's Tithe</h3>
+          <p class="rite-flavor">The GodKing's hunger at midnight.</p>
+          <p class="rite-stats">
+            <span id="night-tithe-effect">Burst ×3 · 30s</span>
+            · Cost: <span id="night-tithe-cost">10 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="night-tithe-buy" disabled>Pay the Night's Tithe</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="autobind-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Autobind Shades</h3>
+          <p class="rite-flavor">The well binds without a hand.</p>
+          <p class="rite-stats">
+            <span id="autobind-effect">Idle bind</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="autobind-buy" aria-pressed="false">Autobind Shades</button>
       </div>
     </section>
 
@@ -347,6 +382,30 @@
         </div>
         <button type="button" class="card-buy" id="seat-buy" disabled>Raise the Seat</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Kindling</h3>
+          <p class="edict-flavor">A lantern waits in the emptied dark.</p>
+          <p class="edict-stats">
+            Effect: <span id="kindle-effect">+0 Lantern at tribute</span>
+            · Cost: <span id="kindle-cost">4 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="kindle-buy" disabled>Speak the Kindling</button>
+      </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Ashen Memory</h3>
+          <p class="edict-flavor">The well remembers what it would not keep.</p>
+          <p class="edict-stats">
+            Effect: <span id="ashen-effect">+0 Ash at tribute</span>
+            · Cost: <span id="ashen-cost">3 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="ashen-buy" disabled>Remember the Ash</button>
+      </div>
     </section>
 
     <details class="chronicle" id="chronicle">
@@ -360,7 +419,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v0.8 · prototype</span>
+      <span>Soulgather v0.9 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

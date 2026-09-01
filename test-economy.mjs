@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v0.8 economy smoke test.
+ * Soulgather v0.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -57,6 +57,10 @@ function wellCost(depth) {
 
 function lanternCost(owned) {
   return N.cost(30, 1.2, owned);
+}
+
+function fetterCost(owned) {
+  return N.cost(20, 1.2, owned);
 }
 
 function markCost(level) {
@@ -137,6 +141,16 @@ function seatCost(level) {
   return 5 * Math.pow(2, n);
 }
 
+function kindleCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 4 * Math.pow(2, n);
+}
+
+function ashenCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 3 * Math.pow(2, n);
+}
+
 function siphonCost(level) {
   return N.cost(50, 3, level);
 }
@@ -165,6 +179,14 @@ function lanternMult(lanterns) {
     return N.add(1, N.mul(0.05, lanterns));
   }
   return N.fromNumber(1 + 0.05 * (Number(lanterns) || 0));
+}
+
+function fetterMult(fetters) {
+  if (fetters && typeof fetters === "object" && typeof fetters.m === "number") {
+    if (fetters.e < 12) return N.fromNumber(1 + 0.05 * (N.toNumber(fetters) || 0));
+    return N.add(1, N.mul(0.05, fetters));
+  }
+  return N.fromNumber(1 + 0.05 * (Number(fetters) || 0));
 }
 
 function emberMult(level) {
@@ -264,6 +286,7 @@ function nextGoal(view, format) {
   const lifetimeShades = Number(view.lifetimeShades) || 0;
   const lanterns = Number(view.lanterns) || 0;
   const censers = Number(view.censers) || 0;
+  const fetters = Number(view.fetters) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
   const unlockedVessels = !!view.unlockedVessels;
   const unlockedThrones = !!view.unlockedThrones;
@@ -291,6 +314,9 @@ function nextGoal(view, format) {
     );
   }
   if (!unlockedVessels) {
+    if (view.unlockedFetters && fetters < 1) {
+      return "Bind a Fetter. A chain that teaches the will to pull.";
+    }
     return "Vessels at 5 Bound Spirits. " + format(spirits) + " / 5";
   }
   if (!unlockedThrones) {
@@ -301,6 +327,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedLanterns && lanterns < 1) {
     return "Kindle a Lantern. A light for the echoes.";
+  }
+  if (view.unlockedFetters && fetters < 1) {
+    return "Bind a Fetter. A chain that teaches the will to pull.";
   }
   if (view.unlockedMarks && marksBought < 1) {
     return "Press a Mark. Ash is what the well will not keep.";
@@ -489,6 +518,42 @@ assertEqual(
     unlockedThrones: true,
     unlockedLanterns: true,
     lanterns: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual("fetterCost(0)", fetterCost(0), 20);
+assertEqual("fetterCost(1)", fetterCost(1), 24);
+assertEqual("kindleCost(0)", kindleCost(0), 4);
+assertEqual("ashenCost(0)", ashenCost(0), 3);
+assertEqual("fetterMult(2)", fetterMult(2), 1.1);
+
+assertEqual(
+  "nextGoal fetter half-step",
+  nextGoal({ shades: 10, spirits: 3, unlockedSpirits: true, unlockedFetters: true, fetters: 0 }),
+  "Bind a Fetter. A chain that teaches the will to pull."
+);
+assertEqual(
+  "nextGoal fetter does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedFetters: true,
+    fetters: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal fetter does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedFetters: true,
+    fetters: 0,
     favorEarned: 1,
   }),
   "Swear an Aspect. The GodKing waits."
