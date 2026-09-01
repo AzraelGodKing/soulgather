@@ -232,6 +232,17 @@
         </div>
         <button type="button" class="card-buy" id="autobind-buy" aria-pressed="false">Autobind Shades</button>
       </div>
+
+      <div class="rite-row is-hidden" id="autobind-spirits-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Autobind Spirits</h3>
+          <p class="rite-flavor">The shackled bind their own.</p>
+          <p class="rite-stats">
+            <span id="autobind-spirits-effect">Idle bind</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="autobind-spirits-buy" aria-pressed="false">Autobind Spirits</button>
+      </div>
     </section>
 
 
@@ -408,6 +419,40 @@
       </div>
     </section>
 
+    <section class="crown is-hidden" id="crown-panel">
+      <div class="crown-head">
+        <h2 class="crown-name">The Crown</h2>
+        <p class="crown-flavor">The GodKing’s brow.</p>
+        <p class="crown-meta">
+          Favor on hand <span id="crown-favor">0</span>
+        </p>
+      </div>
+
+      <div class="crown-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Weight of the Crown</h3>
+          <p class="crown-upgrade-flavor">His brow multiplies the harvest.</p>
+          <p class="crown-stats">
+            Effect: <span id="crown-weight-effect">+0% production</span>
+            · Cost: <span id="crown-weight-cost">6 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="crown-weight-buy" disabled>Bear the Weight</button>
+      </div>
+
+      <div class="crown-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Long Memory</h3>
+          <p class="crown-upgrade-flavor">A fetter waits in the emptied dark.</p>
+          <p class="crown-stats">
+            Effect: <span id="crown-memory-effect">+0 Fetter at tribute</span>
+            · Cost: <span id="crown-memory-cost">5 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="crown-memory-buy" disabled>Lengthen Memory</button>
+      </div>
+    </section>
+
     <details class="chronicle" id="chronicle">
       <summary>Chronicle</summary>
       <div class="chronicle-stats" id="chronicle-stats">
@@ -419,7 +464,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v0.9 · prototype</span>
+      <span>Soulgather v1.0 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

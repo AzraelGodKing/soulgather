@@ -41,6 +41,7 @@
   var FETTER_COST_MULT = 1.2;
   var UNLOCK_FETTERS = 3;
   var UNLOCK_AUTOBIND_SHADES = 15;
+  var UNLOCK_AUTOBIND_SPIRITS = 10;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var NIGHT_TITHE_MIN = 10;
   var NIGHT_TITHE_FRAC = 0.25;
@@ -169,14 +170,25 @@
     return dominion ? 0.15 : 0.1;
   }
 
-  function prodMult(favorEarned, thrones, edictLevel, weight) {
+  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight) {
     var w = weight == null ? 0.1 : Number(weight);
     if (!isFinite(w)) w = 0.1;
     return (
       prestigeMult(favorEarned) *
       (1 + w * (Number(thrones) || 0)) *
-      (1 + 0.25 * (Number(edictLevel) || 0))
+      (1 + 0.25 * (Number(edictLevel) || 0)) *
+      (1 + 0.10 * (Number(crownWeight) || 0))
     );
+  }
+
+  function crownCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 6 * Math.pow(2, n);
+  }
+
+  function longMemCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 5 * Math.pow(2, n);
   }
 
   function titheCost(souls) {
@@ -318,7 +330,11 @@
     "ash",
     "mark",
     "censer",
-    "fetter"
+    "fetter",
+    "giftSouls",
+    "giftShades",
+    "giftVessel",
+    "giftTribute"
   ];
 
   var CHRONICLE_LINES = {
@@ -338,7 +354,11 @@
     ash: "Ash gathered at the well's lip.",
     mark: "A mark was pressed.",
     censer: "A censer was raised.",
-    fetter: "A fetter was bound."
+    fetter: "A fetter was bound.",
+    giftSouls: "A hundred souls. The well returned a gift.",
+    giftShades: "Ten shades. One more was given.",
+    giftVessel: "The first vessel. Ash remains.",
+    giftTribute: "First tribute. The GodKing was generous."
   };
 
   function formatGoalNum(n) {
@@ -575,6 +595,7 @@
       unlockedCensers: false,
       unlockedFetters: false,
       unlockedAutobind: false,
+      unlockedAutobindSpirits: false,
       unlockedNightTithe: false,
       toastShown: false,
       vesselToastShown: false,
@@ -601,6 +622,14 @@
       nightLeft: 0,
       tithePaid: false,
       autobind: false,
+      autobindSpirits: false,
+      peakShades: N.fromNumber(0),
+      bonusLifetimeSouls: false,
+      bonusPeakShades: false,
+      bonusFirstVessel: false,
+      bonusFirstTribute: false,
+      crownWeight: 0,
+      longMemoryLevel: 0,
       runStartedAt: Date.now(),
       allTimeSouls: N.fromNumber(0),
       tributesLaid: 0
@@ -622,7 +651,8 @@
       state.favorEarned,
       state.thrones,
       state.edictLevel,
-      throneWeight(normalizeAspect(state.aspect) === "dominion")
+      throneWeight(normalizeAspect(state.aspect) === "dominion"),
+      state.crownWeight
     );
   }
 
@@ -750,10 +780,13 @@
     }
 
     tryAutobind();
+    tryAutobindSpirits();
     checkUnlock();
   }
 
   function checkUnlock() {
+    tryMilestoneGifts();
+
     if (!state.unlockedWell && N.cmp(state.shades, 1) >= 0) {
       state.unlockedWell = true;
       revealWell();
@@ -819,6 +852,10 @@
 
     if (!state.unlockedAutobind && N.cmp(state.shades, UNLOCK_AUTOBIND_SHADES) >= 0) {
       state.unlockedAutobind = true;
+    }
+
+    if (!state.unlockedAutobindSpirits && N.cmp(state.spirits, UNLOCK_AUTOBIND_SPIRITS) >= 0) {
+      state.unlockedAutobindSpirits = true;
     }
 
     if (!state.unlockedNightTithe) {
@@ -1107,6 +1144,88 @@
     state.lifetimeShades = N.add(state.lifetimeShades, 1);
   }
 
+  function toggleAutobindSpirits() {
+    if (!state.unlockedAutobindSpirits) return;
+    state.autobindSpirits = !state.autobindSpirits;
+    save();
+    render();
+  }
+
+  function tryAutobindSpirits() {
+    if (!state.autobindSpirits) return;
+    if (!state.unlockedSpirits) return;
+    var cost = spiritCost(state.spirits);
+    if (N.cmp(state.shades, cost) < 0) return;
+    state.shades = N.sub(state.shades, cost);
+    state.spirits = N.add(state.spirits, 1);
+    state.lifetimeSpirits = N.add(state.lifetimeSpirits, 1);
+  }
+
+  function bumpPeakShades() {
+    state.peakShades = N.max(num(state.peakShades), num(state.shades));
+  }
+
+  function tryMilestoneGifts() {
+    var granted = false;
+    bumpPeakShades();
+
+    if (
+      !state.bonusLifetimeSouls &&
+      (N.cmp(state.lifetimeSouls, 100) >= 0 || N.cmp(state.allTimeSouls, 100) >= 0)
+    ) {
+      state.bonusLifetimeSouls = true;
+      state.souls = N.add(state.souls, 50);
+      markChronicle("giftSouls");
+      showToast("The well returns fifty souls.");
+      granted = true;
+    }
+
+    bumpPeakShades();
+    if (!state.bonusPeakShades && N.cmp(state.peakShades, 10) >= 0) {
+      state.bonusPeakShades = true;
+      state.shades = N.add(state.shades, 1);
+      state.lifetimeShades = N.add(state.lifetimeShades, 1);
+      bumpPeakShades();
+      markChronicle("giftShades");
+      showToast("A shade is given, unbidden.");
+      granted = true;
+    }
+
+    if (!state.bonusFirstVessel && N.cmp(state.vessels, 1) >= 0) {
+      state.bonusFirstVessel = true;
+      state.ash = N.add(state.ash, 3);
+      markChronicle("giftVessel");
+      showToast("Ash from the first vessel.");
+      granted = true;
+    }
+
+    if (granted) save();
+  }
+
+  function buyCrownWeight() {
+    if (!crownUnlocked()) return;
+    var cost = crownCost(state.crownWeight);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.crownWeight += 1;
+    save();
+    render();
+  }
+
+  function buyLongMemory() {
+    if (!crownUnlocked()) return;
+    var cost = longMemCost(state.longMemoryLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.longMemoryLevel += 1;
+    save();
+    render();
+  }
+
+  function crownUnlocked() {
+    return (Number(state.tributesLaid) || 0) >= 2 || (Number(state.favorEarned) || 0) >= 3;
+  }
+
   function swearAspect(id) {
     if ((Number(state.favorEarned) || 0) < 1) return;
     if (normalizeAspect(state.aspect)) return;
@@ -1152,6 +1271,7 @@
     "unlockedCensers",
     "unlockedFetters",
     "unlockedAutobind",
+    "unlockedAutobindSpirits",
     "unlockedNightTithe",
     "toastShown",
     "vesselToastShown",
@@ -1178,6 +1298,14 @@
     "nightLeft",
     "tithePaid",
     "autobind",
+    "autobindSpirits",
+    "peakShades",
+    "bonusLifetimeSouls",
+    "bonusPeakShades",
+    "bonusFirstVessel",
+    "bonusFirstTribute",
+    "crownWeight",
+    "longMemoryLevel",
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
@@ -1214,6 +1342,7 @@
       unlockedCensers: state.unlockedCensers,
       unlockedFetters: !!state.unlockedFetters,
       unlockedAutobind: !!state.unlockedAutobind,
+      unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
       unlockedNightTithe: !!state.unlockedNightTithe,
       toastShown: state.toastShown,
       vesselToastShown: state.vesselToastShown,
@@ -1240,6 +1369,14 @@
       nightLeft: Number(state.nightLeft) || 0,
       tithePaid: !!state.tithePaid,
       autobind: !!state.autobind,
+      autobindSpirits: !!state.autobindSpirits,
+      peakShades: dumpNum(state.peakShades),
+      bonusLifetimeSouls: !!state.bonusLifetimeSouls,
+      bonusPeakShades: !!state.bonusPeakShades,
+      bonusFirstVessel: !!state.bonusFirstVessel,
+      bonusFirstTribute: !!state.bonusFirstTribute,
+      crownWeight: Number(state.crownWeight) || 0,
+      longMemoryLevel: Number(state.longMemoryLevel) || 0,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
       allTimeSouls: dumpNum(state.allTimeSouls),
       tributesLaid: Number(state.tributesLaid) || 0
@@ -1281,6 +1418,7 @@
     state.unlockedCensers = !!data.unlockedCensers;
     state.unlockedFetters = !!data.unlockedFetters;
     state.unlockedAutobind = !!data.unlockedAutobind;
+    state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
@@ -1314,6 +1452,18 @@
     if (state.nightLeft < 0) state.nightLeft = 0;
     state.tithePaid = !!data.tithePaid || (Number(data.titheLeft) || 0) > 0;
     state.autobind = !!data.autobind;
+    state.autobindSpirits = !!data.autobindSpirits;
+    state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
+    state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
+    state.bonusPeakShades = !!data.bonusPeakShades;
+    state.bonusFirstVessel = !!data.bonusFirstVessel;
+    if (data.bonusFirstTribute == null) {
+      state.bonusFirstTribute = (Number(data.tributesLaid) || 0) >= 1;
+    } else {
+      state.bonusFirstTribute = !!data.bonusFirstTribute;
+    }
+    state.crownWeight = Math.max(0, Math.floor(Number(data.crownWeight) || 0));
+    state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
     if (data.allTimeSouls == null) {
       state.allTimeSouls = N.load(data.lifetimeSouls);
@@ -1468,6 +1618,7 @@
     hideRites();
     hideMarks();
     hideAspects();
+    hideCrown();
   }
 
   function resetGame() {
@@ -1494,8 +1645,14 @@
     );
     if (!ok) return;
     markChronicle("tribute");
-    var keptFavor = (Number(state.favor) || 0) + gain;
-    var keptEarned = (Number(state.favorEarned) || 0) + gain;
+    var extraFavor = 0;
+    if (!state.bonusFirstTribute) {
+      state.bonusFirstTribute = true;
+      extraFavor = 1;
+      markChronicle("giftTribute");
+    }
+    var keptFavor = (Number(state.favor) || 0) + gain + extraFavor;
+    var keptEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
     var keptEdict = state.edictLevel;
     var keptMemory = state.memoryLevel;
     var keptEcho = Number(state.echoLevel) || 0;
@@ -1503,9 +1660,16 @@
     var keptSeat = Number(state.seatLevel) || 0;
     var keptKindle = Number(state.kindleLevel) || 0;
     var keptAshen = Number(state.ashenLevel) || 0;
+    var keptCrown = Number(state.crownWeight) || 0;
+    var keptLongMem = Number(state.longMemoryLevel) || 0;
     var keptBuy = state.buyMode;
     var keptChronicle = (state.chronicle || []).slice();
     var keptAllTime = N.clone(state.allTimeSouls);
+    var keptPeakShades = N.max(num(state.peakShades), num(state.shades));
+    var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
+    var keptBonusPeakShades = !!state.bonusPeakShades;
+    var keptBonusFirstVessel = !!state.bonusFirstVessel;
+    var keptBonusFirstTribute = true;
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -1516,15 +1680,23 @@
     state.seatLevel = keptSeat;
     state.kindleLevel = keptKindle;
     state.ashenLevel = keptAshen;
+    state.crownWeight = keptCrown;
+    state.longMemoryLevel = keptLongMem;
     state.buyMode = keptBuy;
     state.chronicle = keptChronicle;
     state.aspect = "";
     state.allTimeSouls = keptAllTime;
+    state.peakShades = keptPeakShades;
+    state.bonusLifetimeSouls = keptBonusLifetimeSouls;
+    state.bonusPeakShades = keptBonusPeakShades;
+    state.bonusFirstVessel = keptBonusFirstVessel;
+    state.bonusFirstTribute = keptBonusFirstTribute;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
     state.tithePaid = false;
     state.autobind = false;
+    state.autobindSpirits = false;
     state.runStartedAt = Date.now();
     if (keptMemory > 0) {
       state.shades = N.fromNumber(keptMemory);
@@ -1546,6 +1718,10 @@
     if (keptAshen > 0) {
       state.ash = N.fromNumber(10 * keptAshen);
     }
+    if (keptLongMem > 0) {
+      state.fetters = N.fromNumber(keptLongMem);
+      state.unlockedFetters = true;
+    }
     hideToast(true);
     hideUnlockCards();
     checkUnlock();
@@ -1558,6 +1734,9 @@
     if (state.unlockedCensers) revealCensers(false);
     save();
     render();
+    if (extraFavor > 0) {
+      showToast("The GodKing's first remembrance is generous.");
+    }
   }
 
 
@@ -1682,6 +1861,7 @@
     if (els.titheRow) els.titheRow.classList.add("is-hidden");
     if (els.nightTitheRow) els.nightTitheRow.classList.add("is-hidden");
     if (els.autobindRow) els.autobindRow.classList.add("is-hidden");
+    if (els.autobindSpiritsRow) els.autobindSpiritsRow.classList.add("is-hidden");
   }
 
   function hideMarks() {
@@ -1695,6 +1875,10 @@
       els.aspectsPanel.classList.add("is-hidden");
       els.aspectsPanel.classList.remove("is-waiting", "is-sworn");
     }
+  }
+
+  function hideCrown() {
+    if (els.crownPanel) els.crownPanel.classList.add("is-hidden");
   }
 
   function renderChronicle() {
@@ -2062,6 +2246,22 @@
           els.autobindBuy.setAttribute("aria-pressed", state.autobind ? "true" : "false");
         }
       }
+
+      var autoSpiritOpen = !!state.unlockedAutobindSpirits;
+      if (els.autobindSpiritsRow) {
+        els.autobindSpiritsRow.classList.toggle("is-hidden", !autoSpiritOpen);
+        els.autobindSpiritsRow.classList.toggle("is-on", autoSpiritOpen && !!state.autobindSpirits);
+      }
+      if (autoSpiritOpen) {
+        if (els.autobindSpiritsEffect) {
+          els.autobindSpiritsEffect.textContent = state.autobindSpirits ? "The shackled bind" : "Idle bind";
+        }
+        if (els.autobindSpiritsBuy) {
+          els.autobindSpiritsBuy.disabled = false;
+          els.autobindSpiritsBuy.textContent = "Autobind Spirits";
+          els.autobindSpiritsBuy.setAttribute("aria-pressed", state.autobindSpirits ? "true" : "false");
+        }
+      }
     }
 
     var marksOpen = !!state.unlockedMarks;
@@ -2138,6 +2338,8 @@
       }
     }
 
+    var tributeOffer = gain;
+    if (gain >= 1 && !state.bonusFirstTribute) tributeOffer += 1;
     var tributeReady = gain >= 1;
     if (els.tributePanel) {
       els.tributePanel.classList.toggle("is-hidden", !tributeReady);
@@ -2157,10 +2359,10 @@
           els.tributeFavor.textContent = F.formatNumber(state.favor);
         }
       }
-      if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(gain) + " Favor";
+      if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(tributeOffer) + " Favor";
       if (els.tributeMult) {
         els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + gain, state.seatLevel, state.edictLevel)
+          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight)
         );
       }
     }
@@ -2248,6 +2450,35 @@
       if (els.ashenCost) els.ashenCost.textContent = F.formatNumber(aCost) + " Favor";
       if (els.ashenBuy) {
         els.ashenBuy.disabled = state.favor < aCost;
+      }
+    }
+
+    var crownOpen = crownUnlocked();
+    if (els.crownPanel) {
+      els.crownPanel.classList.toggle("is-hidden", !crownOpen);
+    }
+    if (crownOpen) {
+      if (els.crownFavor) els.crownFavor.textContent = F.formatNumber(state.favor);
+
+      var cwCost = crownCost(state.crownWeight);
+      var cwPct = Math.round(10 * (Number(state.crownWeight) || 0));
+      if (els.crownWeightEffect) els.crownWeightEffect.textContent = "+" + cwPct + "% production";
+      if (els.crownWeightCost) els.crownWeightCost.textContent = F.formatNumber(cwCost) + " Favor";
+      if (els.crownWeightBuy) {
+        els.crownWeightBuy.disabled = state.favor < cwCost;
+      }
+
+      var lmCost = longMemCost(state.longMemoryLevel);
+      var lmN = Number(state.longMemoryLevel) || 0;
+      if (els.crownMemoryEffect) {
+        els.crownMemoryEffect.textContent =
+          "+" +
+          F.formatNumber(lmN) +
+          (lmN === 1 ? " Fetter at tribute" : " Fetters at tribute");
+      }
+      if (els.crownMemoryCost) els.crownMemoryCost.textContent = F.formatNumber(lmCost) + " Favor";
+      if (els.crownMemoryBuy) {
+        els.crownMemoryBuy.disabled = state.favor < lmCost;
       }
     }
 
@@ -2364,6 +2595,17 @@
     els.autobindRow = document.getElementById("autobind-row");
     els.autobindEffect = document.getElementById("autobind-effect");
     els.autobindBuy = document.getElementById("autobind-buy");
+    els.autobindSpiritsRow = document.getElementById("autobind-spirits-row");
+    els.autobindSpiritsEffect = document.getElementById("autobind-spirits-effect");
+    els.autobindSpiritsBuy = document.getElementById("autobind-spirits-buy");
+    els.crownPanel = document.getElementById("crown-panel");
+    els.crownFavor = document.getElementById("crown-favor");
+    els.crownWeightEffect = document.getElementById("crown-weight-effect");
+    els.crownWeightCost = document.getElementById("crown-weight-cost");
+    els.crownWeightBuy = document.getElementById("crown-weight-buy");
+    els.crownMemoryEffect = document.getElementById("crown-memory-effect");
+    els.crownMemoryCost = document.getElementById("crown-memory-cost");
+    els.crownMemoryBuy = document.getElementById("crown-memory-buy");
     els.marksPanel = document.getElementById("marks-panel");
     els.markEmberEffect = document.getElementById("mark-ember-effect");
     els.markEmberCost = document.getElementById("mark-ember-cost");
@@ -2415,6 +2657,9 @@
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
     if (els.autobindBuy) els.autobindBuy.addEventListener("click", toggleAutobind);
+    if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
+    if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
+    if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -2474,6 +2719,20 @@
       var active = document.activeElement || target;
       if (isTypingTarget(target) || isTypingTarget(active)) return;
 
+      var actionEl = active || target;
+      var tag = actionEl && actionEl.tagName ? actionEl.tagName.toLowerCase() : "";
+      var buttonEl = null;
+      if (tag === "button") {
+        buttonEl = actionEl;
+      } else if (actionEl && actionEl.closest) {
+        buttonEl = actionEl.closest("button");
+      }
+      var isGather =
+        actionEl === els.gatherBtn ||
+        target === els.gatherBtn ||
+        buttonEl === els.gatherBtn;
+      var otherButton = !!(buttonEl && !isGather);
+
       if (ev.key === "1") {
         setBuyMode("1");
         return;
@@ -2487,19 +2746,22 @@
         return;
       }
 
-      if (ev.key === " " || ev.key === "Enter") {
-        var actionEl = active || target;
-        var tag = actionEl && actionEl.tagName ? actionEl.tagName.toLowerCase() : "";
-        var buttonEl = null;
-        if (tag === "button") {
-          buttonEl = actionEl;
-        } else if (actionEl && actionEl.closest) {
-          buttonEl = actionEl.closest("button");
+      if ((ev.key === "t" || ev.key === "T") && !otherButton) {
+        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, TITHE_MIN) >= 0) {
+          ev.preventDefault();
+          payTithe();
         }
-        var isGather =
-          actionEl === els.gatherBtn ||
-          target === els.gatherBtn ||
-          buttonEl === els.gatherBtn;
+        return;
+      }
+      if ((ev.key === "n" || ev.key === "N") && !otherButton) {
+        if (state.unlockedNightTithe && !nightActive() && N.cmp(state.ash, NIGHT_TITHE_MIN) >= 0) {
+          ev.preventDefault();
+          payNightTithe();
+        }
+        return;
+      }
+
+      if (ev.key === " " || ev.key === "Enter") {
         if (tag === "summary" || tag === "a" || tag === "details") return;
         if (buttonEl && !isGather) return;
         if (isGather && ev.key === "Enter") return;
@@ -2557,6 +2819,8 @@
     seatCost: seatCost,
     kindleCost: kindleCost,
     ashenCost: ashenCost,
+    crownCost: crownCost,
+    longMemCost: longMemCost,
     siphonCost: siphonCost,
     levyCost: levyCost,
     siphonMult: siphonMult,

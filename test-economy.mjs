@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v0.9 economy smoke test.
+ * Soulgather v1.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -111,13 +111,24 @@ function throneWeight(dominion) {
   return dominion ? 0.15 : 0.1;
 }
 
-function prodMult(favorEarned, thrones, edictLevel, weight) {
+function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight) {
   const w = weight == null ? 0.1 : Number(weight);
   return (
     prestigeMult(favorEarned) *
     (1 + w * (Number(thrones) || 0)) *
-    (1 + 0.25 * (Number(edictLevel) || 0))
+    (1 + 0.25 * (Number(edictLevel) || 0)) *
+    (1 + 0.10 * (Number(crownWeight) || 0))
   );
+}
+
+function crownCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 6 * Math.pow(2, n);
+}
+
+function longMemCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 5 * Math.pow(2, n);
 }
 
 function edictCost(level) {
@@ -528,6 +539,13 @@ assertEqual("fetterCost(1)", fetterCost(1), 24);
 assertEqual("kindleCost(0)", kindleCost(0), 4);
 assertEqual("ashenCost(0)", ashenCost(0), 3);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
+
+assertEqual("crownCost(0)", crownCost(0), 6);
+assertEqual("crownCost(1)", crownCost(1), 12);
+assertEqual("longMemCost(0)", longMemCost(0), 5);
+assertEqual("prodMult(0,0,0,false,0)", prodMult(0, 0, 0, false, 0), 1);
+assertEqual("prodMult(0,0,0,false,2)", prodMult(0, 0, 0, false, 2), 1.2);
+assertEqual("prodMult crownWeight 2 other factors 1", prodMult(0, 0, 0, 0.1, 2), 1.2);
 
 assertEqual(
   "nextGoal fetter half-step",

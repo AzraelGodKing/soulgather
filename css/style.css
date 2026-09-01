@@ -1,4 +1,4 @@
-/* Soulgather v0.9 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v1.0 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -863,6 +863,100 @@ body::before {
   align-self: center;
 }
 
+/* ----- The Crown (late meta; Reliquary language) ----- */
+.crown {
+  margin-top: 28px;
+  padding: 16px 20px 10px;
+  background: linear-gradient(180deg, #161016 0%, #100c10 100%);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.crown::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gold-bright);
+  opacity: 0.75;
+}
+
+.crown.is-hidden {
+  display: none;
+}
+
+.crown-name {
+  margin: 0;
+  font-size: 1.18rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.crown-flavor {
+  margin: 6px 0 4px;
+  font-size: 0.92rem;
+  font-style: italic;
+  color: var(--ash);
+}
+
+.crown-meta {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: var(--bone-dim);
+}
+
+.crown-meta span {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.crown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.crown-upgrade-name {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.crown-upgrade-flavor {
+  margin: 4px 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--ash);
+}
+
+.crown-stats {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+
+.crown-stats span {
+  color: var(--bone);
+}
+
+.crown-row .card-buy {
+  justify-self: end;
+  align-self: center;
+}
+
 /* ----- Rites (this-run; Reliquary language, dark gold) ----- */
 .rites {
   margin-top: 28px;
@@ -962,6 +1056,17 @@ body::before {
 }
 
 .rite-row#autobind-row.is-on .card-buy {
+  background: linear-gradient(180deg, #5a3014 0%, #3a1c10 100%);
+  color: #fff6d8;
+  border-color: var(--gold-bright);
+  opacity: 1;
+}
+
+.rite-row#autobind-spirits-row.is-on .rite-name {
+  color: var(--gold-bright);
+}
+
+.rite-row#autobind-spirits-row.is-on .card-buy {
   background: linear-gradient(180deg, #5a3014 0%, #3a1c10 100%);
   color: #fff6d8;
   border-color: var(--gold-bright);
@@ -1471,7 +1576,8 @@ body::before {
   .edict-row,
   .rite-row,
   .mark-row,
-  .aspect-row {
+  .aspect-row,
+  .crown-row {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1479,7 +1585,8 @@ body::before {
   .edict-row .card-buy,
   .rite-row .card-buy,
   .mark-row .card-buy,
-  .aspect-row .card-buy {
+  .aspect-row .card-buy,
+  .crown-row .card-buy {
     justify-self: stretch;
     width: 100%;
   }
@@ -1516,7 +1623,8 @@ body::before {
   .rite-stats,
   .mark-stats,
   .edict-stats,
-  .aspect-stats {
+  .aspect-stats,
+  .crown-stats {
     overflow-wrap: break-word;
     word-break: break-word;
   }
@@ -1547,7 +1655,8 @@ body::before {
   .edict-row,
   .rite-row,
   .mark-row,
-  .aspect-row {
+  .aspect-row,
+  .crown-row {
     flex-direction: column;
     align-items: stretch;
   }
