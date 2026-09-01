@@ -13,7 +13,7 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 ## Loop (short)
 
-Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) / Thrones. Ash feeds Marks and Night's Tithe. Rites, Tithe, Autobind Shades / Autobind Spirits this-run. Tribute for Favor. Reliquary + Aspects after first Tribute. The Crown after 2 tributes or 3 Favor earned.
+Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) / Thrones. Ash feeds Marks and Night's Tithe. Rites, Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels this-run. Tribute for Favor. Reliquary + Aspects after first Tribute. The Crown after 2 tributes or 3 Favor earned.
 
 ## Design notes (v1.0)
 
@@ -36,6 +36,25 @@ Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson
 - Long Memory — start each emptying with +1 Fetter per level. Cost `5 × 2^n` Favor. Button: Lengthen Memory. On Tribute meta: `fetters = longMemoryLevel`; unlock Fetters if > 0.
 
 **Hotkeys.** T pays the Tithe if affordable. N pays Night's Tithe if available. Neither fires while typing in Memory. Neither steals if a button that is not Draw from the Well is focused.
+
+## Design notes (v1.1)
+
+Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
+
+**v1.1 extras.**
+
+**More milestone gifts (one-time).** Same flag pattern as v1.0: persist through Tribute; wipe on Footer Reset. Check flag before granting; set flag then grant; save — so load cannot double-fire. `Num.add` for the bonus.
+
+- 1000 lifetime or all-time souls (`lifetimeSouls` or `allTimeSouls`): +200 souls now. Toast: "The well returns two hundred souls." Chronicle: "A thousand souls. The well returned a greater gift."
+- First Lantern: +10 souls. Toast: "Ten souls for the first lantern." Chronicle: "The first lantern. The well returned ten souls."
+- First Censer: +5 Ash. Toast: "Ash from the first censer." Chronicle: "The first censer. Ash remains in the smoke."
+- First Fetter: +2 Shades (and lifetime Shades). Toast: "Two shades for the first fetter." Chronicle: "The first fetter. Two shades were given."
+
+If several gifts fire in one `checkUnlock`, toasts **queue** (simple array; the next shows when the current toast hides) so they are not overwritten. On load, gift toasts also queue behind the away-harvest toast if both would fire.
+
+**Autobind Vessels (QoL).** Unlock at 3 Vessels this run. Third quiet toggle in Rites next to Autobind Spirits. Flavor: *The hollow fills itself.* When on, each live tick buys exactly 1 Vessel if affordable (always ×1, ignores buy-mode). Persist `autobindVessels` this-run; wipe on Tribute. Offline catchup does not autobind.
+
+**Edict of Depth (Reliquary).** Persist through Tribute; spend Favor on hand. Cost `4 × 2^n` Favor. Each level: start the emptying with +1 Well Depth (`wellDepth = depthLevel` after Tribute clear; unlocks the Well if > 0). Flavor: *The well was always deeper.* Button: Speak the Depth.
 
 ## Design notes (v0.9)
 
@@ -116,11 +135,11 @@ Vessels 0.1 spirit/s × `prodMult` × `titheMult` × `hollowMult`. Click still u
 
 Ash/s = `0.01 * (shade soul production only)` + `censers * 0.2 * prodMult * titheMult * nightMult`.
 
-**Tribute.** First Favor at 25000 lifetime souls (`floor(sqrt(lifetime/25000))`). Tribute keeps Favor, `favorEarned`, `edictLevel`, `memoryLevel`, `echoLevel`, `seatLevel`, `kindleLevel`, `ashenLevel`, `crownWeight`, `longMemoryLevel`, `peakShades`, milestone gift flags, `buyMode`, Chronicle, `allTimeSouls`, `tributesLaid` (+1). Clears the run (souls, producers, lanterns, fetters, censers, Ash, Marks, `wellDraws`, thrones, unlocks, siphon/levy, sworn Aspect, `titheLeft`, `nightLeft`, `tithePaid`, `autobind`, `autobindSpirits`), then applies meta: `shades = memoryLevel` (`unlockedWell` if shades ≥ 1); `thrones = seatLevel` (`unlockedThrones` if thrones ≥ 1); `wellDraws` if `echoLevel >= 1` (rite already drawn, no soul charge); `lanterns = kindleLevel` (`unlockedLanterns` if > 0); `ash = fromNumber(10 * ashenLevel)`; `fetters = longMemoryLevel` (`unlockedFetters` if > 0); aspect = none (must swear again); `runStartedAt` = now. Footer Reset wipes Favor, Reliquary (including echo, seats, kindling, ashen memory), The Crown, milestone gifts, `peakShades`, Aspects, Chronicle, Rites, Tithe, Night's Tithe, Autobind, Marks, `allTimeSouls`, `tributesLaid`.
+**Tribute.** First Favor at 25000 lifetime souls (`floor(sqrt(lifetime/25000))`). Tribute keeps Favor, `favorEarned`, `edictLevel`, `memoryLevel`, `echoLevel`, `seatLevel`, `kindleLevel`, `ashenLevel`, `depthLevel`, `crownWeight`, `longMemoryLevel`, `peakShades`, milestone gift flags, `buyMode`, Chronicle, `allTimeSouls`, `tributesLaid` (+1). Clears the run (souls, producers, lanterns, fetters, censers, Ash, Marks, `wellDraws`, thrones, unlocks, siphon/levy, sworn Aspect, `titheLeft`, `nightLeft`, `tithePaid`, `autobind`, `autobindSpirits`, `autobindVessels`), then applies meta: `shades = memoryLevel` (`unlockedWell` if shades ≥ 1); `thrones = seatLevel` (`unlockedThrones` if thrones ≥ 1); `wellDraws` if `echoLevel >= 1` (rite already drawn, no soul charge); `lanterns = kindleLevel` (`unlockedLanterns` if > 0); `ash = fromNumber(10 * ashenLevel)`; `fetters = longMemoryLevel` (`unlockedFetters` if > 0); `wellDepth = depthLevel` (`unlockedWell` if > 0); aspect = none (must swear again); `runStartedAt` = now. Footer Reset wipes Favor, Reliquary (including echo, seats, kindling, ashen memory, Edict of Depth), The Crown, milestone gifts, `peakShades`, Aspects, Chronicle, Rites, Tithe, Night's Tithe, Autobind, Marks, `allTimeSouls`, `tributesLaid`.
 
-**Session layer (v0.3 / v1.0).** A quiet next-goal line under the soul rate / Blessing (unlock/tribute only; rites do not steal it). After first Tribute, an unsworn Aspect takes the line until you swear — Lanterns/Fetters/Marks/Censers never steal Aspect-swear or Tribute-ready. Lanterns enter the cascade as a half-step at 3 Shades; Fetters after Bound Spirits (before Vessels) as a half-step, and may hint later if still unbought. Marks and Censers hint after the main-line throne gate if still unbought. Away-harvest toast on load after real offline production (8h cap, skip fresh saves and tiny tab-switches); hotkeys Space/Enter draw from the well (unless another button is focused), 1/2/3 set buy 1/10/Max, T Tithe, N Night's Tithe; collapsible Chronicle of first-time milestones (persists through Tribute), including first rite cut, the well beginning to draw, first Aspect sworn, "An echo was spoken.", "A seat was raised.", "A lantern was kindled.", "Ash gathered at the well's lip.", "A mark was pressed.", "A censer was raised.", "A fetter was bound.", and the v1.0 milestone gifts.
+**Session layer (v0.3 / v1.0).** A quiet next-goal line under the soul rate / Blessing (unlock/tribute only; rites do not steal it). After first Tribute, an unsworn Aspect takes the line until you swear — Lanterns/Fetters/Marks/Censers never steal Aspect-swear or Tribute-ready. Lanterns enter the cascade as a half-step at 3 Shades; Fetters after Bound Spirits (before Vessels) as a half-step, and may hint later if still unbought. Marks and Censers hint after the main-line throne gate if still unbought. Away-harvest toast on load after real offline production (8h cap, skip fresh saves and tiny tab-switches); hotkeys Space/Enter draw from the well (unless another button is focused), 1/2/3 set buy 1/10/Max, T Tithe, N Night's Tithe; collapsible Chronicle of first-time milestones (persists through Tribute), including first rite cut, the well beginning to draw, first Aspect sworn, "An echo was spoken.", "A seat was raised.", "A lantern was kindled.", "Ash gathered at the well's lip.", "A mark was pressed.", "A censer was raised.", "A fetter was bound.", and the v1.0 / v1.1 milestone gifts. Toasts queue so several gifts (or a gift after away-harvest) are not overwritten.
 
-**Save.** Key `soulgather-v0`. Old saves: missing `favorEarned` copies favor; missing aspect is none; missing `echoLevel`/`seatLevel`/`kindleLevel`/`ashenLevel`/`crownWeight`/`longMemoryLevel` default 0; missing `titheLeft`/`nightLeft` 0; missing `runStartedAt` now; missing `allTimeSouls` seeds from this-run `lifetimeSouls`; missing `tributesLaid` 0; missing lanterns/ash/censers/marks/fetters default 0; missing `autobind`/`autobindSpirits`/`tithePaid` false; missing `peakShades` seeds from current shades; missing gift flags false (except `bonusFirstTribute` seeds true if `tributesLaid >= 1`). Numeric stocks load through Num (Number → {m,e}). New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap. Footer Memory (collapsed, near Reset) exports or imports that JSON. Toast retrigger on import.
+**Save.** Key `soulgather-v0`. Old saves: missing `favorEarned` copies favor; missing aspect is none; missing `echoLevel`/`seatLevel`/`kindleLevel`/`ashenLevel`/`depthLevel`/`crownWeight`/`longMemoryLevel` default 0; missing `titheLeft`/`nightLeft` 0; missing `runStartedAt` now; missing `allTimeSouls` seeds from this-run `lifetimeSouls`; missing `tributesLaid` 0; missing lanterns/ash/censers/marks/fetters default 0; missing `autobind`/`autobindSpirits`/`autobindVessels`/`tithePaid` false; missing `peakShades` seeds from current shades; missing gift flags false (except `bonusFirstTribute` seeds true if `tributesLaid >= 1`). Numeric stocks load through Num (Number → {m,e}). New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap. Footer Memory (collapsed, near Reset) exports or imports that JSON. Toast retrigger on import.
 
 Do not restyle the locked masthead or well sigil.
 

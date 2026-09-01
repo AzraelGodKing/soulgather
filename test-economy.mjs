@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.0 economy smoke test.
+ * Soulgather v1.1 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -160,6 +160,11 @@ function kindleCost(level) {
 function ashenCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 3 * Math.pow(2, n);
+}
+
+function depthCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 4 * Math.pow(2, n);
 }
 
 function siphonCost(level) {
@@ -538,6 +543,8 @@ assertEqual("fetterCost(0)", fetterCost(0), 20);
 assertEqual("fetterCost(1)", fetterCost(1), 24);
 assertEqual("kindleCost(0)", kindleCost(0), 4);
 assertEqual("ashenCost(0)", ashenCost(0), 3);
+assertEqual("depthCost(0)", depthCost(0), 4);
+assertEqual("depthCost(1)", depthCost(1), 8);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 
 assertEqual("crownCost(0)", crownCost(0), 6);

@@ -42,6 +42,7 @@
   var UNLOCK_FETTERS = 3;
   var UNLOCK_AUTOBIND_SHADES = 15;
   var UNLOCK_AUTOBIND_SPIRITS = 10;
+  var UNLOCK_AUTOBIND_VESSELS = 3;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var NIGHT_TITHE_MIN = 10;
   var NIGHT_TITHE_FRAC = 0.25;
@@ -242,6 +243,11 @@
     return 3 * Math.pow(2, n);
   }
 
+  function depthCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 4 * Math.pow(2, n);
+  }
+
   function siphonCost(level) {
     return N.cost(50, 3, level);
   }
@@ -334,7 +340,11 @@
     "giftSouls",
     "giftShades",
     "giftVessel",
-    "giftTribute"
+    "giftTribute",
+    "giftThousand",
+    "giftLantern",
+    "giftCenser",
+    "giftFetter"
   ];
 
   var CHRONICLE_LINES = {
@@ -358,7 +368,11 @@
     giftSouls: "A hundred souls. The well returned a gift.",
     giftShades: "Ten shades. One more was given.",
     giftVessel: "The first vessel. Ash remains.",
-    giftTribute: "First tribute. The GodKing was generous."
+    giftTribute: "First tribute. The GodKing was generous.",
+    giftThousand: "A thousand souls. The well returned a greater gift.",
+    giftLantern: "The first lantern. The well returned ten souls.",
+    giftCenser: "The first censer. Ash remains in the smoke.",
+    giftFetter: "The first fetter. Two shades were given."
   };
 
   function formatGoalNum(n) {
@@ -596,6 +610,7 @@
       unlockedFetters: false,
       unlockedAutobind: false,
       unlockedAutobindSpirits: false,
+      unlockedAutobindVessels: false,
       unlockedNightTithe: false,
       toastShown: false,
       vesselToastShown: false,
@@ -610,6 +625,7 @@
       seatLevel: 0,
       kindleLevel: 0,
       ashenLevel: 0,
+      depthLevel: 0,
       buyMode: "1",
       siphonLevel: 0,
       levyLevel: 0,
@@ -623,11 +639,16 @@
       tithePaid: false,
       autobind: false,
       autobindSpirits: false,
+      autobindVessels: false,
       peakShades: N.fromNumber(0),
       bonusLifetimeSouls: false,
       bonusPeakShades: false,
       bonusFirstVessel: false,
       bonusFirstTribute: false,
+      bonusThousandSouls: false,
+      bonusFirstLantern: false,
+      bonusFirstCenser: false,
+      bonusFirstFetter: false,
       crownWeight: 0,
       longMemoryLevel: 0,
       runStartedAt: Date.now(),
@@ -639,6 +660,9 @@
   var state = freshState();
   var lastFrame = 0;
   var toastTimer = 0;
+  var toastQueue = [];
+  var toastActive = false;
+  var toastHold = false;
   var pendingAwayToast = null;
   var els = {};
 
@@ -754,7 +778,7 @@
     }
   }
 
-  function applyDt(dt) {
+  function applyDt(dt, live) {
     if (dt <= 0 || !isFinite(dt)) return;
     dt = clamp(dt, 0, MAX_DT);
 
@@ -781,6 +805,7 @@
 
     tryAutobind();
     tryAutobindSpirits();
+    if (live) tryAutobindVessels();
     checkUnlock();
   }
 
@@ -856,6 +881,10 @@
 
     if (!state.unlockedAutobindSpirits && N.cmp(state.spirits, UNLOCK_AUTOBIND_SPIRITS) >= 0) {
       state.unlockedAutobindSpirits = true;
+    }
+
+    if (!state.unlockedAutobindVessels && N.cmp(state.vessels, UNLOCK_AUTOBIND_VESSELS) >= 0) {
+      state.unlockedAutobindVessels = true;
     }
 
     if (!state.unlockedNightTithe) {
@@ -964,6 +993,7 @@
       showToast("A lantern kindles.");
     }
     markChronicle("lantern");
+    checkUnlock();
     save();
     render();
   }
@@ -975,6 +1005,7 @@
     state.shades = N.sub(state.shades, cost);
     state.fetters = N.add(state.fetters, 1);
     markChronicle("fetter");
+    checkUnlock();
     save();
     render();
   }
@@ -986,6 +1017,7 @@
     state.vessels = N.sub(state.vessels, cost);
     state.censers = N.add(state.censers, 1);
     markChronicle("censer");
+    checkUnlock();
     save();
     render();
   }
@@ -1063,6 +1095,15 @@
     if (!isFinite(cost) || state.favor < cost) return;
     state.favor -= cost;
     state.ashenLevel += 1;
+    save();
+    render();
+  }
+
+  function buyDepth() {
+    var cost = depthCost(state.depthLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.depthLevel += 1;
     save();
     render();
   }
@@ -1161,6 +1202,22 @@
     state.lifetimeSpirits = N.add(state.lifetimeSpirits, 1);
   }
 
+  function toggleAutobindVessels() {
+    if (!state.unlockedAutobindVessels) return;
+    state.autobindVessels = !state.autobindVessels;
+    save();
+    render();
+  }
+
+  function tryAutobindVessels() {
+    if (!state.autobindVessels) return;
+    if (!state.unlockedVessels) return;
+    var cost = vesselCost(state.vessels);
+    if (N.cmp(state.spirits, cost) < 0) return;
+    state.spirits = N.sub(state.spirits, cost);
+    state.vessels = N.add(state.vessels, 1);
+  }
+
   function bumpPeakShades() {
     state.peakShades = N.max(num(state.peakShades), num(state.shades));
   }
@@ -1196,6 +1253,43 @@
       state.ash = N.add(state.ash, 3);
       markChronicle("giftVessel");
       showToast("Ash from the first vessel.");
+      granted = true;
+    }
+
+    if (
+      !state.bonusThousandSouls &&
+      (N.cmp(state.lifetimeSouls, 1000) >= 0 || N.cmp(state.allTimeSouls, 1000) >= 0)
+    ) {
+      state.bonusThousandSouls = true;
+      state.souls = N.add(state.souls, 200);
+      markChronicle("giftThousand");
+      showToast("The well returns two hundred souls.");
+      granted = true;
+    }
+
+    if (!state.bonusFirstLantern && N.cmp(state.lanterns, 1) >= 0) {
+      state.bonusFirstLantern = true;
+      state.souls = N.add(state.souls, 10);
+      markChronicle("giftLantern");
+      showToast("Ten souls for the first lantern.");
+      granted = true;
+    }
+
+    if (!state.bonusFirstCenser && N.cmp(state.censers, 1) >= 0) {
+      state.bonusFirstCenser = true;
+      state.ash = N.add(state.ash, 5);
+      markChronicle("giftCenser");
+      showToast("Ash from the first censer.");
+      granted = true;
+    }
+
+    if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
+      state.bonusFirstFetter = true;
+      state.shades = N.add(state.shades, 2);
+      state.lifetimeShades = N.add(state.lifetimeShades, 2);
+      bumpPeakShades();
+      markChronicle("giftFetter");
+      showToast("Two shades for the first fetter.");
       granted = true;
     }
 
@@ -1272,6 +1366,7 @@
     "unlockedFetters",
     "unlockedAutobind",
     "unlockedAutobindSpirits",
+    "unlockedAutobindVessels",
     "unlockedNightTithe",
     "toastShown",
     "vesselToastShown",
@@ -1286,6 +1381,7 @@
     "seatLevel",
     "kindleLevel",
     "ashenLevel",
+    "depthLevel",
     "buyMode",
     "siphonLevel",
     "levyLevel",
@@ -1299,11 +1395,16 @@
     "tithePaid",
     "autobind",
     "autobindSpirits",
+    "autobindVessels",
     "peakShades",
     "bonusLifetimeSouls",
     "bonusPeakShades",
     "bonusFirstVessel",
     "bonusFirstTribute",
+    "bonusThousandSouls",
+    "bonusFirstLantern",
+    "bonusFirstCenser",
+    "bonusFirstFetter",
     "crownWeight",
     "longMemoryLevel",
     "runStartedAt",
@@ -1343,6 +1444,7 @@
       unlockedFetters: !!state.unlockedFetters,
       unlockedAutobind: !!state.unlockedAutobind,
       unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
+      unlockedAutobindVessels: !!state.unlockedAutobindVessels,
       unlockedNightTithe: !!state.unlockedNightTithe,
       toastShown: state.toastShown,
       vesselToastShown: state.vesselToastShown,
@@ -1357,6 +1459,7 @@
       seatLevel: state.seatLevel,
       kindleLevel: Number(state.kindleLevel) || 0,
       ashenLevel: Number(state.ashenLevel) || 0,
+      depthLevel: Number(state.depthLevel) || 0,
       buyMode: state.buyMode,
       siphonLevel: state.siphonLevel,
       levyLevel: state.levyLevel,
@@ -1370,11 +1473,16 @@
       tithePaid: !!state.tithePaid,
       autobind: !!state.autobind,
       autobindSpirits: !!state.autobindSpirits,
+      autobindVessels: !!state.autobindVessels,
       peakShades: dumpNum(state.peakShades),
       bonusLifetimeSouls: !!state.bonusLifetimeSouls,
       bonusPeakShades: !!state.bonusPeakShades,
       bonusFirstVessel: !!state.bonusFirstVessel,
       bonusFirstTribute: !!state.bonusFirstTribute,
+      bonusThousandSouls: !!state.bonusThousandSouls,
+      bonusFirstLantern: !!state.bonusFirstLantern,
+      bonusFirstCenser: !!state.bonusFirstCenser,
+      bonusFirstFetter: !!state.bonusFirstFetter,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
@@ -1419,6 +1527,7 @@
     state.unlockedFetters = !!data.unlockedFetters;
     state.unlockedAutobind = !!data.unlockedAutobind;
     state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
+    state.unlockedAutobindVessels = !!data.unlockedAutobindVessels;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
@@ -1438,6 +1547,7 @@
     state.seatLevel = Number(data.seatLevel) || 0;
     state.kindleLevel = Number(data.kindleLevel) || 0;
     state.ashenLevel = Number(data.ashenLevel) || 0;
+    state.depthLevel = Math.max(0, Math.floor(Number(data.depthLevel) || 0));
     state.buyMode = normalizeBuyMode(data.buyMode);
     state.siphonLevel = Number(data.siphonLevel) || 0;
     state.levyLevel = Number(data.levyLevel) || 0;
@@ -1453,6 +1563,7 @@
     state.tithePaid = !!data.tithePaid || (Number(data.titheLeft) || 0) > 0;
     state.autobind = !!data.autobind;
     state.autobindSpirits = !!data.autobindSpirits;
+    state.autobindVessels = !!data.autobindVessels;
     state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
@@ -1462,6 +1573,10 @@
     } else {
       state.bonusFirstTribute = !!data.bonusFirstTribute;
     }
+    state.bonusThousandSouls = !!data.bonusThousandSouls;
+    state.bonusFirstLantern = !!data.bonusFirstLantern;
+    state.bonusFirstCenser = !!data.bonusFirstCenser;
+    state.bonusFirstFetter = !!data.bonusFirstFetter;
     state.crownWeight = Math.max(0, Math.floor(Number(data.crownWeight) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
@@ -1660,6 +1775,7 @@
     var keptSeat = Number(state.seatLevel) || 0;
     var keptKindle = Number(state.kindleLevel) || 0;
     var keptAshen = Number(state.ashenLevel) || 0;
+    var keptDepth = Number(state.depthLevel) || 0;
     var keptCrown = Number(state.crownWeight) || 0;
     var keptLongMem = Number(state.longMemoryLevel) || 0;
     var keptBuy = state.buyMode;
@@ -1670,6 +1786,10 @@
     var keptBonusPeakShades = !!state.bonusPeakShades;
     var keptBonusFirstVessel = !!state.bonusFirstVessel;
     var keptBonusFirstTribute = true;
+    var keptBonusThousandSouls = !!state.bonusThousandSouls;
+    var keptBonusFirstLantern = !!state.bonusFirstLantern;
+    var keptBonusFirstCenser = !!state.bonusFirstCenser;
+    var keptBonusFirstFetter = !!state.bonusFirstFetter;
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -1680,6 +1800,7 @@
     state.seatLevel = keptSeat;
     state.kindleLevel = keptKindle;
     state.ashenLevel = keptAshen;
+    state.depthLevel = keptDepth;
     state.crownWeight = keptCrown;
     state.longMemoryLevel = keptLongMem;
     state.buyMode = keptBuy;
@@ -1691,12 +1812,17 @@
     state.bonusPeakShades = keptBonusPeakShades;
     state.bonusFirstVessel = keptBonusFirstVessel;
     state.bonusFirstTribute = keptBonusFirstTribute;
+    state.bonusThousandSouls = keptBonusThousandSouls;
+    state.bonusFirstLantern = keptBonusFirstLantern;
+    state.bonusFirstCenser = keptBonusFirstCenser;
+    state.bonusFirstFetter = keptBonusFirstFetter;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
     state.tithePaid = false;
     state.autobind = false;
     state.autobindSpirits = false;
+    state.autobindVessels = false;
     state.runStartedAt = Date.now();
     if (keptMemory > 0) {
       state.shades = N.fromNumber(keptMemory);
@@ -1721,6 +1847,10 @@
     if (keptLongMem > 0) {
       state.fetters = N.fromNumber(keptLongMem);
       state.unlockedFetters = true;
+    }
+    if (keptDepth > 0) {
+      state.wellDepth = keptDepth;
+      state.unlockedWell = true;
     }
     hideToast(true);
     hideUnlockCards();
@@ -1862,6 +1992,7 @@
     if (els.nightTitheRow) els.nightTitheRow.classList.add("is-hidden");
     if (els.autobindRow) els.autobindRow.classList.add("is-hidden");
     if (els.autobindSpiritsRow) els.autobindSpiritsRow.classList.add("is-hidden");
+    if (els.autobindVesselsRow) els.autobindVesselsRow.classList.add("is-hidden");
   }
 
   function hideMarks() {
@@ -1940,7 +2071,17 @@
   }
 
   function showToast(message) {
+    if (!message) return;
+    if (!els.toast || toastHold || toastActive) {
+      toastQueue.push(message);
+      return;
+    }
+    presentToast(message);
+  }
+
+  function presentToast(message) {
     if (!els.toast) return;
+    toastActive = true;
     window.clearTimeout(toastTimer);
     els.toast.classList.remove("is-visible");
     void els.toast.offsetWidth;
@@ -1955,13 +2096,22 @@
 
   function hideToast(immediate) {
     if (!els.toast) return;
+    window.clearTimeout(toastTimer);
     els.toast.classList.remove("is-visible");
     if (immediate) {
+      toastQueue.length = 0;
+      toastActive = false;
       els.toast.classList.add("is-hidden");
       return;
     }
+    toastActive = false;
+    if (toastQueue.length) {
+      var next = toastQueue.shift();
+      presentToast(next);
+      return;
+    }
     window.setTimeout(function () {
-      if (!els.toast.classList.contains("is-visible")) {
+      if (!els.toast.classList.contains("is-visible") && !toastActive) {
         els.toast.classList.add("is-hidden");
       }
     }, 500);
@@ -2262,6 +2412,22 @@
           els.autobindSpiritsBuy.setAttribute("aria-pressed", state.autobindSpirits ? "true" : "false");
         }
       }
+
+      var autoVesselOpen = !!state.unlockedAutobindVessels;
+      if (els.autobindVesselsRow) {
+        els.autobindVesselsRow.classList.toggle("is-hidden", !autoVesselOpen);
+        els.autobindVesselsRow.classList.toggle("is-on", autoVesselOpen && !!state.autobindVessels);
+      }
+      if (autoVesselOpen) {
+        if (els.autobindVesselsEffect) {
+          els.autobindVesselsEffect.textContent = state.autobindVessels ? "The hollow fills" : "Idle bind";
+        }
+        if (els.autobindVesselsBuy) {
+          els.autobindVesselsBuy.disabled = false;
+          els.autobindVesselsBuy.textContent = "Autobind Vessels";
+          els.autobindVesselsBuy.setAttribute("aria-pressed", state.autobindVessels ? "true" : "false");
+        }
+      }
     }
 
     var marksOpen = !!state.unlockedMarks;
@@ -2451,6 +2617,19 @@
       if (els.ashenBuy) {
         els.ashenBuy.disabled = state.favor < aCost;
       }
+
+      var dCost = depthCost(state.depthLevel);
+      var depthN = Number(state.depthLevel) || 0;
+      if (els.depthEffect) {
+        els.depthEffect.textContent =
+          "+" +
+          F.formatNumber(depthN) +
+          " Well Depth at tribute";
+      }
+      if (els.depthCost) els.depthCost.textContent = F.formatNumber(dCost) + " Favor";
+      if (els.depthBuy) {
+        els.depthBuy.disabled = state.favor < dCost;
+      }
     }
 
     var crownOpen = crownUnlocked();
@@ -2493,7 +2672,7 @@
     if (!lastFrame) lastFrame = now;
     var dt = (now - lastFrame) / 1000;
     lastFrame = now;
-    applyDt(dt);
+    applyDt(dt, true);
     render();
     window.requestAnimationFrame(tick);
   }
@@ -2572,6 +2751,9 @@
     els.ashenEffect = document.getElementById("ashen-effect");
     els.ashenCost = document.getElementById("ashen-cost");
     els.ashenBuy = document.getElementById("ashen-buy");
+    els.depthEffect = document.getElementById("depth-effect");
+    els.depthCost = document.getElementById("depth-cost");
+    els.depthBuy = document.getElementById("depth-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -2598,6 +2780,9 @@
     els.autobindSpiritsRow = document.getElementById("autobind-spirits-row");
     els.autobindSpiritsEffect = document.getElementById("autobind-spirits-effect");
     els.autobindSpiritsBuy = document.getElementById("autobind-spirits-buy");
+    els.autobindVesselsRow = document.getElementById("autobind-vessels-row");
+    els.autobindVesselsEffect = document.getElementById("autobind-vessels-effect");
+    els.autobindVesselsBuy = document.getElementById("autobind-vessels-buy");
     els.crownPanel = document.getElementById("crown-panel");
     els.crownFavor = document.getElementById("crown-favor");
     els.crownWeightEffect = document.getElementById("crown-weight-effect");
@@ -2651,6 +2836,7 @@
     if (els.seatBuy) els.seatBuy.addEventListener("click", buySeat);
     if (els.kindleBuy) els.kindleBuy.addEventListener("click", buyKindle);
     if (els.ashenBuy) els.ashenBuy.addEventListener("click", buyAshen);
+    if (els.depthBuy) els.depthBuy.addEventListener("click", buyDepth);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
@@ -2658,6 +2844,7 @@
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
     if (els.autobindBuy) els.autobindBuy.addEventListener("click", toggleAutobind);
     if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
+    if (els.autobindVesselsBuy) els.autobindVesselsBuy.addEventListener("click", toggleAutobindVessels);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
     if (els.markEmberBuy) {
@@ -2773,6 +2960,7 @@
 
   function boot() {
     bind();
+    toastHold = true;
     load();
     if (!state.runStartedAt) state.runStartedAt = Date.now();
     checkUnlock();
@@ -2785,8 +2973,12 @@
     if (state.unlockedCensers) revealCensers(false);
     render();
     if (pendingAwayToast) {
-      showToast(pendingAwayToast);
+      toastQueue.unshift(pendingAwayToast);
       pendingAwayToast = null;
+    }
+    toastHold = false;
+    if (!toastActive && toastQueue.length) {
+      presentToast(toastQueue.shift());
     }
     window.setInterval(save, AUTOSAVE_MS);
     window.requestAnimationFrame(tick);
@@ -2819,6 +3011,7 @@
     seatCost: seatCost,
     kindleCost: kindleCost,
     ashenCost: ashenCost,
+    depthCost: depthCost,
     crownCost: crownCost,
     longMemCost: longMemCost,
     siphonCost: siphonCost,

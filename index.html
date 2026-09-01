@@ -243,6 +243,17 @@
         </div>
         <button type="button" class="card-buy" id="autobind-spirits-buy" aria-pressed="false">Autobind Spirits</button>
       </div>
+
+      <div class="rite-row is-hidden" id="autobind-vessels-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Autobind Vessels</h3>
+          <p class="rite-flavor">The hollow fills itself.</p>
+          <p class="rite-stats">
+            <span id="autobind-vessels-effect">Idle bind</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="autobind-vessels-buy" aria-pressed="false">Autobind Vessels</button>
+      </div>
     </section>
 
 
@@ -417,6 +428,18 @@
         </div>
         <button type="button" class="card-buy" id="ashen-buy" disabled>Remember the Ash</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Depth</h3>
+          <p class="edict-flavor">The well was always deeper.</p>
+          <p class="edict-stats">
+            Effect: <span id="depth-effect">+0 Well Depth at tribute</span>
+            · Cost: <span id="depth-cost">4 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="depth-buy" disabled>Speak the Depth</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -464,7 +487,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.0 · prototype</span>
+      <span>Soulgather v1.1 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
