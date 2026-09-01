@@ -4,7 +4,8 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 
 ## Play
 
-Open `index.html` in a browser (`file://` is fine). Or `python3 -m http.server` in this folder. Vanilla HTML/CSS/JS, no build, no npm.
+Live: https://azraelgodking.github.io/soulgather/
+Open `index.html` in a browser (`file://` is fine). Or `python3 -m http.server` in this folder. Vanilla HTML/CSS/JS, no build, no npm. Pushes to main redeploy Pages.
 
 Hotkeys: Space/Enter draw, 1/2/3 buy mode.
 
