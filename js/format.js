@@ -102,9 +102,27 @@
     return formatNumber(n) + " / sec";
   }
 
+  /**
+   * Blessing HUD: 1 decimal when it is enough (×1.5, ×2.0),
+   * 2 decimals when 1 decimal would round (×1.05 not ×1.1).
+   */
+  function formatBlessing(m) {
+    if (isNumObj(m)) {
+      m = m.m * Math.pow(10, m.e);
+    }
+    m = Number(m);
+    if (!isFinite(m)) m = 1;
+    var tenth = m * 10;
+    if (Math.abs(tenth - Math.round(tenth)) < 1e-8) {
+      return "\u00d7" + m.toFixed(1);
+    }
+    return "\u00d7" + m.toFixed(2);
+  }
+
   global.SoulgatherFormat = {
     formatNumber: formatNumber,
     formatRate: formatRate,
-    formatFromNum: formatFromNum
+    formatFromNum: formatFromNum,
+    formatBlessing: formatBlessing
   };
 })(typeof window !== "undefined" ? window : globalThis);

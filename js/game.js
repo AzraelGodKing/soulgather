@@ -49,6 +49,10 @@
   var NIGHT_TITHE_SECS = 30;
   var REMEMBRANCE_FAVOR_COST = 3;
   var ASHEN_TIDE_MAX = 5;
+  var CHOIR_MAX = 10;
+  var CHOIR_LANTERN_COST = 5;
+  var UNLOCK_CHOIR_LANTERNS = 5;
+  var UNLOCK_CHOIR_ASH = 20;
   var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000];
   var BOUND_NAMES = [
     "The First Siphon",
@@ -303,10 +307,16 @@
     return on ? 1.05 : 1;
   }
 
-  function ashFromShadeFrac(level) {
+  function ashFromShadeFrac(level, choirLevel) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     if (n > ASHEN_TIDE_MAX) n = ASHEN_TIDE_MAX;
-    return ASH_FROM_SHADE_FRAC + 0.005 * n;
+    var c = Math.max(0, Math.floor(Number(choirLevel) || 0));
+    if (c > CHOIR_MAX) c = CHOIR_MAX;
+    return ASH_FROM_SHADE_FRAC + 0.005 * n + 0.005 * c;
+  }
+
+  function choirAshRate(choirLevel, ashenTide) {
+    return ashFromShadeFrac(ashenTide, choirLevel);
   }
 
   function namesFromPeak(peak) {
@@ -441,6 +451,8 @@
     "giftTenThousand",
     "giftThrone",
     "giftCrown",
+    "giftFirstName",
+    "choir",
     "vow",
     "quietCourt",
     "name1",
@@ -487,6 +499,8 @@
     giftTenThousand: "Ten thousand souls. The well returned a greater gift.",
     giftThrone: "The first throne. A vessel was returned.",
     giftCrown: "The crown was generous.",
+    giftFirstName: "The first name. The well returned fifteen souls.",
+    choir: "The choir of ash was raised.",
     vow: "A vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
     name1: "The First Siphon.",
@@ -709,6 +723,9 @@
     if ((Number(state.quietCourtLevel) || 0) >= 1) {
       if (markChronicle("quietCourt")) added = true;
     }
+    if ((Number(state.choirLevel) || 0) >= 1) {
+      if (markChronicle("choir")) added = true;
+    }
     var namesN = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var ni;
     for (ni = 1; ni <= namesN; ni++) {
@@ -798,6 +815,9 @@
       bonusTenThousandSouls: false,
       bonusFirstThrone: false,
       giftCrown: false,
+      giftFirstName: false,
+      choirLevel: 0,
+      unlockedChoir: false,
       crownWeight: 0,
       longMemoryLevel: 0,
       quietCourtLevel: 0,
@@ -903,7 +923,7 @@
   }
 
   function ashPerSec() {
-    var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel));
+    var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
     var fromCensers = N.mul(
       N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
       nightMult(nightActive())
@@ -1048,6 +1068,16 @@
     if (!state.unlockedNightTithe) {
       if (state.tithePaid || N.cmp(state.lanterns, UNLOCK_NIGHT_LANTERNS) >= 0) {
         state.unlockedNightTithe = true;
+      }
+    }
+
+    if (!state.unlockedChoir) {
+      if (
+        N.cmp(state.lanterns, UNLOCK_CHOIR_LANTERNS) >= 0 ||
+        N.cmp(state.ash, UNLOCK_CHOIR_ASH) >= 0 ||
+        (Number(state.choirLevel) || 0) >= 1
+      ) {
+        state.unlockedChoir = true;
       }
     }
     syncChronicle();
@@ -1502,6 +1532,12 @@
       state.namesBound = current;
       markChronicle("name" + current);
       showToast("A name is bound: " + epithet + ".");
+      if (current === 1 && !state.giftFirstName) {
+        state.giftFirstName = true;
+        state.souls = N.add(state.souls, 15);
+        markChronicle("giftFirstName");
+        showToast("Fifteen souls for the first name.");
+      }
       granted = true;
     }
     if (current >= 12) state.namesBound = 12;
@@ -1588,6 +1624,21 @@
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
     state.remembrance -= cost;
     state.ashenTideLevel = level + 1;
+    save();
+    render();
+  }
+
+  function raiseChoir() {
+    if (!state.unlockedChoir) return;
+    var level = Math.max(0, Math.floor(Number(state.choirLevel) || 0));
+    if (level >= CHOIR_MAX) return;
+    if (N.cmp(state.lanterns, CHOIR_LANTERN_COST) < 0) return;
+    state.lanterns = N.sub(state.lanterns, CHOIR_LANTERN_COST);
+    state.unlockedLanterns = true;
+    state.choirLevel = level + 1;
+    if (markChronicle("choir")) {
+      showToast("The choir of ash sings.");
+    }
     save();
     render();
   }
@@ -1692,6 +1743,9 @@
     "bonusTenThousandSouls",
     "bonusFirstThrone",
     "giftCrown",
+    "giftFirstName",
+    "choirLevel",
+    "unlockedChoir",
     "crownWeight",
     "longMemoryLevel",
     "quietCourtLevel",
@@ -1781,6 +1835,9 @@
       bonusTenThousandSouls: !!state.bonusTenThousandSouls,
       bonusFirstThrone: !!state.bonusFirstThrone,
       giftCrown: !!state.giftCrown,
+      giftFirstName: !!state.giftFirstName,
+      choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
+      unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
       quietCourtLevel: Number(state.quietCourtLevel) || 0,
@@ -1891,6 +1948,13 @@
     } else {
       state.giftCrown = !!data.giftCrown;
     }
+    if (data.giftFirstName == null) {
+      state.giftFirstName = Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 1;
+    } else {
+      state.giftFirstName = !!data.giftFirstName;
+    }
+    state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
+    state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -2121,6 +2185,7 @@
     var keptBonusTenThousandSouls = !!state.bonusTenThousandSouls;
     var keptBonusFirstThrone = !!state.bonusFirstThrone;
     var keptGiftCrown = !!state.giftCrown;
+    var keptGiftFirstName = !!state.giftFirstName;
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -2156,6 +2221,7 @@
     state.bonusTenThousandSouls = keptBonusTenThousandSouls;
     state.bonusFirstThrone = keptBonusFirstThrone;
     state.giftCrown = keptGiftCrown;
+    state.giftFirstName = keptGiftFirstName;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -2226,12 +2292,23 @@
     return SoulgatherFormat.formatNumber(n);
   }
 
-  function formatMult(m) {
+  function formatBlessing(m) {
+    if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatBlessing) {
+      return SoulgatherFormat.formatBlessing(m);
+    }
     if (m && typeof m === "object" && typeof m.m === "number") {
       m = N.toNumber(m);
     }
     if (!isFinite(m)) m = 1;
-    return "\u00d7" + m.toFixed(1);
+    var tenth = m * 10;
+    if (Math.abs(tenth - Math.round(tenth)) < 1e-8) {
+      return "\u00d7" + m.toFixed(1);
+    }
+    return "\u00d7" + m.toFixed(2);
+  }
+
+  function formatMult(m) {
+    return formatBlessing(m);
   }
 
   function formatTimes(n) {
@@ -2342,6 +2419,7 @@
     if (els.wellDrawsRow) els.wellDrawsRow.classList.add("is-hidden");
     if (els.titheRow) els.titheRow.classList.add("is-hidden");
     if (els.nightTitheRow) els.nightTitheRow.classList.add("is-hidden");
+    if (els.choirRow) els.choirRow.classList.add("is-hidden");
     if (els.autobindRow) els.autobindRow.classList.add("is-hidden");
     if (els.autobindSpiritsRow) els.autobindSpiritsRow.classList.add("is-hidden");
     if (els.autobindVesselsRow) els.autobindVesselsRow.classList.add("is-hidden");
@@ -2539,6 +2617,7 @@
         state.unlockedMarks ||
         state.unlockedCensers ||
         state.unlockedNightTithe ||
+        state.unlockedChoir ||
         N.cmp(state.ash, 0) > 0;
       if (showAsh) {
         els.soulsAsh.textContent = "Ash " + F.formatNumber(state.ash);
@@ -2688,7 +2767,7 @@
       els.throneCard.classList.toggle("can-buy", thronePlan.can && !throneBlocked);
     }
 
-    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws;
+    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
@@ -2829,6 +2908,34 @@
           els.autobindVesselsBuy.disabled = false;
           els.autobindVesselsBuy.textContent = "Autobind Vessels";
           els.autobindVesselsBuy.setAttribute("aria-pressed", state.autobindVessels ? "true" : "false");
+        }
+      }
+
+      var choirOpen = !!state.unlockedChoir;
+      if (els.choirRow) {
+        els.choirRow.classList.toggle("is-hidden", !choirOpen);
+      }
+      if (choirOpen) {
+        var choirN = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0)));
+        var choirFrac = choirAshRate(choirN, state.ashenTideLevel);
+        var choirPct = choirFrac * 100;
+        var choirPctStr =
+          Math.abs(choirPct - Math.round(choirPct)) < 0.05 ? String(Math.round(choirPct)) : choirPct.toFixed(1);
+        if (els.choirEffect) {
+          els.choirEffect.textContent = "Ash from shades " + choirPctStr + "%";
+        }
+        if (choirN >= CHOIR_MAX) {
+          if (els.choirCost) els.choirCost.textContent = "\u2014";
+          if (els.choirBuy) {
+            els.choirBuy.disabled = true;
+            els.choirBuy.textContent = "The choir is full.";
+          }
+        } else {
+          if (els.choirCost) els.choirCost.textContent = F.formatNumber(CHOIR_LANTERN_COST) + " Lanterns";
+          if (els.choirBuy) {
+            els.choirBuy.disabled = N.cmp(state.lanterns, CHOIR_LANTERN_COST) < 0;
+            els.choirBuy.textContent = "Raise the Choir";
+          }
         }
       }
     }
@@ -3308,6 +3415,10 @@
     els.nightTitheEffect = document.getElementById("night-tithe-effect");
     els.nightTitheCost = document.getElementById("night-tithe-cost");
     els.nightTitheBuy = document.getElementById("night-tithe-buy");
+    els.choirRow = document.getElementById("choir-row");
+    els.choirEffect = document.getElementById("choir-effect");
+    els.choirCost = document.getElementById("choir-cost");
+    els.choirBuy = document.getElementById("choir-buy");
     els.autobindRow = document.getElementById("autobind-row");
     els.autobindEffect = document.getElementById("autobind-effect");
     els.autobindBuy = document.getElementById("autobind-buy");
@@ -3404,6 +3515,7 @@
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
+    if (els.choirBuy) els.choirBuy.addEventListener("click", raiseChoir);
     if (els.autobindBuy) els.autobindBuy.addEventListener("click", toggleAutobind);
     if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
     if (els.autobindVesselsBuy) els.autobindVesselsBuy.addEventListener("click", toggleAutobindVessels);
@@ -3602,6 +3714,8 @@
     remembranceFavorCost: remembranceFavorCost,
     deeperNightCost: deeperNightCost,
     ashenTideCost: ashenTideCost,
+    choirAshRate: choirAshRate,
+    formatBlessing: formatBlessing,
     nightTitheSecs: nightTitheSecs,
     nightSecs: nightSecs,
     ashFromShadeFrac: ashFromShadeFrac,

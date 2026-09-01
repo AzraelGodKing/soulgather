@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.3 economy smoke test.
+ * Soulgather v1.4 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -142,6 +142,25 @@ function deeperNightCost(level) {
 function ashenTideCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 1 * Math.pow(2, n);
+}
+
+function choirAshRate(choirLevel, ashenTide) {
+  const c = Math.max(0, Math.min(10, Math.floor(Number(choirLevel) || 0)));
+  const tide = Math.max(0, Math.min(5, Math.floor(Number(ashenTide) || 0)));
+  return 0.01 + 0.005 * tide + 0.005 * c;
+}
+
+function formatBlessing(m) {
+  if (typeof F !== 'undefined' && F && typeof F.formatBlessing === 'function') {
+    return F.formatBlessing(m);
+  }
+  m = Number(m);
+  if (!isFinite(m)) m = 1;
+  const tenth = m * 10;
+  if (Math.abs(tenth - Math.round(tenth)) < 1e-8) {
+    return '×' + m.toFixed(1);
+  }
+  return '×' + m.toFixed(2);
 }
 
 function nightTitheSecs(level) {
@@ -702,6 +721,13 @@ assertEqual("nightTitheSecs(2)", nightTitheSecs(2), 50);
 assertEqual("nightSecs(0)", nightSecs(0), 30);
 assertEqual("nightSecs(2)", nightSecs(2), 50);
 assertEqual("prodMult namesComplete", prodMult(0, 0, 0, 0.1, 0, true), 1.05);
+
+assertEqual("choirAshRate base", choirAshRate(0), 0.01);
+assertEqual("choirAshRate choir 2 no tide", choirAshRate(2), 0.02);
+assertEqual("choirAshRate choir 2 tide 0 explicit", choirAshRate(2, 0), 0.02);
+assertEqual("formatBlessing(1.05)", F.formatBlessing(1.05), "\u00d71.05");
+assertEqual("formatBlessing(1.5)", F.formatBlessing(1.5), "\u00d71.5");
+assertTrue("formatBlessing(1.05) is not x1.1", F.formatBlessing(1.05) !== "\u00d71.1");
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
