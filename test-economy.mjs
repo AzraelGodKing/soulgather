@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.2 economy smoke test.
+ * Soulgather v1.3 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -111,14 +111,46 @@ function throneWeight(dominion) {
   return dominion ? 0.15 : 0.1;
 }
 
-function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight) {
+function namesCompleteMult(on) {
+  return on ? 1.05 : 1;
+}
+
+function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete) {
   const w = weight == null ? 0.1 : Number(weight);
   return (
     prestigeMult(favorEarned) *
     (1 + w * (Number(thrones) || 0)) *
     (1 + 0.25 * (Number(edictLevel) || 0)) *
-    (1 + 0.10 * (Number(crownWeight) || 0))
+    (1 + 0.10 * (Number(crownWeight) || 0)) *
+    namesCompleteMult(namesComplete)
   );
+}
+
+function remembranceCostFavor() {
+  return 3;
+}
+
+function remembranceFavorCost() {
+  return remembranceCostFavor();
+}
+
+function deeperNightCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 1 * Math.pow(2, n);
+}
+
+function ashenTideCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 1 * Math.pow(2, n);
+}
+
+function nightTitheSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 30 + 10 * n;
+}
+
+function nightSecs(level) {
+  return nightTitheSecs(level);
 }
 
 function crownCost(level) {
@@ -655,6 +687,21 @@ assertEqual(
   }),
   "The well gathers. Another Tribute at 25000 lifetime Souls this run."
 );
+
+assertEqual("remembranceCostFavor", remembranceCostFavor(), 3);
+assertEqual("remembranceFavorCost", remembranceFavorCost(), 3);
+assertEqual("deeperNightCost(0)", deeperNightCost(0), 1);
+assertEqual("deeperNightCost(1)", deeperNightCost(1), 2);
+assertEqual("ashenTideCost(0)", ashenTideCost(0), 1);
+assertEqual("ashenTideCost(1)", ashenTideCost(1), 2);
+assertEqual("namesCompleteMult true", namesCompleteMult(true), 1.05);
+assertEqual("namesCompleteMult false", namesCompleteMult(false), 1);
+assertEqual("nightTitheSecs(0)", nightTitheSecs(0), 30);
+assertEqual("nightTitheSecs(1)", nightTitheSecs(1), 40);
+assertEqual("nightTitheSecs(2)", nightTitheSecs(2), 50);
+assertEqual("nightSecs(0)", nightSecs(0), 30);
+assertEqual("nightSecs(2)", nightSecs(2), 50);
+assertEqual("prodMult namesComplete", prodMult(0, 0, 0, 0.1, 0, true), 1.05);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

@@ -483,6 +483,7 @@
         <p class="crown-flavor">The GodKing’s brow.</p>
         <p class="crown-meta">
           Favor on hand <span id="crown-favor">0</span>
+          <span class="is-hidden" id="crown-remembrance"> · Remembrance <span id="crown-remembrance-count">0</span></span>
         </p>
       </div>
 
@@ -521,6 +522,42 @@
         </div>
         <button type="button" class="card-buy" id="crown-court-buy" disabled>Seat the Court</button>
       </div>
+
+      <div class="crown-row is-hidden" id="remembrance-lay-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Remembrance</h3>
+          <p class="crown-upgrade-flavor">What the GodKing keeps when Favor is spent.</p>
+          <p class="crown-stats">
+            Effect: <span id="remembrance-lay-effect">+1 Remembrance</span>
+            · Cost: <span id="remembrance-lay-cost">3 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="remembrance-lay-buy" disabled>Lay Remembrance</button>
+      </div>
+
+      <div class="crown-row is-hidden" id="deeper-night-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Deeper Night</h3>
+          <p class="crown-upgrade-flavor">Midnight lingers in his keep.</p>
+          <p class="crown-stats">
+            Effect: <span id="deeper-night-effect">Night's Tithe 30s</span>
+            · Cost: <span id="deeper-night-cost">1 Remembrance</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="deeper-night-buy" disabled>Lengthen Night</button>
+      </div>
+
+      <div class="crown-row is-hidden" id="ashen-tide-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">Ashen Tide</h3>
+          <p class="crown-upgrade-flavor">More of the shade remains as ash.</p>
+          <p class="crown-stats">
+            Effect: <span id="ashen-tide-effect">Ash from shades 1%</span>
+            · Cost: <span id="ashen-tide-cost">1 Remembrance</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="ashen-tide-buy" disabled>Raise the Tide</button>
+      </div>
     </section>
 
     <details class="chronicle" id="chronicle">
@@ -529,12 +566,17 @@
         <div id="stat-emptying">This emptying: 00:00</div>
         <div id="stat-alltime">All-time souls: 0</div>
         <div id="stat-tributes">Tributes laid: 0</div>
+        <div id="stat-names" class="is-hidden">Names bound: 0 / 12</div>
+      </div>
+      <div class="names-bound is-hidden" id="names-bound">
+        <div class="names-bound-head">Names of the Bound</div>
+        <ol class="names-bound-list" id="names-bound-list"></ol>
       </div>
       <ol class="chronicle-list" id="chronicle-list"></ol>
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.2 · prototype</span>
+      <span>Soulgather v1.3 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

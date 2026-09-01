@@ -1,4 +1,4 @@
-/* Soulgather v1.2 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v1.3 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -970,6 +970,10 @@ body::before {
   align-self: center;
 }
 
+.crown-row.is-hidden {
+  display: none;
+}
+
 /* ----- Rites (this-run; Reliquary language, dark gold) ----- */
 .rites {
   margin-top: 28px;
@@ -1523,6 +1527,45 @@ body::before {
   margin: 2px 0;
 }
 
+.names-bound {
+  margin: 10px 0 0;
+  color: var(--ash);
+  font-style: italic;
+  letter-spacing: 0.03em;
+  line-height: 1.55;
+}
+
+.names-bound.is-hidden {
+  display: none;
+}
+
+.names-bound-head {
+  color: var(--gold-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-style: normal;
+  opacity: 0.8;
+}
+
+.names-bound-list {
+  margin: 6px 0 0;
+  padding: 0 0 0 1.15em;
+  color: var(--bone-dim);
+  font-style: italic;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+}
+
+.names-bound-list li {
+  margin: 2px 0;
+}
+
+.names-bound-list li.is-locked {
+  color: var(--ash);
+  opacity: 0.7;
+}
+
 /* ----- Footer ----- */
 .foot {
   margin-top: 40px;
@@ -1748,6 +1791,8 @@ body::before {
   .chronicle,
   .chronicle-list,
   .chronicle-stats,
+  .names-bound,
+  .names-bound-list,
   .card-flavor,
   .card-stats,
   .tribute-meta,

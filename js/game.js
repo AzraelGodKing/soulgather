@@ -47,6 +47,23 @@
   var NIGHT_TITHE_MIN = 10;
   var NIGHT_TITHE_FRAC = 0.25;
   var NIGHT_TITHE_SECS = 30;
+  var REMEMBRANCE_FAVOR_COST = 3;
+  var ASHEN_TIDE_MAX = 5;
+  var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000];
+  var BOUND_NAMES = [
+    "The First Siphon",
+    "The Quiet Chain",
+    "The Hollow Tithe",
+    "The Bound Echo",
+    "The Ashen Mouth",
+    "The Night Levy",
+    "The Well's Hunger",
+    "The Seat Unseen",
+    "The Kindled Fetter",
+    "The Crown's Shadow",
+    "The Last Vessel",
+    "The Name He Keeps"
+  ];
 
   function num(v) {
     return N.from(v);
@@ -171,14 +188,15 @@
     return dominion ? 0.15 : 0.1;
   }
 
-  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight) {
+  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete) {
     var w = weight == null ? 0.1 : Number(weight);
     if (!isFinite(w)) w = 0.1;
     return (
       prestigeMult(favorEarned) *
       (1 + w * (Number(thrones) || 0)) *
       (1 + 0.25 * (Number(edictLevel) || 0)) *
-      (1 + 0.10 * (Number(crownWeight) || 0))
+      (1 + 0.10 * (Number(crownWeight) || 0)) *
+      namesCompleteMult(namesComplete)
     );
   }
 
@@ -251,6 +269,55 @@
   function quietCourtCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 8 * Math.pow(2, n);
+  }
+
+  function remembranceCostFavor() {
+    return REMEMBRANCE_FAVOR_COST;
+  }
+
+  function remembranceFavorCost() {
+    return remembranceCostFavor();
+  }
+
+  function deeperNightCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 1 * Math.pow(2, n);
+  }
+
+  function ashenTideCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= ASHEN_TIDE_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
+  function nightTitheSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return NIGHT_TITHE_SECS + 10 * n;
+  }
+
+  function nightSecs(level) {
+    return nightTitheSecs(level);
+  }
+
+  function namesCompleteMult(on) {
+    return on ? 1.05 : 1;
+  }
+
+  function ashFromShadeFrac(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > ASHEN_TIDE_MAX) n = ASHEN_TIDE_MAX;
+    return ASH_FROM_SHADE_FRAC + 0.005 * n;
+  }
+
+  function namesFromPeak(peak) {
+    var p = num(peak);
+    var n = 0;
+    var i;
+    for (i = 0; i < NAME_THRESHOLDS.length; i++) {
+      if (N.cmp(p, NAME_THRESHOLDS[i]) >= 0) n += 1;
+      else break;
+    }
+    return n;
   }
 
   function siphonCost(level) {
@@ -375,7 +442,20 @@
     "giftThrone",
     "giftCrown",
     "vow",
-    "quietCourt"
+    "quietCourt",
+    "name1",
+    "name2",
+    "name3",
+    "name4",
+    "name5",
+    "name6",
+    "name7",
+    "name8",
+    "name9",
+    "name10",
+    "name11",
+    "name12",
+    "namesComplete"
   ];
 
   var CHRONICLE_LINES = {
@@ -408,7 +488,20 @@
     giftThrone: "The first throne. A vessel was returned.",
     giftCrown: "The crown was generous.",
     vow: "A vow was sworn.",
-    quietCourt: "The Quiet Court was seated."
+    quietCourt: "The Quiet Court was seated.",
+    name1: "The First Siphon.",
+    name2: "The Quiet Chain.",
+    name3: "The Hollow Tithe.",
+    name4: "The Bound Echo.",
+    name5: "The Ashen Mouth.",
+    name6: "The Night Levy.",
+    name7: "The Well's Hunger.",
+    name8: "The Seat Unseen.",
+    name9: "The Kindled Fetter.",
+    name10: "The Crown's Shadow.",
+    name11: "The Last Vessel.",
+    name12: "The Name He Keeps.",
+    namesComplete: "The names of the bound were spoken."
   };
 
   function formatGoalNum(n) {
@@ -616,6 +709,14 @@
     if ((Number(state.quietCourtLevel) || 0) >= 1) {
       if (markChronicle("quietCourt")) added = true;
     }
+    var namesN = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
+    var ni;
+    for (ni = 1; ni <= namesN; ni++) {
+      if (markChronicle("name" + ni)) added = true;
+    }
+    if (namesN >= 12 || state.namesComplete) {
+      if (markChronicle("namesComplete")) added = true;
+    }
     return added;
   }
 
@@ -700,6 +801,11 @@
       crownWeight: 0,
       longMemoryLevel: 0,
       quietCourtLevel: 0,
+      namesBound: 0,
+      namesComplete: false,
+      remembrance: 0,
+      deeperNightLevel: 0,
+      ashenTideLevel: 0,
       vow: "",
       vowHungerPaid: false,
       runStartedAt: Date.now(),
@@ -727,7 +833,8 @@
       state.thrones,
       state.edictLevel,
       throneWeight(normalizeAspect(state.aspect) === "dominion"),
-      state.crownWeight
+      state.crownWeight,
+      state.namesComplete
     );
   }
 
@@ -796,7 +903,7 @@
   }
 
   function ashPerSec() {
-    var fromShades = N.mul(shadeSoulsPerSec(), ASH_FROM_SHADE_FRAC);
+    var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel));
     var fromCensers = N.mul(
       N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
       nightMult(nightActive())
@@ -1226,7 +1333,7 @@
     var cost = nightTitheCost(state.ash);
     if (N.cmp(state.ash, cost) < 0) return;
     state.ash = N.sub(state.ash, cost);
-    state.nightLeft = NIGHT_TITHE_SECS;
+    state.nightLeft = nightSecs(state.deeperNightLevel);
     showToast("The GodKing hungers at midnight.");
     save();
     render();
@@ -1378,7 +1485,33 @@
       granted = true;
     }
 
+    if (tryNamesBound()) granted = true;
+
     if (granted) save();
+  }
+
+  function tryNamesBound() {
+    bumpPeakShades();
+    var target = namesFromPeak(state.peakShades);
+    var current = Math.max(0, Math.floor(Number(state.namesBound) || 0));
+    if (current > 12) current = 12;
+    var granted = false;
+    while (current < target && current < 12) {
+      var epithet = BOUND_NAMES[current];
+      current += 1;
+      state.namesBound = current;
+      markChronicle("name" + current);
+      showToast("A name is bound: " + epithet + ".");
+      granted = true;
+    }
+    if (current >= 12) state.namesBound = 12;
+    if (state.namesBound >= 12 && !state.namesComplete) {
+      state.namesComplete = true;
+      markChronicle("namesComplete");
+      showToast("The names of the bound are spoken. The harvest deepens.");
+      granted = true;
+    }
+    return granted;
   }
 
   function buyCrownWeight() {
@@ -1420,6 +1553,43 @@
 
   function crownUnlocked() {
     return (Number(state.tributesLaid) || 0) >= 2 || (Number(state.favorEarned) || 0) >= 3;
+  }
+
+  function remembranceUnlocked() {
+    return (Number(state.tributesLaid) || 0) >= 3 || (Number(state.favorEarned) || 0) >= 5;
+  }
+
+  function layRemembrance() {
+    if (!remembranceUnlocked()) return;
+    var cost = remembranceFavorCost();
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.remembrance = (Number(state.remembrance) || 0) + 1;
+    showToast("The GodKing keeps a remembrance.");
+    save();
+    render();
+  }
+
+  function buyDeeperNight() {
+    if (!remembranceUnlocked()) return;
+    var cost = deeperNightCost(state.deeperNightLevel);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.deeperNightLevel += 1;
+    save();
+    render();
+  }
+
+  function buyAshenTide() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
+    if (level >= ASHEN_TIDE_MAX) return;
+    var cost = ashenTideCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.ashenTideLevel = level + 1;
+    save();
+    render();
   }
 
   function swearAspect(id) {
@@ -1525,6 +1695,11 @@
     "crownWeight",
     "longMemoryLevel",
     "quietCourtLevel",
+    "namesBound",
+    "namesComplete",
+    "remembrance",
+    "deeperNightLevel",
+    "ashenTideLevel",
     "vow",
     "vowHungerPaid",
     "runStartedAt",
@@ -1609,6 +1784,11 @@
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
       quietCourtLevel: Number(state.quietCourtLevel) || 0,
+      namesBound: Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0))),
+      namesComplete: !!state.namesComplete || (Number(state.namesBound) || 0) >= 12,
+      remembrance: Math.max(0, Math.floor(Number(state.remembrance) || 0)),
+      deeperNightLevel: Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0)),
+      ashenTideLevel: Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
@@ -1713,6 +1893,11 @@
     }
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
+    state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
+    state.namesComplete = !!data.namesComplete || state.namesBound >= 12;
+    state.remembrance = Math.max(0, Math.floor(Number(data.remembrance) || 0));
+    state.deeperNightLevel = Math.max(0, Math.floor(Number(data.deeperNightLevel) || 0));
+    state.ashenTideLevel = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(data.ashenTideLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
@@ -1740,6 +1925,9 @@
     if (state.unlockedCensers) revealCensers(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
+    }
+    if (els.namesBoundList) {
+      els.namesBoundList.dataset.sig = "";
     }
     lastFrame = 0;
   }
@@ -1871,6 +2059,7 @@
     hideAspects();
     hideVows();
     hideCrown();
+    hideNames();
   }
 
   function resetGame() {
@@ -1933,6 +2122,11 @@
     var keptBonusFirstThrone = !!state.bonusFirstThrone;
     var keptGiftCrown = !!state.giftCrown;
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
+    var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
+    var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
+    var keptRemembrance = Math.max(0, Math.floor(Number(state.remembrance) || 0));
+    var keptDeeperNight = Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0));
+    var keptAshenTide = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -1963,6 +2157,11 @@
     state.bonusFirstThrone = keptBonusFirstThrone;
     state.giftCrown = keptGiftCrown;
     state.quietCourtLevel = keptQuietCourt;
+    state.namesBound = keptNamesBound;
+    state.namesComplete = keptNamesComplete;
+    state.remembrance = keptRemembrance;
+    state.deeperNightLevel = keptDeeperNight;
+    state.ashenTideLevel = keptAshenTide;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -2172,6 +2371,10 @@
     if (els.crownPanel) els.crownPanel.classList.add("is-hidden");
   }
 
+  function hideNames() {
+    if (els.namesPanel) els.namesPanel.classList.add("is-hidden");
+  }
+
   function renderChronicle() {
     if (!els.chronicleList) return;
     var n = state.chronicle ? state.chronicle.length : 0;
@@ -2228,6 +2431,15 @@
     if (els.statTributes) {
       els.statTributes.textContent = "Tributes laid: " + fmt(state.tributesLaid);
     }
+    if (els.statNames) {
+      var bound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
+      if (bound >= 1) {
+        els.statNames.textContent = "Names bound: " + bound + " / 12";
+        els.statNames.classList.remove("is-hidden");
+      } else {
+        els.statNames.classList.add("is-hidden");
+      }
+    }
   }
 
   function showToast(message) {
@@ -2280,6 +2492,30 @@
   function bindLabel(oneText, verb, k, unitOne, unitMany) {
     if (k <= 1) return oneText;
     return verb + " " + k + " " + unitMany;
+  }
+
+
+  function renderNames() {
+    var n = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
+    var open = n >= 1;
+    if (els.namesPanel) els.namesPanel.classList.toggle("is-hidden", !open);
+    if (!els.namesList) return;
+    if (!open) return;
+    var sig = "n" + n + (state.namesComplete ? "c" : "");
+    if (els.namesList.dataset.sig === sig) return;
+    els.namesList.dataset.sig = sig;
+    els.namesList.innerHTML = "";
+    var i;
+    for (i = 0; i < 12; i++) {
+      var li = document.createElement("li");
+      if (i < n) {
+        li.textContent = BOUND_NAMES[i];
+      } else {
+        li.textContent = "\u2014";
+        li.className = "is-locked";
+      }
+      els.namesList.appendChild(li);
+    }
   }
 
   function render() {
@@ -2532,7 +2768,7 @@
         var nLeft = Number(state.nightLeft) || 0;
         var nCost = nightTitheCost(state.ash);
         if (els.nightTitheEffect) {
-          els.nightTitheEffect.textContent = nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 30s";
+          els.nightTitheEffect.textContent = nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 " + nightSecs(state.deeperNightLevel) + "s";
         }
         if (els.nightTitheCost) {
           els.nightTitheCost.textContent = F.formatNumber(nCost) + " Ash";
@@ -2735,7 +2971,7 @@
       if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(tributeOffer) + " Favor";
       if (els.tributeMult) {
         els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight)
+          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete)
         );
       }
     }
@@ -2877,13 +3113,93 @@
       if (els.crownCourtBuy) {
         els.crownCourtBuy.disabled = state.favor < qcCost;
       }
+
+      var remOpen = remembranceUnlocked();
+      if (els.crownRemembrance) {
+        if (remOpen) {
+          els.crownRemembrance.classList.remove("is-hidden");
+        } else {
+          els.crownRemembrance.classList.add("is-hidden");
+        }
+      }
+      if (els.crownRemembranceCount) {
+        els.crownRemembranceCount.textContent = F.formatNumber(Number(state.remembrance) || 0);
+      }
+      if (els.remembranceLayRow) els.remembranceLayRow.classList.toggle("is-hidden", !remOpen);
+      if (els.deeperNightRow) els.deeperNightRow.classList.toggle("is-hidden", !remOpen);
+      if (els.ashenTideRow) els.ashenTideRow.classList.toggle("is-hidden", !remOpen);
+      if (remOpen) {
+        var rCost = remembranceFavorCost();
+        if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
+        if (els.remembranceLayBuy) {
+          els.remembranceLayBuy.disabled = state.favor < rCost;
+        }
+
+        var dnCost = deeperNightCost(state.deeperNightLevel);
+        var dnSecs = nightSecs(state.deeperNightLevel);
+        if (els.deeperNightEffect) {
+          els.deeperNightEffect.textContent = "Night's Tithe " + dnSecs + "s";
+        }
+        if (els.deeperNightCost) els.deeperNightCost.textContent = F.formatNumber(dnCost) + " Remembrance";
+        if (els.deeperNightBuy) {
+          els.deeperNightBuy.disabled = !isFinite(dnCost) || (Number(state.remembrance) || 0) < dnCost;
+        }
+
+        var atLevel = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
+        var atFrac = ashFromShadeFrac(atLevel);
+        var atPct = atFrac * 100;
+        var atPctStr =
+          Math.abs(atPct - Math.round(atPct)) < 0.05 ? String(Math.round(atPct)) : atPct.toFixed(1);
+        var atCost = ashenTideCost(atLevel);
+        if (els.ashenTideEffect) {
+          els.ashenTideEffect.textContent = "Ash from shades " + atPctStr + "%";
+        }
+        if (atLevel >= ASHEN_TIDE_MAX) {
+          if (els.ashenTideCost) els.ashenTideCost.textContent = "\u2014";
+          if (els.ashenTideBuy) {
+            els.ashenTideBuy.disabled = true;
+            els.ashenTideBuy.textContent = "The tide is full.";
+          }
+        } else {
+          if (els.ashenTideCost) els.ashenTideCost.textContent = F.formatNumber(atCost) + " Remembrance";
+          if (els.ashenTideBuy) {
+            els.ashenTideBuy.disabled = !isFinite(atCost) || (Number(state.remembrance) || 0) < atCost;
+            els.ashenTideBuy.textContent = "Raise the Tide";
+          }
+        }
+      }
     }
+
+    renderNames();
 
     if (els.nextGoal) {
       els.nextGoal.textContent = nextGoal(state);
     }
     renderChronicle();
     renderStats();
+  }
+
+  function renderNames() {
+    if (!els.namesBound || !els.namesBoundList) return;
+    var n = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
+    var show = n >= 1 || !!state.namesComplete;
+    els.namesBound.classList.toggle("is-hidden", !show);
+    if (!show) return;
+    var sig = n + ":" + (state.namesComplete ? "1" : "0");
+    if (els.namesBoundList.dataset.sig === sig) return;
+    els.namesBoundList.dataset.sig = sig;
+    els.namesBoundList.innerHTML = "";
+    var i;
+    for (i = 0; i < 12; i++) {
+      var li = document.createElement("li");
+      if (i < n) {
+        li.textContent = BOUND_NAMES[i];
+      } else {
+        li.textContent = "\u2014";
+        li.className = "is-locked";
+      }
+      els.namesBoundList.appendChild(li);
+    }
   }
 
   function tick(now) {
@@ -3012,6 +3328,23 @@
     els.crownCourtEffect = document.getElementById("crown-court-effect");
     els.crownCourtCost = document.getElementById("crown-court-cost");
     els.crownCourtBuy = document.getElementById("crown-court-buy");
+    els.crownRemembranceWrap = document.getElementById("crown-remembrance-wrap");
+    els.crownRemembrance = document.getElementById("crown-remembrance");
+    els.crownRemembranceCount = document.getElementById("crown-remembrance-count");
+    els.remembranceLayRow = document.getElementById("remembrance-lay-row");
+    els.remembranceLayEffect = document.getElementById("remembrance-lay-effect");
+    els.remembranceLayCost = document.getElementById("remembrance-lay-cost");
+    els.remembranceLayBuy = document.getElementById("remembrance-lay-buy");
+    els.deeperNightRow = document.getElementById("deeper-night-row");
+    els.deeperNightEffect = document.getElementById("deeper-night-effect");
+    els.deeperNightCost = document.getElementById("deeper-night-cost");
+    els.deeperNightBuy = document.getElementById("deeper-night-buy");
+    els.ashenTideRow = document.getElementById("ashen-tide-row");
+    els.ashenTideEffect = document.getElementById("ashen-tide-effect");
+    els.ashenTideCost = document.getElementById("ashen-tide-cost");
+    els.ashenTideBuy = document.getElementById("ashen-tide-buy");
+    els.namesPanel = document.getElementById("names-bound");
+    els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
     els.markEmberEffect = document.getElementById("mark-ember-effect");
     els.markEmberCost = document.getElementById("mark-ember-cost");
@@ -3047,6 +3380,7 @@
     els.statEmptying = document.getElementById("stat-emptying");
     els.statAllTime = document.getElementById("stat-alltime");
     els.statTributes = document.getElementById("stat-tributes");
+    els.statNames = document.getElementById("stat-names");
 
     els.gatherBtn.addEventListener("click", harvest);
     els.wellBuy.addEventListener("click", buyWell);
@@ -3077,6 +3411,9 @@
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
     if (els.crownCourtBuy) els.crownCourtBuy.addEventListener("click", buyQuietCourt);
+    if (els.remembranceLayBuy) els.remembranceLayBuy.addEventListener("click", layRemembrance);
+    if (els.deeperNightBuy) els.deeperNightBuy.addEventListener("click", buyDeeperNight);
+    if (els.ashenTideBuy) els.ashenTideBuy.addEventListener("click", buyAshenTide);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -3261,6 +3598,14 @@
     crownCost: crownCost,
     longMemCost: longMemCost,
     quietCourtCost: quietCourtCost,
+    namesCompleteMult: namesCompleteMult,
+    remembranceCostFavor: remembranceCostFavor,
+    remembranceFavorCost: remembranceFavorCost,
+    deeperNightCost: deeperNightCost,
+    ashenTideCost: ashenTideCost,
+    nightTitheSecs: nightTitheSecs,
+    nightSecs: nightSecs,
+    ashFromShadeFrac: ashFromShadeFrac,
     vowExtraFavor: vowExtraFavor,
     normalizeVow: normalizeVow,
     siphonCost: siphonCost,
