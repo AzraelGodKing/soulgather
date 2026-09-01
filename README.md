@@ -25,7 +25,7 @@ Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson
 
 **Choir of Ash (this-run side spend, not a producer-of-producer).** Unlock at 5 Lanterns this run OR Ash ≥ 20. Quiet row in Rites. Spend **5 Lanterns** (must have ≥ 5; subtract 5, keep `unlockedLanterns`). Each press: `choirLevel += 1`, extra +0.5% of shade soul production as additional Ash. Stacks with Ashen Tide: ash from shades = `(0.01 + 0.005 * ashenTideLevel + 0.005 * choirLevel) * shadeSouls/s`. Cap `choirLevel` at 10. Flavor: *They sing what the well discards.* Button: **Raise the Choir**. Wipe on Tribute. Chronicle first choir. Cannot press if lanterns < 5 or choir at cap.
 
-**Gift: first Name unlocked.** When `namesBound` goes 0→1, once: +15 souls. Flag `giftFirstName` persist Tribute, wipe Reset. Same pattern as other gifts (check flag, set, grant, save). Old saves with `namesBound >= 1` seed the flag without granting.
+**Gift: first Name unlocked.** When `namesBound` goes 0→1, once: +15 souls. Flag `giftFirstName` persist Tribute, wipe Reset. Same pattern as other gifts (check flag, set, grant, save). Toast: "Fifteen souls for the first name." Chronicle: "The first name. The well returned fifteen souls." Old saves with `namesBound >= 1` seed the flag without granting.
 
 ## Design notes (v1.3)
 
