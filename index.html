@@ -18,6 +18,7 @@
       <div class="souls-count" id="souls-count">0</div>
       <div class="souls-label">Souls</div>
       <div class="souls-rate" id="souls-rate">0 / sec</div>
+      <div class="souls-ash is-hidden" id="souls-ash">Ash 0</div>
       <div class="souls-favor is-hidden" id="souls-favor">Blessing ×1.0</div>
       <div class="next-goal" id="next-goal">Bind a Shade to wake the well.</div>
     </section>
@@ -87,6 +88,17 @@
         <button type="button" class="card-buy" id="shade-buy" disabled>Bind a Shade</button>
       </article>
 
+      <article class="card is-hidden" id="lantern-card">
+        <h2 class="card-name">Lanterns</h2>
+        <div class="card-owned" id="lantern-owned">0</div>
+        <p class="card-flavor">A light that teaches the echoes where to drink.</p>
+        <div class="card-stats">
+          <div>Kindle: <span id="lantern-prod">Shade souls ×1</span></div>
+          <div>Kindle cost: <span id="lantern-cost">30 Souls</span></div>
+        </div>
+        <button type="button" class="card-buy" id="lantern-buy" disabled>Kindle a Lantern</button>
+      </article>
+
       <article class="card is-hidden" id="spirit-card">
         <h2 class="card-name">Bound Spirits</h2>
         <div class="card-owned" id="spirit-owned">0</div>
@@ -107,6 +119,17 @@
           <div>Bind cost: <span id="vessel-cost">10 Spirits</span></div>
         </div>
         <button type="button" class="card-buy" id="vessel-buy" disabled>Bind a Vessel</button>
+      </article>
+
+      <article class="card is-hidden" id="censer-card">
+        <h2 class="card-name">Censers</h2>
+        <div class="card-owned" id="censer-owned">0</div>
+        <p class="card-flavor">They burn what the well discards.</p>
+        <div class="card-stats">
+          <div>Burn: <span id="censer-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="censer-cost">10 Vessels</span></div>
+        </div>
+        <button type="button" class="card-buy" id="censer-buy" disabled>Raise a Censer</button>
       </article>
 
       <article class="card is-hidden" id="throne-card">
@@ -176,6 +199,49 @@
       </div>
     </section>
 
+
+    <section class="marks is-hidden" id="marks-panel">
+      <div class="marks-head">
+        <h2 class="marks-name">Marks</h2>
+        <p class="marks-flavor">Ash is what the well will not keep.</p>
+      </div>
+
+      <div class="mark-row" id="mark-ember-row">
+        <div class="mark-copy">
+          <h3 class="mark-name">Mark of Ember</h3>
+          <p class="mark-flavor">Ash remembers the shade's thirst.</p>
+          <p class="mark-stats">
+            <span id="mark-ember-effect">Shade souls ×1</span>
+            · Cost: <span id="mark-ember-cost">8 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="mark-ember-buy" disabled>Press the Mark</button>
+      </div>
+
+      <div class="mark-row is-hidden" id="mark-chain-row">
+        <div class="mark-copy">
+          <h3 class="mark-name">Mark of Chain</h3>
+          <p class="mark-flavor">Ash binds the levy tighter.</p>
+          <p class="mark-stats">
+            <span id="mark-chain-effect">Spirit levy ×1</span>
+            · Cost: <span id="mark-chain-cost">8 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="mark-chain-buy" disabled>Press the Mark</button>
+      </div>
+
+      <div class="mark-row is-hidden" id="mark-hollow-row">
+        <div class="mark-copy">
+          <h3 class="mark-name">Mark of Hollow</h3>
+          <p class="mark-flavor">Ash teaches the vessel to house.</p>
+          <p class="mark-stats">
+            <span id="mark-hollow-effect">Vessel house ×1</span>
+            · Cost: <span id="mark-hollow-cost">8 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="mark-hollow-buy" disabled>Press the Mark</button>
+      </div>
+    </section>
 
     <section class="aspects is-hidden" id="aspects-panel">
       <div class="aspects-head">
@@ -294,7 +360,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v0.7 · prototype</span>
+      <span>Soulgather v0.8 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
@@ -314,6 +380,7 @@
 
   <div class="toast is-hidden" id="toast" role="status"></div>
 
+  <script src="js/num.js"></script>
   <script src="js/format.js"></script>
   <script src="js/game.js"></script>
 </body>

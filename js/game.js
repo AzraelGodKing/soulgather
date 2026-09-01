@@ -1,14 +1,22 @@
 (function () {
   "use strict";
 
+  var N = globalThis.SoulgatherNum;
+
   var SAVE_KEY = "soulgather-v0";
   var COST_BASE = 10;
   var COST_MULT = 1.15;
   var WELL_COST_BASE = 25;
   var WELL_COST_MULT = 1.5;
+  var LANTERN_COST_BASE = 30;
+  var LANTERN_COST_MULT = 1.2;
+  var MARK_COST_BASE = 8;
+  var MARK_COST_MULT = 2;
   var SHADE_SOULS_PER_SEC = 1;
   var SPIRIT_SHADES_PER_SEC = 0.1;
   var VESSEL_SPIRITS_PER_SEC = 0.1;
+  var CENSER_ASH_PER_SEC = 0.2;
+  var ASH_FROM_SHADE_FRAC = 0.01;
   var UNLOCK_SHADES = 10;
   var UNLOCK_LIFETIME = 100;
   var UNLOCK_SPIRITS_FOR_VESSELS = 5;
@@ -16,6 +24,10 @@
   var UNLOCK_VESSELS_FOR_THRONES = 1;
   var UNLOCK_LIFETIME_SPIRITS = 50;
   var UNLOCK_WELL_DRAWS_SHADES = 3;
+  var UNLOCK_LANTERNS = 3;
+  var UNLOCK_MARKS_LIFETIME = 500;
+  var UNLOCK_CENSERS_VESSELS = 1;
+  var UNLOCK_CENSERS_LIFETIME_SPIRITS = 25;
   var WELL_DRAWS_COST = 50;
   var BULK_CAP = 10000;
   var AUTOSAVE_MS = 5000;
@@ -26,9 +38,29 @@
   var TITHE_FRAC = 0.1;
   var TITHE_SECS = 60;
 
+  function num(v) {
+    return N.from(v);
+  }
+
+  function nVal(v) {
+    if (v && typeof v === "object" && typeof v.m === "number") {
+      var n = N.toNumber(v);
+      if (!isFinite(n)) return n > 0 ? 1e300 : 0;
+      return n;
+    }
+    return Number(v) || 0;
+  }
+
+  function addOwned(owned, i) {
+    i = Number(i) || 0;
+    if (owned && typeof owned === "object" && typeof owned.m === "number") {
+      return N.add(N.floor(N.max(owned, 0)), i);
+    }
+    return Math.max(0, Math.floor(Number(owned) || 0)) + i;
+  }
+
   function producerCost(owned) {
-    var n = Math.max(0, Math.floor(owned));
-    return Math.floor(COST_BASE * Math.pow(COST_MULT, n));
+    return N.cost(COST_BASE, COST_MULT, owned);
   }
 
   function shadeCost(owned) {
@@ -47,44 +79,66 @@
     return producerCost(owned);
   }
 
-  function wellCost(depth) {
-    var n = Math.max(0, Math.floor(depth));
-    return Math.floor(WELL_COST_BASE * Math.pow(WELL_COST_MULT, n));
+  function lanternCost(owned) {
+    return N.cost(LANTERN_COST_BASE, LANTERN_COST_MULT, owned);
   }
 
-  function bulkCost(base, owned, k) {
+  function censerCost(owned) {
+    return producerCost(owned);
+  }
+
+  function markCost(level) {
+    return N.cost(MARK_COST_BASE, MARK_COST_MULT, level);
+  }
+
+  function wellCost(depth) {
+    return N.cost(WELL_COST_BASE, WELL_COST_MULT, depth);
+  }
+
+  function bulkCost(base, owned, k, mult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    var o = Math.max(0, Math.floor(owned));
+    if (mult == null) mult = COST_MULT;
     var n = Math.max(0, Math.floor(k));
     if (n > BULK_CAP) n = BULK_CAP;
-    var total = 0;
+    var total = N.fromNumber(0);
     var i;
     for (i = 0; i < n; i++) {
-      total += Math.floor(b * Math.pow(COST_MULT, o + i));
+      total = N.add(total, N.cost(b, mult, addOwned(owned, i)));
     }
     return total;
   }
 
-  function maxAffordable(base, owned, currency) {
+  function maxAffordable(base, owned, currency, mult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    var o = Math.max(0, Math.floor(owned));
-    var remaining = Number(currency) || 0;
+    if (mult == null) mult = COST_MULT;
+    var remaining = num(currency);
     var k = 0;
     while (k < BULK_CAP) {
-      var c = Math.floor(b * Math.pow(COST_MULT, o + k));
-      if (remaining < c) break;
-      remaining -= c;
+      var c = N.cost(b, mult, addOwned(owned, k));
+      if (N.cmp(remaining, c) < 0) break;
+      remaining = N.sub(remaining, c);
       k += 1;
     }
     return k;
   }
 
   function favorGain(lifetimeSouls) {
-    var n = Number(lifetimeSouls) || 0;
-    if (n < 0) n = 0;
-    return Math.floor(Math.sqrt(n / 25000));
+    var n = N.max(num(lifetimeSouls), 0);
+    if (N.cmp(n, 0) <= 0) return 0;
+    if (n.e < 15) {
+      var v = N.toNumber(n);
+      if (isFinite(v) && v >= 0) {
+        return Math.floor(Math.sqrt(v / 25000));
+      }
+    }
+    var q = N.div(n, 25000);
+    var s = N.floor(N.add(N.pow(q, 0.5), N.fromNumber(1e-9)));
+    var asN = N.toNumber(s);
+    if (!isFinite(asN) || asN > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+    if (asN < 0) return 0;
+    return Math.floor(asN);
   }
 
   function prestigeMult(favorEarned) {
@@ -114,9 +168,9 @@
   }
 
   function titheCost(souls) {
-    var n = Number(souls) || 0;
-    if (n < 0) n = 0;
-    return Math.max(TITHE_MIN, Math.floor(n * TITHE_FRAC));
+    var n = N.max(num(souls), 0);
+    var tenth = N.floor(N.mul(n, TITHE_FRAC));
+    return N.max(N.fromNumber(TITHE_MIN), tenth);
   }
 
   function titheMult(on) {
@@ -145,21 +199,45 @@
   }
 
   function siphonCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return Math.floor(50 * Math.pow(3, n));
+    return N.cost(50, 3, level);
   }
 
   function levyCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return Math.floor(15 * Math.pow(3, n));
+    return N.cost(15, 3, level);
   }
 
   function siphonMult(level) {
-    return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n < 40) return N.fromNumber(Math.pow(2, n));
+    return N.pow(N.fromNumber(2), n);
   }
 
   function levyMult(level) {
-    return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+    return siphonMult(level);
+  }
+
+  function lanternMult(lanterns) {
+    if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
+      if (lanterns.e < 12) {
+        return N.fromNumber(1 + 0.05 * (N.toNumber(lanterns) || 0));
+      }
+      return N.add(1, N.mul(0.05, lanterns));
+    }
+    return N.fromNumber(1 + 0.05 * (Number(lanterns) || 0));
+  }
+
+  function emberMult(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n < 40) return N.fromNumber(Math.pow(1.25, n));
+    return N.pow(N.fromNumber(1.25), n);
+  }
+
+  function chainMult(level) {
+    return emberMult(level);
+  }
+
+  function hollowMult(level) {
+    return emberMult(level);
   }
 
   var ASPECT_IDS = { harvest: "harvest", binding: "binding", dominion: "dominion" };
@@ -181,7 +259,24 @@
     return "1";
   }
 
-  var CHRONICLE_ORDER = ["soul", "shade", "spirits", "well", "vessels", "throne", "rite", "wellDraw", "tribute", "aspect", "echo", "seat"];
+  var CHRONICLE_ORDER = [
+    "soul",
+    "shade",
+    "spirits",
+    "well",
+    "vessels",
+    "throne",
+    "rite",
+    "wellDraw",
+    "tribute",
+    "aspect",
+    "echo",
+    "seat",
+    "lantern",
+    "ash",
+    "mark",
+    "censer"
+  ];
 
   var CHRONICLE_LINES = {
     soul: "The first soul was drawn.",
@@ -195,12 +290,19 @@
     tribute: "Tribute was laid. The GodKing remembers.",
     aspect: "An aspect was sworn.",
     echo: "An echo was spoken.",
-    seat: "A seat was raised."
+    seat: "A seat was raised.",
+    lantern: "A lantern was kindled.",
+    ash: "Ash gathered at the well's lip.",
+    mark: "A mark was pressed.",
+    censer: "A censer was raised."
   };
 
   function formatGoalNum(n) {
     if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatNumber) {
       return SoulgatherFormat.formatNumber(n);
+    }
+    if (n && typeof n === "object" && typeof n.m === "number") {
+      n = nVal(n);
     }
     if (n == null || !isFinite(n)) return "0";
     if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
@@ -210,16 +312,22 @@
   function nextGoal(view, format) {
     view = view || {};
     format = format || formatGoalNum;
-    var shades = Number(view.shades) || 0;
-    var spirits = Number(view.spirits) || 0;
-    var lifetimeSouls = Number(view.lifetimeSouls) || 0;
-    var lifetimeShades = Number(view.lifetimeShades) || 0;
+    var shades = nVal(view.shades);
+    var spirits = nVal(view.spirits);
+    var lifetimeSouls = nVal(view.lifetimeSouls);
+    var lifetimeShades = nVal(view.lifetimeShades);
+    var lanterns = nVal(view.lanterns);
+    var censers = nVal(view.censers);
     var unlockedSpirits = !!view.unlockedSpirits;
     var unlockedVessels = !!view.unlockedVessels;
     var unlockedThrones = !!view.unlockedThrones;
     var favorEarned = Number(view.favorEarned) || 0;
-    var gain = favorGain(lifetimeSouls);
+    var gain = favorGain(view.lifetimeSouls);
     var sworn = normalizeAspect(view.aspect);
+    var marksBought =
+      (Number(view.emberLevel) || 0) +
+      (Number(view.chainLevel) || 0) +
+      (Number(view.hollowLevel) || 0);
 
     if (favorEarned >= 1 && !sworn) {
       return "Swear an Aspect. The GodKing waits.";
@@ -229,14 +337,17 @@
       return "Bind a Shade to wake the well.";
     }
     if (!unlockedSpirits) {
+      if (view.unlockedLanterns && lanterns < 1) {
+        return "Kindle a Lantern. A light for the echoes.";
+      }
       return (
         "The well thickens. Bound Spirits at 10 Shades. " +
-        format(shades) +
+        format(view.shades != null ? view.shades : shades) +
         " / 10 Shades"
       );
     }
     if (!unlockedVessels) {
-      return "Vessels at 5 Bound Spirits. " + format(spirits) + " / 5";
+      return "Vessels at 5 Bound Spirits. " + format(view.spirits != null ? view.spirits : spirits) + " / 5";
     }
     if (!unlockedThrones) {
       return "A throne at 1 Vessel.";
@@ -244,12 +355,21 @@
     if (gain >= 1) {
       return "Lay Tribute. The GodKing will remember.";
     }
+    if (view.unlockedLanterns && lanterns < 1) {
+      return "Kindle a Lantern. A light for the echoes.";
+    }
+    if (view.unlockedMarks && marksBought < 1) {
+      return "Press a Mark. Ash is what the well will not keep.";
+    }
+    if (view.unlockedCensers && censers < 1) {
+      return "Raise a Censer. They burn what the well discards.";
+    }
     if (favorEarned >= 1) {
       return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
     }
     return (
       "Tribute when the GodKing will remember. " +
-      format(lifetimeSouls) +
+      format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls) +
       " / 25000 lifetime Souls."
     );
   }
@@ -292,21 +412,27 @@
     return false;
   }
 
+  function chronicleAt() {
+    var tn = N.toNumber(state.lifetimeSouls);
+    if (!isFinite(tn) || tn < 0) return 0;
+    return tn;
+  }
+
   function markChronicle(id) {
     if (!state.chronicle) state.chronicle = [];
     if (!CHRONICLE_LINES[id] || hasChronicle(id)) return false;
-    state.chronicle.push({ id: id, at: Number(state.lifetimeSouls) || 0 });
+    state.chronicle.push({ id: id, at: chronicleAt() });
     return true;
   }
 
   function syncChronicle() {
     var added = false;
-    if ((Number(state.lifetimeSouls) || 0) > 0 || (Number(state.favorEarned) || 0) >= 1) {
+    if (N.cmp(state.lifetimeSouls, 0) > 0 || (Number(state.favorEarned) || 0) >= 1) {
       if (markChronicle("soul")) added = true;
     }
     if (
-      (Number(state.shades) || 0) >= 1 ||
-      (Number(state.lifetimeShades) || 0) >= 1 ||
+      N.cmp(state.shades, 1) >= 0 ||
+      N.cmp(state.lifetimeShades, 1) >= 0 ||
       (Number(state.wellDepth) || 0) >= 1
     ) {
       if (markChronicle("shade")) added = true;
@@ -341,6 +467,22 @@
     if ((Number(state.seatLevel) || 0) >= 1) {
       if (markChronicle("seat")) added = true;
     }
+    if (N.cmp(state.lanterns, 1) >= 0) {
+      if (markChronicle("lantern")) added = true;
+    }
+    if (N.cmp(state.ash, 0) > 0) {
+      if (markChronicle("ash")) added = true;
+    }
+    if (
+      (Number(state.emberLevel) || 0) >= 1 ||
+      (Number(state.chainLevel) || 0) >= 1 ||
+      (Number(state.hollowLevel) || 0) >= 1
+    ) {
+      if (markChronicle("mark")) added = true;
+    }
+    if (N.cmp(state.censers, 1) >= 0) {
+      if (markChronicle("censer")) added = true;
+    }
     return added;
   }
 
@@ -354,22 +496,33 @@
 
   function freshState() {
     return {
-      souls: 0,
-      lifetimeSouls: 0,
-      lifetimeShades: 0,
-      lifetimeSpirits: 0,
-      shades: 0,
-      spirits: 0,
-      vessels: 0,
+      souls: N.fromNumber(0),
+      lifetimeSouls: N.fromNumber(0),
+      lifetimeShades: N.fromNumber(0),
+      lifetimeSpirits: N.fromNumber(0),
+      shades: N.fromNumber(0),
+      spirits: N.fromNumber(0),
+      vessels: N.fromNumber(0),
       thrones: 0,
       wellDepth: 0,
+      lanterns: N.fromNumber(0),
+      ash: N.fromNumber(0),
+      censers: N.fromNumber(0),
+      emberLevel: 0,
+      chainLevel: 0,
+      hollowLevel: 0,
       unlockedSpirits: false,
       unlockedVessels: false,
       unlockedWell: false,
       unlockedThrones: false,
+      unlockedLanterns: false,
+      unlockedMarks: false,
+      unlockedCensers: false,
       toastShown: false,
       vesselToastShown: false,
       throneToastShown: false,
+      lanternToastShown: false,
+      censerToastShown: false,
       favor: 0,
       favorEarned: 0,
       edictLevel: 0,
@@ -386,7 +539,7 @@
       chronicle: [],
       titheLeft: 0,
       runStartedAt: Date.now(),
-      allTimeSouls: 0,
+      allTimeSouls: N.fromNumber(0),
       tributesLaid: 0
     };
   }
@@ -419,55 +572,80 @@
   }
 
   function clickPower() {
-    return (1 + state.wellDepth) * rateMult();
+    return N.mul(1 + (Number(state.wellDepth) || 0), rateMult());
   }
 
   function shadeSoulsPerSec() {
-    return (
-      state.shades *
-      SHADE_SOULS_PER_SEC *
-      rateMult() *
-      siphonMult(state.siphonLevel) *
-      harvestMult(normalizeAspect(state.aspect) === "harvest")
+    return N.mul(
+      N.mul(
+        N.mul(
+          N.mul(
+            N.mul(N.mul(state.shades, SHADE_SOULS_PER_SEC), rateMult()),
+            siphonMult(state.siphonLevel)
+          ),
+          harvestMult(normalizeAspect(state.aspect) === "harvest")
+        ),
+        lanternMult(state.lanterns)
+      ),
+      emberMult(state.emberLevel)
     );
   }
 
   function soulsPerSec() {
     var rate = shadeSoulsPerSec();
-    if (state.wellDraws) rate += clickPower();
+    if (state.wellDraws) rate = N.add(rate, clickPower());
     return rate;
   }
 
   function shadesPerSec() {
-    return (
-      state.spirits *
-      SPIRIT_SHADES_PER_SEC *
-      rateMult() *
-      levyMult(state.levyLevel) *
-      bindingMult(normalizeAspect(state.aspect) === "binding")
+    return N.mul(
+      N.mul(
+        N.mul(
+          N.mul(N.mul(state.spirits, SPIRIT_SHADES_PER_SEC), rateMult()),
+          levyMult(state.levyLevel)
+        ),
+        bindingMult(normalizeAspect(state.aspect) === "binding")
+      ),
+      chainMult(state.chainLevel)
     );
   }
 
   function spiritsPerSec() {
-    return state.vessels * VESSEL_SPIRITS_PER_SEC * rateMult();
+    return N.mul(
+      N.mul(N.mul(state.vessels, VESSEL_SPIRITS_PER_SEC), rateMult()),
+      hollowMult(state.hollowLevel)
+    );
+  }
+
+  function ashPerSec() {
+    var fromShades = N.mul(shadeSoulsPerSec(), ASH_FROM_SHADE_FRAC);
+    var fromCensers = N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult());
+    return N.add(fromShades, fromCensers);
   }
 
   function applyRates(dt) {
-    var dSouls = shadeSoulsPerSec() * dt;
+    var hadAsh = N.cmp(state.ash, 0) > 0;
+    var dSouls = N.mul(shadeSoulsPerSec(), dt);
     if (state.wellDraws) {
-      dSouls += clickPower() * dt;
+      dSouls = N.add(dSouls, N.mul(clickPower(), dt));
     }
-    state.souls += dSouls;
-    state.lifetimeSouls += dSouls;
-    state.allTimeSouls += dSouls;
+    state.souls = N.add(state.souls, dSouls);
+    state.lifetimeSouls = N.add(state.lifetimeSouls, dSouls);
+    state.allTimeSouls = N.add(state.allTimeSouls, dSouls);
 
-    var dShades = shadesPerSec() * dt;
-    state.shades += dShades;
-    state.lifetimeShades += dShades;
+    var dShades = N.mul(shadesPerSec(), dt);
+    state.shades = N.add(state.shades, dShades);
+    state.lifetimeShades = N.add(state.lifetimeShades, dShades);
 
-    var dSpirits = spiritsPerSec() * dt;
-    state.spirits += dSpirits;
-    state.lifetimeSpirits += dSpirits;
+    var dSpirits = N.mul(spiritsPerSec(), dt);
+    state.spirits = N.add(state.spirits, dSpirits);
+    state.lifetimeSpirits = N.add(state.lifetimeSpirits, dSpirits);
+
+    var dAsh = N.mul(ashPerSec(), dt);
+    state.ash = N.add(state.ash, dAsh);
+    if (!hadAsh && N.cmp(state.ash, 0) > 0) {
+      markChronicle("ash");
+    }
   }
 
   function applyDt(dt) {
@@ -493,13 +671,18 @@
   }
 
   function checkUnlock() {
-    if (!state.unlockedWell && state.shades >= 1) {
+    if (!state.unlockedWell && N.cmp(state.shades, 1) >= 0) {
       state.unlockedWell = true;
       revealWell();
     }
 
+    if (!state.unlockedLanterns && N.cmp(state.shades, UNLOCK_LANTERNS) >= 0) {
+      state.unlockedLanterns = true;
+      revealLanterns(true);
+    }
+
     if (!state.unlockedSpirits) {
-      if (state.shades >= UNLOCK_SHADES || state.lifetimeSouls >= UNLOCK_LIFETIME) {
+      if (N.cmp(state.shades, UNLOCK_SHADES) >= 0 || N.cmp(state.lifetimeSouls, UNLOCK_LIFETIME) >= 0) {
         state.unlockedSpirits = true;
         revealSpirits(true);
       }
@@ -507,8 +690,8 @@
 
     if (!state.unlockedVessels) {
       if (
-        state.spirits >= UNLOCK_SPIRITS_FOR_VESSELS ||
-        state.lifetimeShades >= UNLOCK_LIFETIME_SHADES
+        N.cmp(state.spirits, UNLOCK_SPIRITS_FOR_VESSELS) >= 0 ||
+        N.cmp(state.lifetimeShades, UNLOCK_LIFETIME_SHADES) >= 0
       ) {
         state.unlockedVessels = true;
         revealVessels(true);
@@ -517,15 +700,32 @@
 
     if (!state.unlockedThrones) {
       if (
-        state.vessels >= UNLOCK_VESSELS_FOR_THRONES ||
-        state.lifetimeSpirits >= UNLOCK_LIFETIME_SPIRITS
+        N.cmp(state.vessels, UNLOCK_VESSELS_FOR_THRONES) >= 0 ||
+        N.cmp(state.lifetimeSpirits, UNLOCK_LIFETIME_SPIRITS) >= 0
       ) {
         state.unlockedThrones = true;
         revealThrones(true);
       }
     }
 
-    if (!state.unlockedWellDraws && state.shades >= UNLOCK_WELL_DRAWS_SHADES) {
+    if (!state.unlockedCensers) {
+      if (
+        N.cmp(state.vessels, UNLOCK_CENSERS_VESSELS) >= 0 ||
+        N.cmp(state.lifetimeSpirits, UNLOCK_CENSERS_LIFETIME_SPIRITS) >= 0
+      ) {
+        state.unlockedCensers = true;
+        revealCensers(true);
+      }
+    }
+
+    if (
+      !state.unlockedMarks &&
+      (N.cmp(state.ash, 1) >= 0 || N.cmp(state.lifetimeSouls, UNLOCK_MARKS_LIFETIME) >= 0)
+    ) {
+      state.unlockedMarks = true;
+    }
+
+    if (!state.unlockedWellDraws && N.cmp(state.shades, UNLOCK_WELL_DRAWS_SHADES) >= 0) {
       state.unlockedWellDraws = true;
     }
     syncChronicle();
@@ -533,9 +733,9 @@
 
   function harvest() {
     var power = clickPower();
-    state.souls += power;
-    state.lifetimeSouls += power;
-    state.allTimeSouls += power;
+    state.souls = N.add(state.souls, power);
+    state.lifetimeSouls = N.add(state.lifetimeSouls, power);
+    state.allTimeSouls = N.add(state.allTimeSouls, power);
     checkUnlock();
     save();
     pulseGather();
@@ -543,29 +743,30 @@
     render();
   }
 
-  function purchasePlan(owned, currency) {
-    owned = Math.max(0, Math.floor(Number(owned) || 0));
-    var one = producerCost(owned);
+  function purchasePlan(owned, currency, base, mult) {
+    if (base == null) base = COST_BASE;
+    if (mult == null) mult = COST_MULT;
+    var one = N.cost(base, mult, owned);
     var mode = state.buyMode;
     if (mode === "10") {
-      var cost10 = bulkCost(COST_BASE, owned, 10);
-      return { k: 10, cost: cost10, can: currency >= cost10 };
+      var cost10 = bulkCost(base, owned, 10, mult);
+      return { k: 10, cost: cost10, can: N.cmp(currency, cost10) >= 0 };
     }
     if (mode === "max") {
-      var k = maxAffordable(COST_BASE, owned, currency);
+      var k = maxAffordable(base, owned, currency, mult);
       if (k < 1) {
         return { k: 0, cost: one, can: false };
       }
-      return { k: k, cost: bulkCost(COST_BASE, owned, k), can: true };
+      return { k: k, cost: bulkCost(base, owned, k, mult), can: true };
     }
-    return { k: 1, cost: one, can: currency >= one };
+    return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
   }
 
   function buyWell() {
     if (!state.unlockedWell) return;
     var cost = wellCost(state.wellDepth);
-    if (state.souls < cost) return;
-    state.souls -= cost;
+    if (N.cmp(state.souls, cost) < 0) return;
+    state.souls = N.sub(state.souls, cost);
     state.wellDepth += 1;
     syncChronicle();
     save();
@@ -575,9 +776,9 @@
   function buyShade() {
     var plan = purchasePlan(state.shades, state.souls);
     if (!plan.can || plan.k < 1) return;
-    state.souls -= plan.cost;
-    state.shades += plan.k;
-    state.lifetimeShades += plan.k;
+    state.souls = N.sub(state.souls, plan.cost);
+    state.shades = N.add(state.shades, plan.k);
+    state.lifetimeShades = N.add(state.lifetimeShades, plan.k);
     checkUnlock();
     save();
     render();
@@ -587,9 +788,9 @@
     if (!state.unlockedSpirits) return;
     var plan = purchasePlan(state.spirits, state.shades);
     if (!plan.can || plan.k < 1) return;
-    state.shades -= plan.cost;
-    state.spirits += plan.k;
-    state.lifetimeSpirits += plan.k;
+    state.shades = N.sub(state.shades, plan.cost);
+    state.spirits = N.add(state.spirits, plan.k);
+    state.lifetimeSpirits = N.add(state.lifetimeSpirits, plan.k);
     checkUnlock();
     save();
     render();
@@ -599,8 +800,8 @@
     if (!state.unlockedVessels) return;
     var plan = purchasePlan(state.vessels, state.spirits);
     if (!plan.can || plan.k < 1) return;
-    state.spirits -= plan.cost;
-    state.vessels += plan.k;
+    state.spirits = N.sub(state.spirits, plan.cost);
+    state.vessels = N.add(state.vessels, plan.k);
     checkUnlock();
     save();
     render();
@@ -610,9 +811,55 @@
     if (!state.unlockedThrones) return;
     var plan = purchasePlan(state.thrones, state.vessels);
     if (!plan.can || plan.k < 1) return;
-    state.vessels -= plan.cost;
+    state.vessels = N.sub(state.vessels, plan.cost);
     state.thrones += plan.k;
     syncChronicle();
+    save();
+    render();
+  }
+
+  function buyLantern() {
+    if (!state.unlockedLanterns) return;
+    var cost = lanternCost(state.lanterns);
+    if (N.cmp(state.souls, cost) < 0) return;
+    state.souls = N.sub(state.souls, cost);
+    state.lanterns = N.add(state.lanterns, 1);
+    if (!state.lanternToastShown) {
+      state.lanternToastShown = true;
+      showToast("A lantern kindles.");
+    }
+    markChronicle("lantern");
+    save();
+    render();
+  }
+
+  function buyCenser() {
+    if (!state.unlockedCensers) return;
+    var cost = censerCost(state.censers);
+    if (N.cmp(state.vessels, cost) < 0) return;
+    state.vessels = N.sub(state.vessels, cost);
+    state.censers = N.add(state.censers, 1);
+    markChronicle("censer");
+    save();
+    render();
+  }
+
+  function buyMark(kind) {
+    if (!state.unlockedMarks) return;
+    var levelKey;
+    if (kind === "ember") levelKey = "emberLevel";
+    else if (kind === "chain") {
+      if (!state.unlockedSpirits) return;
+      levelKey = "chainLevel";
+    } else if (kind === "hollow") {
+      if (!state.unlockedVessels) return;
+      levelKey = "hollowLevel";
+    } else return;
+    var cost = markCost(state[levelKey]);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state[levelKey] += 1;
+    markChronicle("mark");
     save();
     render();
   }
@@ -658,8 +905,8 @@
 
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
-    if (state.souls < cost) return;
-    state.souls -= cost;
+    if (N.cmp(state.souls, cost) < 0) return;
+    state.souls = N.sub(state.souls, cost);
     state.siphonLevel += 1;
     syncChronicle();
     save();
@@ -669,8 +916,8 @@
   function buyLevy() {
     if (!state.unlockedSpirits) return;
     var cost = levyCost(state.levyLevel);
-    if (state.shades < cost) return;
-    state.shades -= cost;
+    if (N.cmp(state.shades, cost) < 0) return;
+    state.shades = N.sub(state.shades, cost);
     state.levyLevel += 1;
     syncChronicle();
     save();
@@ -679,9 +926,9 @@
 
   function buyWellDraws() {
     if (state.wellDraws) return;
-    if (!state.unlockedWellDraws && state.shades < UNLOCK_WELL_DRAWS_SHADES) return;
-    if (state.souls < WELL_DRAWS_COST) return;
-    state.souls -= WELL_DRAWS_COST;
+    if (!state.unlockedWellDraws && N.cmp(state.shades, UNLOCK_WELL_DRAWS_SHADES) < 0) return;
+    if (N.cmp(state.souls, WELL_DRAWS_COST) < 0) return;
+    state.souls = N.sub(state.souls, WELL_DRAWS_COST);
     state.wellDraws = true;
     state.unlockedWellDraws = true;
     syncChronicle();
@@ -692,10 +939,10 @@
   function payTithe() {
     if (!state.unlockedWell) return;
     if (titheActive()) return;
-    if ((Number(state.souls) || 0) < TITHE_MIN) return;
+    if (N.cmp(state.souls, TITHE_MIN) < 0) return;
     var cost = titheCost(state.souls);
-    if (state.souls < cost) return;
-    state.souls -= cost;
+    if (N.cmp(state.souls, cost) < 0) return;
+    state.souls = N.sub(state.souls, cost);
     state.titheLeft = TITHE_SECS;
     showToast("The GodKing takes his cut.");
     save();
@@ -731,13 +978,24 @@
     "vessels",
     "thrones",
     "wellDepth",
+    "lanterns",
+    "ash",
+    "censers",
+    "emberLevel",
+    "chainLevel",
+    "hollowLevel",
     "unlockedSpirits",
     "unlockedVessels",
     "unlockedWell",
     "unlockedThrones",
+    "unlockedLanterns",
+    "unlockedMarks",
+    "unlockedCensers",
     "toastShown",
     "vesselToastShown",
     "throneToastShown",
+    "lanternToastShown",
+    "censerToastShown",
     "favor",
     "favorEarned",
     "edictLevel",
@@ -758,24 +1016,39 @@
     "tributesLaid"
   ];
 
+  function dumpNum(v) {
+    return N.dump(v);
+  }
+
   function serializeState() {
     return {
-      souls: state.souls,
-      lifetimeSouls: state.lifetimeSouls,
-      lifetimeShades: state.lifetimeShades,
-      lifetimeSpirits: state.lifetimeSpirits,
-      shades: state.shades,
-      spirits: state.spirits,
-      vessels: state.vessels,
+      souls: dumpNum(state.souls),
+      lifetimeSouls: dumpNum(state.lifetimeSouls),
+      lifetimeShades: dumpNum(state.lifetimeShades),
+      lifetimeSpirits: dumpNum(state.lifetimeSpirits),
+      shades: dumpNum(state.shades),
+      spirits: dumpNum(state.spirits),
+      vessels: dumpNum(state.vessels),
       thrones: state.thrones,
       wellDepth: state.wellDepth,
+      lanterns: dumpNum(state.lanterns),
+      ash: dumpNum(state.ash),
+      censers: dumpNum(state.censers),
+      emberLevel: state.emberLevel,
+      chainLevel: state.chainLevel,
+      hollowLevel: state.hollowLevel,
       unlockedSpirits: state.unlockedSpirits,
       unlockedVessels: state.unlockedVessels,
       unlockedWell: state.unlockedWell,
       unlockedThrones: state.unlockedThrones,
+      unlockedLanterns: state.unlockedLanterns,
+      unlockedMarks: state.unlockedMarks,
+      unlockedCensers: state.unlockedCensers,
       toastShown: state.toastShown,
       vesselToastShown: state.vesselToastShown,
       throneToastShown: state.throneToastShown,
+      lanternToastShown: state.lanternToastShown,
+      censerToastShown: state.censerToastShown,
       favor: state.favor,
       favorEarned: state.favorEarned,
       edictLevel: state.edictLevel,
@@ -792,7 +1065,7 @@
       chronicle: state.chronicle || [],
       titheLeft: Number(state.titheLeft) || 0,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
-      allTimeSouls: Number(state.allTimeSouls) || 0,
+      allTimeSouls: dumpNum(state.allTimeSouls),
       tributesLaid: Number(state.tributesLaid) || 0
     };
   }
@@ -807,22 +1080,33 @@
   }
 
   function applySaveData(data) {
-    state.souls = Number(data.souls) || 0;
-    state.lifetimeSouls = Number(data.lifetimeSouls) || 0;
-    state.lifetimeShades = Number(data.lifetimeShades) || 0;
-    state.lifetimeSpirits = Number(data.lifetimeSpirits) || 0;
-    state.shades = Number(data.shades) || 0;
-    state.spirits = Number(data.spirits) || 0;
-    state.vessels = Number(data.vessels) || 0;
+    state.souls = N.load(data.souls);
+    state.lifetimeSouls = N.load(data.lifetimeSouls);
+    state.lifetimeShades = N.load(data.lifetimeShades);
+    state.lifetimeSpirits = N.load(data.lifetimeSpirits);
+    state.shades = N.load(data.shades);
+    state.spirits = N.load(data.spirits);
+    state.vessels = N.load(data.vessels);
     state.thrones = Number(data.thrones) || 0;
     state.wellDepth = Number(data.wellDepth) || 0;
+    state.lanterns = N.load(data.lanterns);
+    state.ash = N.load(data.ash);
+    state.censers = N.load(data.censers);
+    state.emberLevel = Number(data.emberLevel) || 0;
+    state.chainLevel = Number(data.chainLevel) || 0;
+    state.hollowLevel = Number(data.hollowLevel) || 0;
     state.unlockedSpirits = !!data.unlockedSpirits;
     state.unlockedVessels = !!data.unlockedVessels;
     state.unlockedWell = !!data.unlockedWell;
     state.unlockedThrones = !!data.unlockedThrones;
+    state.unlockedLanterns = !!data.unlockedLanterns;
+    state.unlockedMarks = !!data.unlockedMarks;
+    state.unlockedCensers = !!data.unlockedCensers;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
     state.throneToastShown = !!data.throneToastShown;
+    state.lanternToastShown = !!data.lanternToastShown;
+    state.censerToastShown = !!data.censerToastShown;
     state.favor = Number(data.favor) || 0;
     if (data.favorEarned == null) {
       state.favorEarned = Number(data.favor) || 0;
@@ -846,11 +1130,11 @@
     if (state.titheLeft < 0) state.titheLeft = 0;
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
     if (data.allTimeSouls == null) {
-      state.allTimeSouls = Number(data.lifetimeSouls) || 0;
+      state.allTimeSouls = N.load(data.lifetimeSouls);
     } else {
-      state.allTimeSouls = Number(data.allTimeSouls) || 0;
+      state.allTimeSouls = N.load(data.allTimeSouls);
     }
-    if (state.allTimeSouls < 0) state.allTimeSouls = 0;
+    if (N.cmp(state.allTimeSouls, 0) < 0) state.allTimeSouls = N.fromNumber(0);
     state.tributesLaid = Math.max(0, Math.floor(Number(data.tributesLaid) || 0));
   }
 
@@ -861,9 +1145,11 @@
     hideUnlockCards();
     checkUnlock();
     if (state.unlockedWell) revealWell();
+    if (state.unlockedLanterns) revealLanterns(false);
     if (state.unlockedSpirits) revealSpirits(false);
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
+    if (state.unlockedCensers) revealCensers(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
     }
@@ -887,20 +1173,20 @@
       applySaveData(data);
 
       var offline = (Date.now() - state.lastTick) / 1000;
-      var soulsBefore = state.souls;
-      var shadesBefore = state.shades;
+      var soulsBefore = N.clone(state.souls);
+      var shadesBefore = N.clone(state.shades);
       if (offline > 0.25) {
         applyDt(offline);
       }
-      var soulsGained = state.souls - soulsBefore;
-      var shadesGained = state.shades - shadesBefore;
+      var soulsGained = N.sub(state.souls, soulsBefore);
+      var shadesGained = N.sub(state.shades, shadesBefore);
       state.lastTick = Date.now();
       syncChronicle();
       save();
 
-      if (offline > AWAY_MIN_DT && (soulsGained > 0 || shadesGained > 0)) {
+      if (offline > AWAY_MIN_DT && (N.cmp(soulsGained, 0) > 0 || N.cmp(shadesGained, 0) > 0)) {
         var awayMsg = "The well gathered while you were away.";
-        if (soulsGained > 0) {
+        if (N.cmp(soulsGained, 0) > 0) {
           awayMsg += " +" + fmt(soulsGained) + " Souls";
         }
         pendingAwayToast = awayMsg;
@@ -988,8 +1274,11 @@
     hideCard(els.spiritCard);
     hideCard(els.vesselCard);
     hideCard(els.throneCard);
+    hideCard(els.lanternCard);
+    hideCard(els.censerCard);
     hideTribute();
     hideRites();
+    hideMarks();
     hideAspects();
   }
 
@@ -1026,7 +1315,7 @@
     var keptSeat = Number(state.seatLevel) || 0;
     var keptBuy = state.buyMode;
     var keptChronicle = (state.chronicle || []).slice();
-    var keptAllTime = Number(state.allTimeSouls) || 0;
+    var keptAllTime = N.clone(state.allTimeSouls);
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -1043,7 +1332,7 @@
     state.titheLeft = 0;
     state.runStartedAt = Date.now();
     if (keptMemory > 0) {
-      state.shades = keptMemory;
+      state.shades = N.fromNumber(keptMemory);
       state.unlockedWell = true;
     }
     state.thrones = keptSeat;
@@ -1058,20 +1347,42 @@
     hideUnlockCards();
     checkUnlock();
     if (state.unlockedWell) revealWell();
+    if (state.unlockedLanterns) revealLanterns(false);
     if (state.unlockedSpirits) revealSpirits(false);
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
+    if (state.unlockedCensers) revealCensers(false);
     save();
     render();
   }
+
 
   function fmt(n) {
     return SoulgatherFormat.formatNumber(n);
   }
 
   function formatMult(m) {
+    if (m && typeof m === "object" && typeof m.m === "number") {
+      m = N.toNumber(m);
+    }
     if (!isFinite(m)) m = 1;
     return "\u00d7" + m.toFixed(1);
+  }
+
+  function formatTimes(n) {
+    if (n && typeof n === "object" && typeof n.m === "number") {
+      if (n.e < 12) {
+        var v = N.toNumber(n);
+        if (isFinite(v) && Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+        if (isFinite(v) && v < 1000) {
+          if (Math.abs(v - Math.round(v)) < 0.05) return String(Math.round(v));
+          return v.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+        }
+      }
+      return fmt(n);
+    }
+    if (!isFinite(n)) return fmt(n);
+    return String(n);
   }
 
   function pulseGather() {
@@ -1138,6 +1449,19 @@
     }
   }
 
+  function revealLanterns(withToast) {
+    revealCard(els.lanternCard);
+  }
+
+  function revealCensers(withToast) {
+    revealCard(els.censerCard);
+    if (withToast && !state.censerToastShown) {
+      state.censerToastShown = true;
+      showToast("They burn what the well discards.");
+      save();
+    }
+  }
+
   function hideTribute() {
     if (els.tributePanel) els.tributePanel.classList.add("is-hidden");
     if (els.tributeFootBtn) els.tributeFootBtn.classList.add("is-hidden");
@@ -1148,6 +1472,12 @@
     if (els.levyRow) els.levyRow.classList.add("is-hidden");
     if (els.wellDrawsRow) els.wellDrawsRow.classList.add("is-hidden");
     if (els.titheRow) els.titheRow.classList.add("is-hidden");
+  }
+
+  function hideMarks() {
+    if (els.marksPanel) els.marksPanel.classList.add("is-hidden");
+    if (els.markChainRow) els.markChainRow.classList.add("is-hidden");
+    if (els.markHollowRow) els.markHollowRow.classList.add("is-hidden");
   }
 
   function hideAspects() {
@@ -1258,6 +1588,19 @@
     els.soulsCount.textContent = F.formatNumber(state.souls);
     els.soulsRate.textContent = F.formatRate(soulsPerSec());
 
+    if (els.soulsAsh) {
+      var showAsh =
+        state.unlockedMarks ||
+        state.unlockedCensers ||
+        N.cmp(state.ash, 0) > 0;
+      if (showAsh) {
+        els.soulsAsh.textContent = "Ash " + F.formatNumber(state.ash);
+        els.soulsAsh.classList.remove("is-hidden");
+      } else {
+        els.soulsAsh.classList.add("is-hidden");
+      }
+    }
+
     if (els.soulsFavor) {
       if (mult > 1) {
         els.soulsFavor.textContent = "Blessing " + formatMult(mult);
@@ -1282,40 +1625,54 @@
         revealWell();
       }
       var wCost = wellCost(state.wellDepth);
-      var canWell = state.souls >= wCost;
+      var canWell = N.cmp(state.souls, wCost) >= 0;
       var power = clickPower();
       els.wellOwned.textContent = F.formatNumber(state.wellDepth);
       els.wellPower.textContent =
-        F.formatNumber(power) + (power === 1 ? " soul / click" : " souls / click");
+        F.formatNumber(power) + (N.cmp(power, 1) === 0 ? " soul / click" : " souls / click");
       els.wellCost.textContent = F.formatNumber(wCost) + " Souls";
       els.wellBuy.disabled = !canWell;
       els.wellCard.classList.toggle("can-buy", canWell);
     }
 
     var shadePlan = purchasePlan(state.shades, state.souls);
-    var canShade = state.souls >= producerCost(state.shades);
+    var canShade = shadePlan.can;
     els.shadeOwned.textContent = F.formatNumber(state.shades);
     els.shadeProd.textContent =
       F.formatNumber(shadeSoulsPerSec()) + " souls / sec";
     els.shadeCost.textContent = F.formatNumber(shadePlan.cost) + " Souls";
-    els.shadeBuy.disabled = !canShade || !shadePlan.can;
+    els.shadeBuy.disabled = !canShade;
     els.shadeBuy.textContent = bindLabel("Bind a Shade", "Bind", shadePlan.k, "Shade", "Shades");
-    els.shadeCard.classList.toggle("can-buy", canShade && shadePlan.can);
-    els.shadeCard.classList.toggle("is-dormant", state.lifetimeSouls < 1);
+    els.shadeCard.classList.toggle("can-buy", canShade);
+    els.shadeCard.classList.toggle("is-dormant", N.cmp(state.lifetimeSouls, 1) < 0);
+
+    if (state.unlockedLanterns) {
+      if (els.lanternCard && els.lanternCard.classList.contains("is-hidden")) {
+        revealLanterns(false);
+      }
+      var lanternC = lanternCost(state.lanterns);
+      var lMult = lanternMult(state.lanterns);
+      var canLantern = N.cmp(state.souls, lanternC) >= 0;
+      els.lanternOwned.textContent = F.formatNumber(state.lanterns);
+      els.lanternProd.textContent = "Shade souls \u00d7" + formatTimes(lMult);
+      els.lanternCost.textContent = F.formatNumber(lanternC) + " Souls";
+      els.lanternBuy.disabled = !canLantern;
+      els.lanternBuy.textContent = "Kindle a Lantern";
+      els.lanternCard.classList.toggle("can-buy", canLantern);
+    }
 
     if (state.unlockedSpirits) {
       if (els.spiritCard.classList.contains("is-hidden")) {
         revealSpirits(false);
       }
       var spiritPlan = purchasePlan(state.spirits, state.shades);
-      var canSpiritOne = state.shades >= producerCost(state.spirits);
       els.spiritOwned.textContent = F.formatNumber(state.spirits);
       els.spiritProd.textContent =
         F.formatNumber(shadesPerSec()) + " shades / sec";
       els.spiritCost.textContent = F.formatNumber(spiritPlan.cost) + " Shades";
-      els.spiritBuy.disabled = !canSpiritOne || !spiritPlan.can;
+      els.spiritBuy.disabled = !spiritPlan.can;
       els.spiritBuy.textContent = bindLabel("Bind a Spirit", "Bind", spiritPlan.k, "Spirit", "Spirits");
-      els.spiritCard.classList.toggle("can-buy", canSpiritOne && spiritPlan.can);
+      els.spiritCard.classList.toggle("can-buy", spiritPlan.can);
     }
 
     if (state.unlockedVessels) {
@@ -1323,14 +1680,28 @@
         revealVessels(false);
       }
       var vesselPlan = purchasePlan(state.vessels, state.spirits);
-      var canVesselOne = state.spirits >= producerCost(state.vessels);
       els.vesselOwned.textContent = F.formatNumber(state.vessels);
       els.vesselProd.textContent =
         F.formatNumber(spiritsPerSec()) + " spirits / sec";
       els.vesselCost.textContent = F.formatNumber(vesselPlan.cost) + " Spirits";
-      els.vesselBuy.disabled = !canVesselOne || !vesselPlan.can;
+      els.vesselBuy.disabled = !vesselPlan.can;
       els.vesselBuy.textContent = bindLabel("Bind a Vessel", "Bind", vesselPlan.k, "Vessel", "Vessels");
-      els.vesselCard.classList.toggle("can-buy", canVesselOne && vesselPlan.can);
+      els.vesselCard.classList.toggle("can-buy", vesselPlan.can);
+    }
+
+    if (state.unlockedCensers) {
+      if (els.censerCard && els.censerCard.classList.contains("is-hidden")) {
+        revealCensers(false);
+      }
+      var censerC = censerCost(state.censers);
+      var censerRate = N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult());
+      var canCenser = N.cmp(state.vessels, censerC) >= 0;
+      els.censerOwned.textContent = F.formatNumber(state.censers);
+      els.censerProd.textContent = F.formatNumber(censerRate) + " ash / sec";
+      els.censerCost.textContent = F.formatNumber(censerC) + " Vessels";
+      els.censerBuy.disabled = !canCenser;
+      els.censerBuy.textContent = "Raise a Censer";
+      els.censerCard.classList.toggle("can-buy", canCenser);
     }
 
     if (state.unlockedThrones) {
@@ -1338,38 +1709,37 @@
         revealThrones(false);
       }
       var thronePlan = purchasePlan(state.thrones, state.vessels);
-      var canThroneOne = state.vessels >= producerCost(state.thrones);
       var thronePct = Math.round(
         (normalizeAspect(state.aspect) === "dominion" ? 15 : 10) * state.thrones
       );
       els.throneOwned.textContent = F.formatNumber(state.thrones);
       els.throneProd.textContent = "+" + thronePct + "% production";
       els.throneCost.textContent = F.formatNumber(thronePlan.cost) + " Vessels";
-      els.throneBuy.disabled = !canThroneOne || !thronePlan.can;
+      els.throneBuy.disabled = !thronePlan.can;
       els.throneBuy.textContent = bindLabel("Raise a Throne", "Raise", thronePlan.k, "Throne", "Thrones");
-      els.throneCard.classList.toggle("can-buy", canThroneOne && thronePlan.can);
+      els.throneCard.classList.toggle("can-buy", thronePlan.can);
     }
 
-    var ritesOpen = !!state.unlockedWell || state.shades >= 1 || !!state.wellDraws;
+    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
     if (ritesOpen) {
       var sCost = siphonCost(state.siphonLevel);
       var sMult = siphonMult(state.siphonLevel);
-      if (els.siphonEffect) els.siphonEffect.textContent = "Siphon \u00d7" + sMult;
+      if (els.siphonEffect) els.siphonEffect.textContent = "Siphon \u00d7" + formatTimes(sMult);
       if (els.siphonCost) els.siphonCost.textContent = F.formatNumber(sCost) + " Souls";
-      if (els.siphonBuy) els.siphonBuy.disabled = state.souls < sCost;
+      if (els.siphonBuy) els.siphonBuy.disabled = N.cmp(state.souls, sCost) < 0;
 
       if (els.levyRow) {
         els.levyRow.classList.toggle("is-hidden", !state.unlockedSpirits);
       }
       if (state.unlockedSpirits) {
         var lCost = levyCost(state.levyLevel);
-        var lMult = levyMult(state.levyLevel);
-        if (els.levyEffect) els.levyEffect.textContent = "Levy \u00d7" + lMult;
+        var levyM = levyMult(state.levyLevel);
+        if (els.levyEffect) els.levyEffect.textContent = "Levy \u00d7" + formatTimes(levyM);
         if (els.levyCost) els.levyCost.textContent = F.formatNumber(lCost) + " Shades";
-        if (els.levyBuy) els.levyBuy.disabled = state.shades < lCost;
+        if (els.levyBuy) els.levyBuy.disabled = N.cmp(state.shades, lCost) < 0;
       }
 
       var drawsOpen = !!state.unlockedWellDraws || !!state.wellDraws;
@@ -1379,7 +1749,7 @@
       if (drawsOpen) {
         if (state.wellDraws) {
           if (els.wellDrawsEffect) els.wellDrawsEffect.textContent = "The well draws";
-          if (els.wellDrawsCost) els.wellDrawsCost.textContent = "—";
+          if (els.wellDrawsCost) els.wellDrawsCost.textContent = "\u2014";
           if (els.wellDrawsBuy) {
             els.wellDrawsBuy.disabled = true;
             els.wellDrawsBuy.textContent = "The well draws";
@@ -1390,7 +1760,7 @@
             els.wellDrawsCost.textContent = F.formatNumber(WELL_DRAWS_COST) + " Souls";
           }
           if (els.wellDrawsBuy) {
-            els.wellDrawsBuy.disabled = state.souls < WELL_DRAWS_COST;
+            els.wellDrawsBuy.disabled = N.cmp(state.souls, WELL_DRAWS_COST) < 0;
             els.wellDrawsBuy.textContent = "Let the Well Draw";
           }
         }
@@ -1415,10 +1785,44 @@
             els.titheBuy.disabled = true;
             els.titheBuy.textContent = "The tithe burns \u2014 " + Math.ceil(tLeft) + "s";
           } else {
-            els.titheBuy.disabled = state.souls < TITHE_MIN;
+            els.titheBuy.disabled = N.cmp(state.souls, TITHE_MIN) < 0;
             els.titheBuy.textContent = "Pay the Tithe";
           }
         }
+      }
+    }
+
+    var marksOpen = !!state.unlockedMarks;
+    if (els.marksPanel) {
+      els.marksPanel.classList.toggle("is-hidden", !marksOpen);
+    }
+    if (marksOpen) {
+      var eCost = markCost(state.emberLevel);
+      var eMult = emberMult(state.emberLevel);
+      if (els.markEmberEffect) els.markEmberEffect.textContent = "Shade souls \u00d7" + formatTimes(eMult);
+      if (els.markEmberCost) els.markEmberCost.textContent = F.formatNumber(eCost) + " Ash";
+      if (els.markEmberBuy) els.markEmberBuy.disabled = N.cmp(state.ash, eCost) < 0;
+
+      if (els.markChainRow) {
+        els.markChainRow.classList.toggle("is-hidden", !state.unlockedSpirits);
+      }
+      if (state.unlockedSpirits) {
+        var chCost = markCost(state.chainLevel);
+        var chMult = chainMult(state.chainLevel);
+        if (els.markChainEffect) els.markChainEffect.textContent = "Spirit levy \u00d7" + formatTimes(chMult);
+        if (els.markChainCost) els.markChainCost.textContent = F.formatNumber(chCost) + " Ash";
+        if (els.markChainBuy) els.markChainBuy.disabled = N.cmp(state.ash, chCost) < 0;
+      }
+
+      if (els.markHollowRow) {
+        els.markHollowRow.classList.toggle("is-hidden", !state.unlockedVessels);
+      }
+      if (state.unlockedVessels) {
+        var hCost = markCost(state.hollowLevel);
+        var hMult = hollowMult(state.hollowLevel);
+        if (els.markHollowEffect) els.markHollowEffect.textContent = "Vessel house \u00d7" + formatTimes(hMult);
+        if (els.markHollowCost) els.markHollowCost.textContent = F.formatNumber(hCost) + " Ash";
+        if (els.markHollowBuy) els.markHollowBuy.disabled = N.cmp(state.ash, hCost) < 0;
       }
     }
 
@@ -1497,12 +1901,12 @@
       if (els.reliquaryFavor) els.reliquaryFavor.textContent = F.formatNumber(state.favor);
       if (els.reliquaryEarned) els.reliquaryEarned.textContent = F.formatNumber(state.favorEarned);
 
-      var eCost = edictCost(state.edictLevel);
+      var edCost = edictCost(state.edictLevel);
       var ePct = Math.round(25 * state.edictLevel);
       if (els.edictEffect) els.edictEffect.textContent = "+" + ePct + "% production";
-      if (els.edictCost) els.edictCost.textContent = F.formatNumber(eCost) + " Favor";
+      if (els.edictCost) els.edictCost.textContent = F.formatNumber(edCost) + " Favor";
       if (els.edictBuy) {
-        els.edictBuy.disabled = state.favor < eCost;
+        els.edictBuy.disabled = state.favor < edCost;
       }
 
       var mCost = memoryCost(state.memoryLevel);
@@ -1520,7 +1924,7 @@
 
       if (state.echoLevel >= 1) {
         if (els.echoEffect) els.echoEffect.textContent = "The Well Draws at tribute";
-        if (els.echoCost) els.echoCost.textContent = "—";
+        if (els.echoCost) els.echoCost.textContent = "\u2014";
         if (els.echoBuy) {
           els.echoBuy.disabled = true;
           els.echoBuy.textContent = "The well remembers.";
@@ -1568,6 +1972,7 @@
   function bind() {
     els.soulsCount = document.getElementById("souls-count");
     els.soulsRate = document.getElementById("souls-rate");
+    els.soulsAsh = document.getElementById("souls-ash");
     els.soulsFavor = document.getElementById("souls-favor");
     els.gatherBtn = document.getElementById("gather-btn");
     els.buyMode = document.getElementById("buy-mode");
@@ -1581,6 +1986,11 @@
     els.shadeProd = document.getElementById("shade-prod");
     els.shadeCost = document.getElementById("shade-cost");
     els.shadeBuy = document.getElementById("shade-buy");
+    els.lanternCard = document.getElementById("lantern-card");
+    els.lanternOwned = document.getElementById("lantern-owned");
+    els.lanternProd = document.getElementById("lantern-prod");
+    els.lanternCost = document.getElementById("lantern-cost");
+    els.lanternBuy = document.getElementById("lantern-buy");
     els.spiritCard = document.getElementById("spirit-card");
     els.spiritOwned = document.getElementById("spirit-owned");
     els.spiritProd = document.getElementById("spirit-prod");
@@ -1591,6 +2001,11 @@
     els.vesselProd = document.getElementById("vessel-prod");
     els.vesselCost = document.getElementById("vessel-cost");
     els.vesselBuy = document.getElementById("vessel-buy");
+    els.censerCard = document.getElementById("censer-card");
+    els.censerOwned = document.getElementById("censer-owned");
+    els.censerProd = document.getElementById("censer-prod");
+    els.censerCost = document.getElementById("censer-cost");
+    els.censerBuy = document.getElementById("censer-buy");
     els.throneCard = document.getElementById("throne-card");
     els.throneOwned = document.getElementById("throne-owned");
     els.throneProd = document.getElementById("throne-prod");
@@ -1633,6 +2048,18 @@
     els.titheEffect = document.getElementById("tithe-effect");
     els.titheCost = document.getElementById("tithe-cost");
     els.titheBuy = document.getElementById("tithe-buy");
+    els.marksPanel = document.getElementById("marks-panel");
+    els.markEmberEffect = document.getElementById("mark-ember-effect");
+    els.markEmberCost = document.getElementById("mark-ember-cost");
+    els.markEmberBuy = document.getElementById("mark-ember-buy");
+    els.markChainRow = document.getElementById("mark-chain-row");
+    els.markChainEffect = document.getElementById("mark-chain-effect");
+    els.markChainCost = document.getElementById("mark-chain-cost");
+    els.markChainBuy = document.getElementById("mark-chain-buy");
+    els.markHollowRow = document.getElementById("mark-hollow-row");
+    els.markHollowEffect = document.getElementById("mark-hollow-effect");
+    els.markHollowCost = document.getElementById("mark-hollow-cost");
+    els.markHollowBuy = document.getElementById("mark-hollow-buy");
     els.aspectsPanel = document.getElementById("aspects-panel");
     els.aspectsSworn = document.getElementById("aspects-sworn");
     els.aspectHarvestRow = document.getElementById("aspect-harvest-row");
@@ -1652,8 +2079,10 @@
     els.gatherBtn.addEventListener("click", harvest);
     els.wellBuy.addEventListener("click", buyWell);
     els.shadeBuy.addEventListener("click", buyShade);
+    if (els.lanternBuy) els.lanternBuy.addEventListener("click", buyLantern);
     els.spiritBuy.addEventListener("click", buySpirit);
     els.vesselBuy.addEventListener("click", buyVessel);
+    if (els.censerBuy) els.censerBuy.addEventListener("click", buyCenser);
     els.throneBuy.addEventListener("click", buyThrone);
     els.tributeBtn.addEventListener("click", layTribute);
     els.tributeFootBtn.addEventListener("click", layTribute);
@@ -1665,6 +2094,21 @@
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
+    if (els.markEmberBuy) {
+      els.markEmberBuy.addEventListener("click", function () {
+        buyMark("ember");
+      });
+    }
+    if (els.markChainBuy) {
+      els.markChainBuy.addEventListener("click", function () {
+        buyMark("chain");
+      });
+    }
+    if (els.markHollowBuy) {
+      els.markHollowBuy.addEventListener("click", function () {
+        buyMark("hollow");
+      });
+    }
     if (els.aspectHarvestBuy) {
       els.aspectHarvestBuy.addEventListener("click", function () {
         swearAspect("harvest");
@@ -1750,9 +2194,11 @@
     if (!state.runStartedAt) state.runStartedAt = Date.now();
     checkUnlock();
     if (state.unlockedWell) revealWell();
+    if (state.unlockedLanterns) revealLanterns(false);
     if (state.unlockedSpirits) revealSpirits(false);
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
+    if (state.unlockedCensers) revealCensers(false);
     render();
     if (pendingAwayToast) {
       showToast(pendingAwayToast);
@@ -1774,6 +2220,9 @@
     vesselCost: vesselCost,
     throneCost: throneCost,
     wellCost: wellCost,
+    lanternCost: lanternCost,
+    censerCost: censerCost,
+    markCost: markCost,
     favorGain: favorGain,
     prestigeMult: prestigeMult,
     prodMult: prodMult,
@@ -1790,9 +2239,14 @@
     harvestMult: harvestMult,
     bindingMult: bindingMult,
     throneWeight: throneWeight,
+    lanternMult: lanternMult,
+    emberMult: emberMult,
+    chainMult: chainMult,
+    hollowMult: hollowMult,
     normalizeAspect: normalizeAspect,
     nextGoal: nextGoal,
     titheCost: titheCost,
-    titheMult: titheMult
+    titheMult: titheMult,
+    ashPerSec: ashPerSec
   };
 })();

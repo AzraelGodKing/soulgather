@@ -13,13 +13,27 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 ## Loop (short)
 
-Click the well → Shades → Bound Spirits → Vessels → Thrones. Rites and Tithe this-run. Tribute for Favor. Reliquary + Aspects after first Tribute.
+Click the well → Shades → Lanterns (half-step) → Bound Spirits → Vessels → Censers (side) / Thrones. Ash feeds Marks. Rites and Tithe this-run. Tribute for Favor. Reliquary + Aspects after first Tribute.
 
-## Design notes (v0.7)
+## Design notes (v0.8)
 
 Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
 
-**Loop.** Click the well. Shades (base 10 souls, ×1.15, 1 soul/s). Bound Spirits at 10 shades or 100 lifetime souls (0.1 shade/s). Well Depth after 1 shade (+1 click; `floor(25×1.5^d)` souls). Vessels at 5 spirits or 50 lifetime shades (0.1 spirit/s). Thrones at 1 vessel or 50 lifetime spirits this run (cost in vessels; +10% production each, or +15% under Dominion). Buy 1 / 10 / Max on producers (not Well Depth, not Rites, not Aspects, not the Tithe). Tick: souls from shades, shades from spirits, spirits from vessels.
+**Num safety (v0.8).** Foo's late-run freeze was JS Number overflow: Math.pow(1.15, n) on huge owned counts, 50 * Math.pow(3, siphonLevel), then Math.floor(Infinity) leading to NaN comparisons and dead buy buttons. js/num.js is a tiny mantissa+exponent library (value = m x 10^e, 1 <= |m| < 10). Costs use cost(base, mult, owned) = floor(base * mult^owned) in Num space (small n still matches the old Math.floor curve). Souls, shades, spirits, vessels, lifetimeSouls, lifetimeShades, lifetimeSpirits, allTimeSouls, Ash, and growing owned counts (shades/spirits/vessels/lanterns/censers) are Num. Buy/compare via Num.cmp. Production is rate * dt in Num. Saves store {m,e}; old numeric saves still load. Format keeps K/M/B/T then 1.2e34 past suffixes. No external libs.
+
+**Lanterns (half-step).** Unlock after 3 Shades this run. Card in the producer row. Spend Souls, cost floor(30 x 1.2^n). Each Lantern +5% shade soul output, additive (lanternMult = 1 + 0.05 * lanterns). Stacks with siphon, Harvest, prodMult, ember. Does not produce units and is not a producer-of-producer. Flavor: *A light that teaches the echoes where to drink.* Button: Kindle a Lantern. Toast on first kindle: "A lantern kindles." Wipe on Tribute.
+
+**Ash + Marks (side resource / side spend).** Ash accrues at 1% of soul production from shades only (not clicks, not Well Draws). Quiet "Ash N" line under the soul rate, same gold type. Marks panel (like Rites: this-run, wipe on Tribute) unlocks when Ash >= 1 or lifetime souls >= 500. Three independent x1 buys, cost Ash floor(8 x 2^n) each:
+
+- Mark of Ember — shade soul output x1.25 per level (emberMult = 1.25^level).
+- Mark of Chain — spirit shade output x1.25 per level. Hidden until Bound Spirits unlocked.
+- Mark of Hollow — vessel spirit output x1.25 per level. Hidden until Vessels unlocked.
+
+Flavor: *Ash is what the well will not keep.* Buttons: Press the Mark.
+
+**Censers (late side path).** Unlock at 1 Vessel or 25 lifetime Spirits. Spend Vessels, same producer curve 10 x 1.15^n. Each Censer produces 0.2 Ash/s x prodMult x titheMult (not siphon). Flavor: *They burn what the well discards.* Button: Raise a Censer. Not required for Tribute. Gives late-run Ash so Marks stay buyable.
+
+**Loop.** Click the well. Shades (base 10 souls, ×1.15, 1 soul/s). Bound Spirits at 10 shades or 100 lifetime souls (0.1 shade/s). Well Depth after 1 shade (+1 click; `floor(25×1.5^d)` souls). Vessels at 5 spirits or 50 lifetime shades (0.1 spirit/s). Thrones at 1 vessel or 50 lifetime spirits this run (cost in vessels; +10% production each, or +15% under Dominion). Buy 1 / 10 / Max on producers including Lanterns and Censers (not Well Depth, not Rites, not Marks, not Aspects, not the Tithe). Tick: souls from shades, shades from spirits, spirits from vessels, Ash from shade souls and Censers. Lanterns at 3 Shades; Censers at 1 Vessel or 25 lifetime Spirits.
 
 **The Tithe (v0.7).** This-run burst, not a producer. Hidden until `unlockedWell` (first Shade this run); compact row in Rites. Wipes on Tribute and Footer Reset (active burst ends). Button: Pay the Tithe. Flavor: *A cut for the GodKing. The well runs hotter.* Cost 10% of current souls, minimum 25 (`Math.max(25, Math.floor(souls * 0.1))`). Cannot pay if souls < 25. Effect: 60s of `titheMult = 2` on top of `prodMult` — souls/s, shades/s, vessel spirit/s, and clickPower. While active the button is disabled and reads "The tithe burns — Xs" (whole seconds). No stacking. After the window ends this run, another Tithe is allowed (no long cooldown). Timed on the same dt tick (`titheLeft` decremented in `applyDt`; persist so a mid-burst refresh continues). Offline catchup consumes remaining `titheLeft` against offline dt and does not extend past it. Toast on pay: "The GodKing takes his cut." Rate: `currentMult * titheMult`, `titheMult` 2 if `titheLeft > 0` else 1.
 
@@ -50,22 +64,31 @@ Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson
 
 **Multiplier.** `prodMult = (1 + 0.5 * favorEarned) * (1 + throneWeight * thrones) * (1 + 0.25 * edictLevel)`, `throneWeight` 0.15 if Dominion else 0.10.
 
-Rates and clicks also take `titheMult` (2 during an active Tithe, else 1): `clickPower = (1 + wellDepth) * prodMult * titheMult`.
+Rates and clicks also take `titheMult` (2 during an active Tithe, else 1): `clickPower = (1 + wellDepth) * prodMult * titheMult`. ClickPower is otherwise unchanged (no lantern/ember).
 
-souls/s from shades = `shades * 1 * prodMult * titheMult * 2^siphonLevel * harvestMult` (+ `clickPower` if `wellDraws`). `harvestMult` is 1.5 if Harvest else 1.
+v0.8 extras:
 
-shades/s from spirits = `spirits * 0.1 * prodMult * titheMult * 2^levyLevel * bindingMult`. `bindingMult` is 1.5 if Binding else 1.
+- `lanternMult = 1 + 0.05 * lanterns`
+- `emberMult = 1.25^emberLevel`
+- `chainMult = 1.25^chainLevel`
+- `hollowMult = 1.25^hollowLevel`
 
-Vessels 0.1 spirit/s × `prodMult` × `titheMult`. Click still uses `prodMult * titheMult`, so Dominion slightly blesses clicks through Thrones. Thrones do not produce.
+shade souls/s = `shades * 1 * prodMult * titheMult * 2^siphon * harvestMult * lanternMult * emberMult` (+ `clickPower` if `wellDraws`). `harvestMult` is 1.5 if Harvest else 1.
 
-**Tribute.** First Favor at 25000 lifetime souls (`floor(sqrt(lifetime/25000))`). Tribute keeps Favor, `favorEarned`, `edictLevel`, `memoryLevel`, `echoLevel`, `seatLevel`, `buyMode`, Chronicle, `allTimeSouls`, `tributesLaid` (+1). Clears the run (souls, producers, `wellDraws`, thrones, unlocks, siphon/levy, sworn Aspect, `titheLeft`), then applies meta: `shades = memoryLevel` (`unlockedWell` if shades ≥ 1); `thrones = seatLevel` (`unlockedThrones` if thrones ≥ 1); `wellDraws` if `echoLevel >= 1` (rite already drawn, no soul charge); aspect = none (must swear again); `runStartedAt` = now. Footer Reset wipes Favor, Reliquary (including echo and seats), Aspects, Chronicle, Rites, Tithe, `allTimeSouls`, `tributesLaid`.
+shades/s from spirits = `spirits * 0.1 * prodMult * titheMult * 2^levyLevel * bindingMult * chainMult`. `bindingMult` is 1.5 if Binding else 1.
 
-**Session layer (v0.3).** A quiet next-goal line under the soul rate / Blessing (unlock/tribute only; rites do not steal it). After first Tribute, an unsworn Aspect takes the line until you swear. Away-harvest toast on load after real offline production (8h cap, skip fresh saves and tiny tab-switches); hotkeys Space/Enter draw from the well (unless another button is focused), 1/2/3 set buy 1/10/Max; collapsible Chronicle of first-time milestones (persists through Tribute), including first rite cut, the well beginning to draw, first Aspect sworn, "An echo was spoken." and "A seat was raised."
+Vessels 0.1 spirit/s × `prodMult` × `titheMult` × `hollowMult`. Click still uses `prodMult * titheMult`, so Dominion slightly blesses clicks through Thrones. Thrones do not produce.
 
-**Save.** Key `soulgather-v0`. Old saves: missing `favorEarned` copies favor; missing aspect is none; missing `echoLevel`/`seatLevel` default 0; missing `titheLeft` 0; missing `runStartedAt` now; missing `allTimeSouls` seeds from this-run `lifetimeSouls`; missing `tributesLaid` 0. New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap. Footer Memory (collapsed, near Reset) exports or imports that JSON. Toast retrigger on import.
+Ash/s = `0.01 * (shade soul production only)` + `censers * 0.2 * prodMult * titheMult`.
+
+**Tribute.** First Favor at 25000 lifetime souls (`floor(sqrt(lifetime/25000))`). Tribute keeps Favor, `favorEarned`, `edictLevel`, `memoryLevel`, `echoLevel`, `seatLevel`, `buyMode`, Chronicle, `allTimeSouls`, `tributesLaid` (+1). Clears the run (souls, producers, lanterns, censers, Ash, Marks, `wellDraws`, thrones, unlocks, siphon/levy, sworn Aspect, `titheLeft`), then applies meta: `shades = memoryLevel` (`unlockedWell` if shades ≥ 1); `thrones = seatLevel` (`unlockedThrones` if thrones ≥ 1); `wellDraws` if `echoLevel >= 1` (rite already drawn, no soul charge); aspect = none (must swear again); `runStartedAt` = now. Footer Reset wipes Favor, Reliquary (including echo and seats), Aspects, Chronicle, Rites, Tithe, Marks, `allTimeSouls`, `tributesLaid`.
+
+**Session layer (v0.3 / v0.8).** A quiet next-goal line under the soul rate / Blessing (unlock/tribute only; rites do not steal it). After first Tribute, an unsworn Aspect takes the line until you swear — Lanterns/Marks/Censers never steal Aspect-swear or Tribute-ready. Lanterns enter the cascade as a half-step at 3 Shades; Marks and Censers hint after the main-line throne gate if still unbought. Away-harvest toast on load after real offline production (8h cap, skip fresh saves and tiny tab-switches); hotkeys Space/Enter draw from the well (unless another button is focused), 1/2/3 set buy 1/10/Max; collapsible Chronicle of first-time milestones (persists through Tribute), including first rite cut, the well beginning to draw, first Aspect sworn, "An echo was spoken.", "A seat was raised.", "A lantern was kindled.", "Ash gathered at the well's lip.", "A mark was pressed.", and "A censer was raised."
+
+**Save.** Key `soulgather-v0`. Old saves: missing `favorEarned` copies favor; missing aspect is none; missing `echoLevel`/`seatLevel` default 0; missing `titheLeft` 0; missing `runStartedAt` now; missing `allTimeSouls` seeds from this-run `lifetimeSouls`; missing `tributesLaid` 0; missing lanterns/ash/censers/marks default 0. Numeric stocks load through Num (Number → {m,e}). New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap. Footer Memory (collapsed, near Reset) exports or imports that JSON. Toast retrigger on import.
 
 Do not restyle the locked masthead or well sigil.
 
 Verify: `node test-economy.mjs` (expect exit 0).
 
-Files: `index.html`, `css/style.css`, `js/format.js`, `js/game.js`, `test-economy.mjs`, `sim-firstrun.mjs`.
+Files: `index.html`, `css/style.css`, `js/num.js`, `js/format.js`, `js/game.js`, `test-economy.mjs`, `sim-firstrun.mjs`.

@@ -1,4 +1,4 @@
-/* Soulgather v0.7 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v0.8 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -126,6 +126,21 @@ body::before {
   font-size: 0.95rem;
   color: var(--bone-dim);
   letter-spacing: 0.08em;
+}
+
+
+.souls-ash {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  opacity: 0.88;
+  font-variant-numeric: tabular-nums;
+}
+
+.souls-ash.is-hidden {
+  display: none;
 }
 
 .souls-favor {
@@ -428,7 +443,9 @@ body::before {
 .card#well-card,
 .card#spirit-card,
 .card#vessel-card,
-.card#throne-card {
+.card#throne-card,
+.card#lantern-card,
+.card#censer-card {
   transform: translateY(12px);
   opacity: 0;
   transition: opacity 0.55s ease, transform 0.55s ease, border-color 0.2s ease, box-shadow 0.2s ease;
@@ -437,7 +454,9 @@ body::before {
 .card#well-card.is-revealed,
 .card#spirit-card.is-revealed,
 .card#vessel-card.is-revealed,
-.card#throne-card.is-revealed {
+.card#throne-card.is-revealed,
+.card#lantern-card.is-revealed,
+.card#censer-card.is-revealed {
   opacity: 1;
   transform: translateY(0);
 }
@@ -528,6 +547,49 @@ body::before {
 }
 
 .card#throne-card .card-buy:disabled {
+  border-color: var(--disabled);
+  background: #1a1416;
+  color: #6a5e52;
+}
+
+
+.card#lantern-card::before {
+  background: var(--gold);
+}
+
+.card#lantern-card.can-buy::before {
+  background: var(--gold-bright);
+}
+
+.card#lantern-card .card-name {
+  color: var(--gold-bright);
+}
+
+.card#censer-card::before {
+  background: #6a3040;
+}
+
+.card#censer-card.can-buy::before {
+  background: var(--crimson-hot);
+}
+
+.card#censer-card .card-name {
+  color: #d8c4a8;
+}
+
+.card#censer-card .card-buy {
+  border-color: #a87840;
+  background: linear-gradient(180deg, #2e1c12 0%, #1a100c 100%);
+  color: #ead4b0;
+}
+
+.card#censer-card .card-buy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4a2c18 0%, #2a1810 100%);
+  border-color: var(--gold-bright);
+  color: #fff6d8;
+}
+
+.card#censer-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
   color: #6a5e52;
@@ -856,6 +918,93 @@ body::before {
 
 .rite-row#tithe-row.is-burning .rite-name {
   color: var(--crimson-hot);
+}
+
+
+/* ----- Marks (this-run; Ash spend; Reliquary language) ----- */
+.marks {
+  margin-top: 28px;
+  padding: 16px 20px 10px;
+  background: linear-gradient(180deg, #161016 0%, #100c10 100%);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.marks::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gold);
+  opacity: 0.7;
+}
+
+.marks.is-hidden {
+  display: none;
+}
+
+.marks-name {
+  margin: 0;
+  font-size: 1.18rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.marks-flavor {
+  margin: 6px 0 8px;
+  font-size: 0.92rem;
+  font-style: italic;
+  color: var(--ash);
+}
+
+.mark-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.mark-row.is-hidden {
+  display: none;
+}
+
+.mark-name {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.mark-flavor {
+  margin: 4px 0;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--ash);
+}
+
+.mark-stats {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+
+.mark-stats span {
+  color: var(--bone);
+}
+
+.mark-row .card-buy {
+  justify-self: end;
+  align-self: center;
 }
 
 /* ----- Aspects (quiet swear; Reliquary language) ----- */
@@ -1273,6 +1422,7 @@ body::before {
 
   .edict-row,
   .rite-row,
+  .mark-row,
   .aspect-row {
     flex-direction: column;
     align-items: stretch;
@@ -1280,6 +1430,7 @@ body::before {
 
   .edict-row .card-buy,
   .rite-row .card-buy,
+  .mark-row .card-buy,
   .aspect-row .card-buy {
     justify-self: stretch;
     width: 100%;
@@ -1315,6 +1466,7 @@ body::before {
   .card-stats,
   .tribute-meta,
   .rite-stats,
+  .mark-stats,
   .edict-stats,
   .aspect-stats {
     overflow-wrap: break-word;
@@ -1346,6 +1498,7 @@ body::before {
 
   .edict-row,
   .rite-row,
+  .mark-row,
   .aspect-row {
     flex-direction: column;
     align-items: stretch;

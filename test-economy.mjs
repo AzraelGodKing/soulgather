@@ -1,12 +1,38 @@
 #!/usr/bin/env node
 /**
- * Soulgather v0.7 economy smoke test.
- * Duplicates the in-game formulas (classic scripts, no ES modules in the page).
+ * Soulgather v0.8 economy smoke test.
+ * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
+import fs from "fs";
+import path from "path";
+import vm from "vm";
+import { fileURLToPath } from "url";
+
+const root = path.dirname(fileURLToPath(import.meta.url));
+function loadScript(rel) {
+  vm.runInThisContext(fs.readFileSync(path.join(root, rel), "utf8"), { filename: rel });
+}
+loadScript("js/num.js");
+loadScript("js/format.js");
+
+const N = globalThis.SoulgatherNum;
+const F = globalThis.SoulgatherFormat;
+
+function unwrap(x) {
+  if (x && typeof x === "object" && typeof x.m === "number") {
+    const n = N.toNumber(x);
+    if (isFinite(n) && Math.abs(n) < 1e15) {
+      if (Math.abs(n - Math.round(n)) < 1e-9) return Math.round(n);
+      return n;
+    }
+    return n;
+  }
+  return x;
+}
+
 function producerCost(owned) {
-  const n = Math.max(0, Math.floor(owned));
-  return Math.floor(10 * Math.pow(1.15, n));
+  return N.cost(10, 1.15, owned);
 }
 
 function shadeCost(owned) {
@@ -26,25 +52,43 @@ function throneCost(owned) {
 }
 
 function wellCost(depth) {
-  const n = Math.max(0, Math.floor(depth));
-  return Math.floor(25 * Math.pow(1.5, n));
+  return N.cost(25, 1.5, depth);
+}
+
+function lanternCost(owned) {
+  return N.cost(30, 1.2, owned);
+}
+
+function markCost(level) {
+  return N.cost(8, 2, level);
 }
 
 function bulkCost(base, owned, k) {
   const b = Number(base);
-  const o = Math.max(0, Math.floor(owned));
   const n = Math.max(0, Math.floor(k));
-  let total = 0;
+  let total = N.fromNumber(0);
   for (let i = 0; i < n; i++) {
-    total += Math.floor(b * Math.pow(1.15, o + i));
+    const o = Math.max(0, Math.floor(owned)) + i;
+    total = N.add(total, N.cost(b, 1.15, o));
   }
   return total;
 }
 
 function favorGain(lifetimeSouls) {
-  const n = Number(lifetimeSouls) || 0;
-  if (n < 0) return 0;
-  return Math.floor(Math.sqrt(n / 25000));
+  const n = N.max(N.from(lifetimeSouls), 0);
+  if (N.cmp(n, 0) <= 0) return 0;
+  if (n.e < 15) {
+    const v = N.toNumber(n);
+    if (isFinite(v) && v >= 0) {
+      return Math.floor(Math.sqrt(v / 25000));
+    }
+  }
+  const q = N.div(n, 25000);
+  const s = N.floor(N.add(N.pow(q, 0.5), N.fromNumber(1e-9)));
+  const asN = N.toNumber(s);
+  if (!isFinite(asN) || asN > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+  if (asN < 0) return 0;
+  return Math.floor(asN);
 }
 
 function prestigeMult(favor) {
@@ -94,13 +138,11 @@ function seatCost(level) {
 }
 
 function siphonCost(level) {
-  const n = Math.max(0, Math.floor(level));
-  return Math.floor(50 * Math.pow(3, n));
+  return N.cost(50, 3, level);
 }
 
 function levyCost(level) {
-  const n = Math.max(0, Math.floor(level));
-  return Math.floor(15 * Math.pow(3, n));
+  return N.cost(15, 3, level);
 }
 
 function siphonMult(level) {
@@ -108,23 +150,48 @@ function siphonMult(level) {
 }
 
 function titheCost(souls) {
-  let n = Number(souls) || 0;
-  if (n < 0) n = 0;
-  return Math.max(25, Math.floor(n * 0.1));
+  const n = N.max(N.from(souls), 0);
+  const tenth = N.floor(N.mul(n, 0.1));
+  return N.max(N.fromNumber(25), tenth);
 }
 
 function titheMult(on) {
   return on ? 2 : 1;
 }
 
+function lanternMult(lanterns) {
+  if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
+    if (lanterns.e < 12) return N.fromNumber(1 + 0.05 * (N.toNumber(lanterns) || 0));
+    return N.add(1, N.mul(0.05, lanterns));
+  }
+  return N.fromNumber(1 + 0.05 * (Number(lanterns) || 0));
+}
+
+function emberMult(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  if (n < 40) return N.fromNumber(Math.pow(1.25, n));
+  return N.pow(N.fromNumber(1.25), n);
+}
+
 let failed = 0;
 
 function assertEqual(label, actual, expected) {
+  actual = unwrap(actual);
+  expected = unwrap(expected);
   if (actual !== expected) {
     console.error("FAIL:", label, "got", actual, "expected", expected);
     failed += 1;
   } else {
     console.log("ok  ", label, "=", actual);
+  }
+}
+
+function assertTrue(label, cond) {
+  if (!cond) {
+    console.error("FAIL:", label);
+    failed += 1;
+  } else {
+    console.log("ok  ", label);
   }
 }
 
@@ -153,9 +220,9 @@ assertEqual("prestigeMult(2)", prestigeMult(2), 2);
 
 // Extra honesty checks — same curve, integer-owned flooring
 assertEqual("shadeCost(2)", shadeCost(2), Math.floor(10 * Math.pow(1.15, 2)));
-assertEqual("spiritCost matches shadeCost for n=7", spiritCost(7), shadeCost(7));
-assertEqual("fractional owned floors", shadeCost(1.9), shadeCost(1));
-assertEqual("vesselCost matches producerCost n=10", vesselCost(10), producerCost(10));
+assertEqual("spiritCost matches shadeCost for n=7", unwrap(spiritCost(7)), unwrap(shadeCost(7)));
+assertEqual("fractional owned floors", unwrap(shadeCost(1.9)), unwrap(shadeCost(1)));
+assertEqual("vesselCost matches producerCost n=10", unwrap(vesselCost(10)), unwrap(producerCost(10)));
 assertEqual("wellCost(2)", wellCost(2), Math.floor(25 * Math.pow(1.5, 2)));
 
 // v0.2
@@ -195,6 +262,8 @@ function nextGoal(view, format) {
   const spirits = Number(view.spirits) || 0;
   const lifetimeSouls = Number(view.lifetimeSouls) || 0;
   const lifetimeShades = Number(view.lifetimeShades) || 0;
+  const lanterns = Number(view.lanterns) || 0;
+  const censers = Number(view.censers) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
   const unlockedVessels = !!view.unlockedVessels;
   const unlockedThrones = !!view.unlockedThrones;
@@ -202,6 +271,7 @@ function nextGoal(view, format) {
   const gain = favorGain(lifetimeSouls);
   const sworn = view.aspect === "harvest" || view.aspect === "binding" || view.aspect === "dominion"
     || view.aspect === "aspectHarvest" || view.aspect === "aspectBinding" || view.aspect === "aspectDominion";
+  const marksBought = (Number(view.emberLevel) || 0) + (Number(view.chainLevel) || 0) + (Number(view.hollowLevel) || 0);
 
   if (favorEarned >= 1 && !sworn) {
     return "Swear an Aspect. The GodKing waits.";
@@ -211,6 +281,9 @@ function nextGoal(view, format) {
     return "Bind a Shade to wake the well.";
   }
   if (!unlockedSpirits) {
+    if (view.unlockedLanterns && lanterns < 1) {
+      return "Kindle a Lantern. A light for the echoes.";
+    }
     return (
       "The well thickens. Bound Spirits at 10 Shades. " +
       format(shades) +
@@ -225,6 +298,15 @@ function nextGoal(view, format) {
   }
   if (gain >= 1) {
     return "Lay Tribute. The GodKing will remember.";
+  }
+  if (view.unlockedLanterns && lanterns < 1) {
+    return "Kindle a Lantern. A light for the echoes.";
+  }
+  if (view.unlockedMarks && marksBought < 1) {
+    return "Press a Mark. Ash is what the well will not keep.";
+  }
+  if (view.unlockedCensers && censers < 1) {
+    return "Raise a Censer. They burn what the well discards.";
   }
   if (favorEarned >= 1) {
     return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
@@ -321,7 +403,7 @@ assertEqual(
   "Swear an Aspect. The GodKing waits."
 );
 
-assertEqual("bulkCost fractional owned floors", bulkCost(10, 1.9, 1), bulkCost(10, 1, 1));
+assertEqual("bulkCost fractional owned floors", unwrap(bulkCost(10, 1.9, 1)), unwrap(bulkCost(10, 1, 1)));
 
 const fakeSave = {
   souls: 12,
@@ -339,6 +421,78 @@ assertEqual("titheCost(400)", titheCost(400), 40);
 assertEqual("titheCost(10)", titheCost(10), 25);
 assertEqual("titheMult(true)", titheMult(true), 2);
 assertEqual("titheMult(false)", titheMult(false), 1);
+
+// v0.8 Num safety
+assertEqual("fromNumber(10)", unwrap(N.fromNumber(10)), 10);
+assertEqual("cost(10,1.15,0)", N.cost(10, 1.15, 0), 10);
+assertEqual("cost(10,1.15,1)", N.cost(10, 1.15, 1), 11);
+assertEqual("cost(10,1.15,10)", N.cost(10, 1.15, 10), 40);
+
+const siphon80 = siphonCost(80);
+assertTrue("siphonCost(80) is finite", N.isFinite(siphon80) && isFinite(N.toNumber(siphon80)) && N.toNumber(siphon80) !== Infinity);
+const siphon700 = siphonCost(700);
+assertTrue("siphonCost(700) is finite Num", N.isFinite(siphon700) && N.cmp(siphon700, 0) > 0);
+assertTrue("siphonCost(700) not JS Infinity", !isFinite(N.toNumber(siphon700)) || N.toNumber(siphon700) !== Infinity ? (N.isFinite(siphon700) && siphon700.e > 300) : true);
+
+const bigA = N.mul(N.fromNumber(1.2), N.pow(N.fromNumber(10), 40));
+const bigB = N.mul(N.fromNumber(3.4), N.pow(N.fromNumber(10), 40));
+const bigSum = N.add(bigA, bigB);
+assertTrue("add two large nums finite", N.isFinite(bigSum) && N.cmp(bigSum, 0) > 0);
+assertTrue("add two large nums ~4.6e40", Math.abs(bigSum.e - 40) <= 1);
+
+let formatThrew = false;
+try {
+  F.formatFromNum(siphon700);
+  F.formatNumber(bigSum);
+  F.formatFromNum(N.fromNumber(10));
+  F.formatNumber(N.cost(10, 1.15, 10));
+} catch (err) {
+  formatThrew = true;
+  console.error("format threw", err);
+}
+assertTrue("format doesn't throw", !formatThrew);
+
+assertEqual("lanternCost(0)", lanternCost(0), 30);
+assertEqual("lanternCost(1)", lanternCost(1), 36);
+assertEqual("markCost(0)", markCost(0), 8);
+assertEqual("markCost(1)", markCost(1), 16);
+assertEqual("lanternMult(2)", lanternMult(2), 1.1);
+assertEqual("emberMult(2)", emberMult(2), 1.5625);
+
+assertEqual("dump/load number", unwrap(N.load(12)), 12);
+assertEqual("dump/load {m,e}", unwrap(N.load({ m: 1.2, e: 1 })), 12);
+assertEqual("dump round-trip 40", unwrap(N.load(N.dump(N.cost(10, 1.15, 10)))), 40);
+assertTrue("50*3^80 not Infinity", N.isFinite(siphon80) && N.toNumber(siphon80) !== Infinity);
+
+assertEqual(
+  "nextGoal lantern half-step",
+  nextGoal({ shades: 3, unlockedLanterns: true, lanterns: 0 }),
+  "Kindle a Lantern. A light for the echoes."
+);
+assertEqual(
+  "nextGoal does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedLanterns: true,
+    lanterns: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedLanterns: true,
+    lanterns: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
