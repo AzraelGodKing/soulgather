@@ -256,6 +256,16 @@
       <span>Soulgather v0.5 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
+        <details class="memory-xfer" id="memory-panel">
+          <summary>Memory</summary>
+          <div class="memory-body">
+            <textarea id="memory-text" rows="3" spellcheck="false" aria-label="Well memory"></textarea>
+            <div class="memory-actions">
+              <button type="button" class="reset-btn" id="memory-export">Export</button>
+              <button type="button" class="reset-btn" id="memory-import">Import</button>
+            </div>
+          </div>
+        </details>
         <button type="button" class="reset-btn" id="reset-btn">Reset</button>
       </div>
     </footer>

@@ -479,6 +479,7 @@
   }
 
   function purchasePlan(owned, currency) {
+    owned = Math.max(0, Math.floor(Number(owned) || 0));
     var one = producerCost(owned);
     var mode = state.buyMode;
     if (mode === "10") {
@@ -621,39 +622,133 @@
     render();
   }
 
+  var SAVE_FIELDS = [
+    "souls",
+    "lifetimeSouls",
+    "lifetimeShades",
+    "lifetimeSpirits",
+    "shades",
+    "spirits",
+    "vessels",
+    "thrones",
+    "wellDepth",
+    "unlockedSpirits",
+    "unlockedVessels",
+    "unlockedWell",
+    "unlockedThrones",
+    "toastShown",
+    "vesselToastShown",
+    "throneToastShown",
+    "favor",
+    "favorEarned",
+    "edictLevel",
+    "memoryLevel",
+    "buyMode",
+    "siphonLevel",
+    "levyLevel",
+    "wellDraws",
+    "unlockedWellDraws",
+    "aspect",
+    "lastTick",
+    "chronicle"
+  ];
+
+  function serializeState() {
+    return {
+      souls: state.souls,
+      lifetimeSouls: state.lifetimeSouls,
+      lifetimeShades: state.lifetimeShades,
+      lifetimeSpirits: state.lifetimeSpirits,
+      shades: state.shades,
+      spirits: state.spirits,
+      vessels: state.vessels,
+      thrones: state.thrones,
+      wellDepth: state.wellDepth,
+      unlockedSpirits: state.unlockedSpirits,
+      unlockedVessels: state.unlockedVessels,
+      unlockedWell: state.unlockedWell,
+      unlockedThrones: state.unlockedThrones,
+      toastShown: state.toastShown,
+      vesselToastShown: state.vesselToastShown,
+      throneToastShown: state.throneToastShown,
+      favor: state.favor,
+      favorEarned: state.favorEarned,
+      edictLevel: state.edictLevel,
+      memoryLevel: state.memoryLevel,
+      buyMode: state.buyMode,
+      siphonLevel: state.siphonLevel,
+      levyLevel: state.levyLevel,
+      wellDraws: state.wellDraws,
+      unlockedWellDraws: state.unlockedWellDraws,
+      aspect: normalizeAspect(state.aspect),
+      lastTick: Date.now(),
+      chronicle: state.chronicle || []
+    };
+  }
+
+  function isSaveShape(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+    var i;
+    for (i = 0; i < SAVE_FIELDS.length; i++) {
+      if (Object.prototype.hasOwnProperty.call(data, SAVE_FIELDS[i])) return true;
+    }
+    return false;
+  }
+
+  function applySaveData(data) {
+    state.souls = Number(data.souls) || 0;
+    state.lifetimeSouls = Number(data.lifetimeSouls) || 0;
+    state.lifetimeShades = Number(data.lifetimeShades) || 0;
+    state.lifetimeSpirits = Number(data.lifetimeSpirits) || 0;
+    state.shades = Number(data.shades) || 0;
+    state.spirits = Number(data.spirits) || 0;
+    state.vessels = Number(data.vessels) || 0;
+    state.thrones = Number(data.thrones) || 0;
+    state.wellDepth = Number(data.wellDepth) || 0;
+    state.unlockedSpirits = !!data.unlockedSpirits;
+    state.unlockedVessels = !!data.unlockedVessels;
+    state.unlockedWell = !!data.unlockedWell;
+    state.unlockedThrones = !!data.unlockedThrones;
+    state.toastShown = !!data.toastShown;
+    state.vesselToastShown = !!data.vesselToastShown;
+    state.throneToastShown = !!data.throneToastShown;
+    state.favor = Number(data.favor) || 0;
+    if (data.favorEarned == null) {
+      state.favorEarned = Number(data.favor) || 0;
+    } else {
+      state.favorEarned = Number(data.favorEarned) || 0;
+    }
+    state.edictLevel = Number(data.edictLevel) || 0;
+    state.memoryLevel = Number(data.memoryLevel) || 0;
+    state.buyMode = normalizeBuyMode(data.buyMode);
+    state.siphonLevel = Number(data.siphonLevel) || 0;
+    state.levyLevel = Number(data.levyLevel) || 0;
+    state.wellDraws = !!data.wellDraws;
+    state.unlockedWellDraws = !!data.unlockedWellDraws;
+    state.aspect = normalizeAspect(data.aspect);
+    state.lastTick = Number(data.lastTick) || Date.now();
+    state.chronicle = normalizeChronicle(data.chronicle);
+  }
+
+  function adoptSave(data) {
+    state = freshState();
+    applySaveData(data);
+    hideToast(true);
+    hideUnlockCards();
+    checkUnlock();
+    if (state.unlockedWell) revealWell();
+    if (state.unlockedSpirits) revealSpirits(false);
+    if (state.unlockedVessels) revealVessels(false);
+    if (state.unlockedThrones) revealThrones(false);
+    if (els.chronicleList) {
+      els.chronicleList.dataset.sig = "";
+    }
+    lastFrame = 0;
+  }
+
   function save() {
     try {
-      var payload = {
-        souls: state.souls,
-        lifetimeSouls: state.lifetimeSouls,
-        lifetimeShades: state.lifetimeShades,
-        lifetimeSpirits: state.lifetimeSpirits,
-        shades: state.shades,
-        spirits: state.spirits,
-        vessels: state.vessels,
-        thrones: state.thrones,
-        wellDepth: state.wellDepth,
-        unlockedSpirits: state.unlockedSpirits,
-        unlockedVessels: state.unlockedVessels,
-        unlockedWell: state.unlockedWell,
-        unlockedThrones: state.unlockedThrones,
-        toastShown: state.toastShown,
-        vesselToastShown: state.vesselToastShown,
-        throneToastShown: state.throneToastShown,
-        favor: state.favor,
-        favorEarned: state.favorEarned,
-        edictLevel: state.edictLevel,
-        memoryLevel: state.memoryLevel,
-        buyMode: state.buyMode,
-        siphonLevel: state.siphonLevel,
-        levyLevel: state.levyLevel,
-        wellDraws: state.wellDraws,
-        unlockedWellDraws: state.unlockedWellDraws,
-        aspect: normalizeAspect(state.aspect),
-        lastTick: Date.now(),
-        chronicle: state.chronicle || []
-      };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState()));
     } catch (err) {
       /* private mode / quota — game still runs */
     }
@@ -665,38 +760,7 @@
       if (!raw) return;
       var data = JSON.parse(raw);
       if (!data || typeof data !== "object") return;
-      state.souls = Number(data.souls) || 0;
-      state.lifetimeSouls = Number(data.lifetimeSouls) || 0;
-      state.lifetimeShades = Number(data.lifetimeShades) || 0;
-      state.lifetimeSpirits = Number(data.lifetimeSpirits) || 0;
-      state.shades = Number(data.shades) || 0;
-      state.spirits = Number(data.spirits) || 0;
-      state.vessels = Number(data.vessels) || 0;
-      state.thrones = Number(data.thrones) || 0;
-      state.wellDepth = Number(data.wellDepth) || 0;
-      state.unlockedSpirits = !!data.unlockedSpirits;
-      state.unlockedVessels = !!data.unlockedVessels;
-      state.unlockedWell = !!data.unlockedWell;
-      state.unlockedThrones = !!data.unlockedThrones;
-      state.toastShown = !!data.toastShown;
-      state.vesselToastShown = !!data.vesselToastShown;
-      state.throneToastShown = !!data.throneToastShown;
-      state.favor = Number(data.favor) || 0;
-      if (data.favorEarned == null) {
-        state.favorEarned = Number(data.favor) || 0;
-      } else {
-        state.favorEarned = Number(data.favorEarned) || 0;
-      }
-      state.edictLevel = Number(data.edictLevel) || 0;
-      state.memoryLevel = Number(data.memoryLevel) || 0;
-      state.buyMode = normalizeBuyMode(data.buyMode);
-      state.siphonLevel = Number(data.siphonLevel) || 0;
-      state.levyLevel = Number(data.levyLevel) || 0;
-      state.wellDraws = !!data.wellDraws;
-      state.unlockedWellDraws = !!data.unlockedWellDraws;
-      state.aspect = normalizeAspect(data.aspect);
-      state.lastTick = Number(data.lastTick) || Date.now();
-      state.chronicle = normalizeChronicle(data.chronicle);
+      applySaveData(data);
 
       var offline = (Date.now() - state.lastTick) / 1000;
       var soulsBefore = state.souls;
@@ -720,6 +784,78 @@
     } catch (err) {
       state = freshState();
     }
+  }
+
+  function exportMemory() {
+    save();
+    var json;
+    try {
+      json = JSON.stringify(serializeState());
+    } catch (err) {
+      showToast("The memory would not bind.");
+      return;
+    }
+    function fillFallback() {
+      if (els.memoryPanel) els.memoryPanel.open = true;
+      if (els.memoryText) {
+        els.memoryText.value = json;
+        els.memoryText.focus();
+        els.memoryText.select();
+        try {
+          document.execCommand("copy");
+        } catch (err2) {
+          /* textarea still holds the memory */
+        }
+      }
+      showToast("The well's memory is copied.");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(json).then(function () {
+        if (els.memoryText) els.memoryText.value = json;
+        showToast("The well's memory is copied.");
+      }, fillFallback);
+    } else {
+      fillFallback();
+    }
+  }
+
+  function importMemory() {
+    var ok = window.confirm(
+      "Importing empties the current well and replaces its memory."
+    );
+    if (!ok) return;
+
+    var raw = "";
+    if (els.memoryText && els.memoryText.value) {
+      raw = String(els.memoryText.value).trim();
+    }
+    if (!raw) {
+      var pasted = window.prompt("Paste the well's memory.");
+      if (pasted == null) return;
+      raw = String(pasted).trim();
+    }
+    if (!raw) {
+      showToast("The memory would not bind.");
+      return;
+    }
+
+    var data;
+    try {
+      data = JSON.parse(raw);
+    } catch (err) {
+      showToast("The memory would not bind.");
+      return;
+    }
+    if (!isSaveShape(data)) {
+      showToast("The memory would not bind.");
+      return;
+    }
+
+    adoptSave(data);
+    state.lastTick = Date.now();
+    syncChronicle();
+    save();
+    render();
   }
 
   function hideUnlockCards() {
@@ -769,6 +905,7 @@
     state.memoryLevel = keptMemory;
     state.buyMode = keptBuy;
     state.chronicle = keptChronicle;
+    state.aspect = "";
     if (keptMemory > 0) {
       state.shades = keptMemory;
       state.unlockedWell = true;
@@ -878,8 +1015,17 @@
   function renderChronicle() {
     if (!els.chronicleList) return;
     var n = state.chronicle ? state.chronicle.length : 0;
-    if (els.chronicleList.dataset.count === String(n)) return;
-    els.chronicleList.dataset.count = String(n);
+    var sig = String(n);
+    if (n > 0) {
+      var ids = [];
+      var ci;
+      for (ci = 0; ci < n; ci++) {
+        ids.push(state.chronicle[ci].id);
+      }
+      sig = n + ":" + ids.join(",");
+    }
+    if (els.chronicleList.dataset.sig === sig) return;
+    els.chronicleList.dataset.sig = sig;
     els.chronicleList.innerHTML = "";
     if (n === 0) {
       var empty = document.createElement("li");
@@ -1289,6 +1435,12 @@
       });
     }
     els.resetBtn.addEventListener("click", resetGame);
+    els.memoryPanel = document.getElementById("memory-panel");
+    els.memoryText = document.getElementById("memory-text");
+    els.memoryExport = document.getElementById("memory-export");
+    els.memoryImport = document.getElementById("memory-import");
+    if (els.memoryExport) els.memoryExport.addEventListener("click", exportMemory);
+    if (els.memoryImport) els.memoryImport.addEventListener("click", importMemory);
 
     if (els.buyMode) {
       els.buyMode.addEventListener("click", function (ev) {
@@ -1308,7 +1460,8 @@
     document.addEventListener("keydown", function (ev) {
       if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
       var target = ev.target;
-      if (isTypingTarget(target)) return;
+      var active = document.activeElement || target;
+      if (isTypingTarget(target) || isTypingTarget(active)) return;
 
       if (ev.key === "1") {
         setBuyMode("1");
@@ -1324,11 +1477,20 @@
       }
 
       if (ev.key === " " || ev.key === "Enter") {
-        var tag = target && target.tagName ? target.tagName.toLowerCase() : "";
-        var isButton = tag === "button";
-        var isGather = target === els.gatherBtn;
+        var actionEl = active || target;
+        var tag = actionEl && actionEl.tagName ? actionEl.tagName.toLowerCase() : "";
+        var buttonEl = null;
+        if (tag === "button") {
+          buttonEl = actionEl;
+        } else if (actionEl && actionEl.closest) {
+          buttonEl = actionEl.closest("button");
+        }
+        var isGather =
+          actionEl === els.gatherBtn ||
+          target === els.gatherBtn ||
+          buttonEl === els.gatherBtn;
         if (tag === "summary" || tag === "a" || tag === "details") return;
-        if (isButton && !isGather) return;
+        if (buttonEl && !isGather) return;
         if (isGather && ev.key === "Enter") return;
         if (ev.key === " ") ev.preventDefault();
         harvest();

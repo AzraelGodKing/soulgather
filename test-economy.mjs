@@ -283,6 +283,30 @@ assertEqual("throneWeight(false)", throneWeight(false), 0.1);
 assertEqual("prodMult(0,2,0) no dominion", prodMult(0, 2, 0, throneWeight(false)), 1.2);
 assertEqual("prodMult(0,2,0) dominion", prodMult(0, 2, 0, throneWeight(true)), 1.3);
 
+assertEqual(
+  "nextGoal null aspect",
+  nextGoal({ favorEarned: 1, aspect: null }),
+  "Swear an Aspect. The GodKing waits."
+);
+assertEqual(
+  "nextGoal empty aspect",
+  nextGoal({ favorEarned: 1, aspect: "" }),
+  "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual("bulkCost fractional owned floors", bulkCost(10, 1.9, 1), bulkCost(10, 1, 1));
+
+const fakeSave = {
+  souls: 12,
+  shades: 3,
+  aspect: "harvest",
+  favorEarned: 2,
+  siphonLevel: 1,
+};
+const roundTripped = JSON.parse(JSON.stringify(fakeSave));
+assertEqual("round-trip keep aspect", roundTripped.aspect, "harvest");
+assertEqual("round-trip keep favorEarned", roundTripped.favorEarned, 2);
+
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
   process.exit(1);

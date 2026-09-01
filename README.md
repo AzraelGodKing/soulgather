@@ -26,7 +26,7 @@ First Favor at 25000 lifetime souls (floor(sqrt(lifetime/25000))). Tribute keeps
 
 v0.3 session layer: a quiet next-goal line under the soul rate / Blessing (unlock/tribute only; rites do not steal it). After first Tribute, an unsworn Aspect takes the line until you swear. Away-harvest toast on load after real offline production (8h cap, skip fresh saves and tiny tab-switches); hotkeys Space/Enter draw from the well (unless another button is focused), 1/2/3 set buy 1/10/Max; collapsible Chronicle of first-time milestones (persists through Tribute), including first rite cut, the well beginning to draw, and first Aspect sworn.
 
-Save key soulgather-v0. Old saves: missing favorEarned copies favor; missing aspect is none. New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap.
+Save key soulgather-v0. Old saves: missing favorEarned copies favor; missing aspect is none. New fields default 0/false/"1"/empty Chronicle. Autosave 5s. 8h offline cap. Footer Memory (collapsed, near Reset) exports or imports that JSON.
 
 Verify: node test-economy.mjs (expect exit 0).
 

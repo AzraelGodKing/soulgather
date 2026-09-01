@@ -1114,6 +1114,86 @@ body::before {
   box-shadow: 0 0 0 2px var(--gold);
 }
 
+.memory-xfer {
+  position: relative;
+  color: var(--ash);
+  font-size: 0.72rem;
+}
+
+.memory-xfer summary {
+  cursor: pointer;
+  list-style: none;
+  color: #8a7068;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-family: inherit;
+  padding: 6px 12px;
+  border: 1px solid #3a2a2c;
+  border-radius: 2px;
+  user-select: none;
+}
+
+.memory-xfer summary::-webkit-details-marker {
+  display: none;
+}
+
+.memory-xfer summary::marker {
+  content: "";
+}
+
+.memory-xfer summary:hover {
+  border-color: var(--crimson);
+  color: #d8a8a8;
+}
+
+.memory-xfer summary:focus {
+  outline: none;
+}
+
+.memory-xfer summary:focus-visible {
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.memory-body {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(320px, 72vw);
+  padding: 10px;
+  background: #120c14;
+  border: 1px solid var(--panel-edge);
+  border-radius: 2px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 6;
+}
+
+.memory-body textarea {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  background: var(--void-deep);
+  border: 1px solid #3a2a2c;
+  color: var(--bone-dim);
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  padding: 6px 8px;
+}
+
+.memory-body textarea:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+.memory-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .wrap {
     padding: 24px 16px 40px;
@@ -1161,5 +1241,10 @@ body::before {
   .foot {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .memory-body {
+    right: auto;
+    left: 0;
   }
 }
