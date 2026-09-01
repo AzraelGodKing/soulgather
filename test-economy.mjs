@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.4 economy smoke test.
+ * Soulgather v1.5 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -255,6 +255,19 @@ function titheCost(souls) {
 
 function titheMult(on) {
   return on ? 2 : 1;
+}
+
+function hymnMult(on) {
+  return on ? 1.25 : 1;
+}
+
+function hymnLeftAfterTribute() {
+  return 45;
+}
+
+function choirEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 5 * Math.pow(2, n);
 }
 
 function lanternMult(lanterns) {
@@ -728,6 +741,11 @@ assertEqual("choirAshRate choir 2 tide 0 explicit", choirAshRate(2, 0), 0.02);
 assertEqual("formatBlessing(1.05)", F.formatBlessing(1.05), "\u00d71.05");
 assertEqual("formatBlessing(1.5)", F.formatBlessing(1.5), "\u00d71.5");
 assertTrue("formatBlessing(1.05) is not x1.1", F.formatBlessing(1.05) !== "\u00d71.1");
+
+assertEqual("hymnMult(true)", hymnMult(true), 1.25);
+assertEqual("hymnMult(false)", hymnMult(false), 1);
+assertEqual("choirEdictCost(0)", choirEdictCost(0), 5);
+assertEqual("hymnLeft after tribute", hymnLeftAfterTribute(), 45);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

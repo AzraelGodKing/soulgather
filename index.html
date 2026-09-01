@@ -20,6 +20,7 @@
       <div class="souls-rate" id="souls-rate">0 / sec</div>
       <div class="souls-ash is-hidden" id="souls-ash">Ash 0</div>
       <div class="souls-favor is-hidden" id="souls-favor">Blessing ×1.0</div>
+      <div class="souls-hymn is-hidden" id="souls-hymn">Hymn ×1.25 — 0s</div>
       <div class="next-goal" id="next-goal">Bind a Shade to wake the well.</div>
     </section>
 
@@ -487,6 +488,18 @@
         </div>
         <button type="button" class="card-buy" id="depth-buy" disabled>Speak the Depth</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of the Choir</h3>
+          <p class="edict-flavor">They already sang.</p>
+          <p class="edict-stats">
+            Effect: <span id="choir-edict-effect">+0 Choir at tribute</span>
+            · Cost: <span id="choir-edict-cost">5 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="choir-edict-buy" disabled>Speak the Choir</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -588,7 +601,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.4 · prototype</span>
+      <span>Soulgather v1.5 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

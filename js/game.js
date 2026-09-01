@@ -53,6 +53,8 @@
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
   var UNLOCK_CHOIR_ASH = 20;
+  var HYMN_SECS = 45;
+  var HYMN_MULT = 1.25;
   var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000];
   var BOUND_NAMES = [
     "The First Siphon",
@@ -232,6 +234,23 @@
 
   function nightMult(on) {
     return on ? 3 : 1;
+  }
+
+  function hymnMult(on) {
+    return on ? HYMN_MULT : 1;
+  }
+
+  function hymnSecs() {
+    return HYMN_SECS;
+  }
+
+  function hymnLeftAfterTribute() {
+    return HYMN_SECS;
+  }
+
+  function choirEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 5 * Math.pow(2, n);
   }
 
   function edictCost(level) {
@@ -452,7 +471,10 @@
     "giftThrone",
     "giftCrown",
     "giftFirstName",
+    "giftFiveTributes",
     "choir",
+    "choirEdict",
+    "hymn",
     "vow",
     "quietCourt",
     "name1",
@@ -500,7 +522,10 @@
     giftThrone: "The first throne. A vessel was returned.",
     giftCrown: "The crown was generous.",
     giftFirstName: "The first name. The well returned fifteen souls.",
+    giftFiveTributes: "Five tributes. The GodKing returned two Favor.",
     choir: "The choir of ash was raised.",
+    choirEdict: "The choir was spoken.",
+    hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
     name1: "The First Siphon.",
@@ -726,6 +751,12 @@
     if ((Number(state.choirLevel) || 0) >= 1) {
       if (markChronicle("choir")) added = true;
     }
+    if ((Number(state.choirEdictLevel) || 0) >= 1) {
+      if (markChronicle("choirEdict")) added = true;
+    }
+    if ((Number(state.hymnLeft) || 0) > 0) {
+      if (markChronicle("hymn")) added = true;
+    }
     var namesN = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var ni;
     for (ni = 1; ni <= namesN; ni++) {
@@ -816,8 +847,11 @@
       bonusFirstThrone: false,
       giftCrown: false,
       giftFirstName: false,
+      giftFiveTributes: false,
       choirLevel: 0,
       unlockedChoir: false,
+      choirEdictLevel: 0,
+      hymnLeft: 0,
       crownWeight: 0,
       longMemoryLevel: 0,
       quietCourtLevel: 0,
@@ -866,6 +900,10 @@
     return (Number(state.nightLeft) || 0) > 0;
   }
 
+  function hymnActive() {
+    return (Number(state.hymnLeft) || 0) > 0;
+  }
+
   function rateMult() {
     return currentMult() * titheMult(titheActive());
   }
@@ -875,7 +913,7 @@
   }
 
   function shadeSoulsPerSec() {
-    return N.mul(
+    var base = N.mul(
       N.mul(
         N.mul(
           N.mul(
@@ -891,6 +929,10 @@
       ),
       nightMult(nightActive())
     );
+    return N.mul(
+      base,
+      hymnMult(hymnActive())
+    );
   }
 
   function soulsPerSec() {
@@ -900,7 +942,7 @@
   }
 
   function shadesPerSec() {
-    return N.mul(
+    var base = N.mul(
       N.mul(
         N.mul(
           N.mul(
@@ -913,6 +955,7 @@
       ),
       fetterMult(state.fetters)
     );
+    return N.mul(base, hymnMult(hymnActive()));
   }
 
   function spiritsPerSec() {
@@ -925,8 +968,11 @@
   function ashPerSec() {
     var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
     var fromCensers = N.mul(
-      N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
-      nightMult(nightActive())
+      N.mul(
+        N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
+        nightMult(nightActive())
+      ),
+      hymnMult(hymnActive())
     );
     return N.add(fromShades, fromCensers);
   }
@@ -966,9 +1012,12 @@
       if (tithe < 0) tithe = 0;
       var night = Number(state.nightLeft) || 0;
       if (night < 0) night = 0;
+      var hymn = Number(state.hymnLeft) || 0;
+      if (hymn < 0) hymn = 0;
       var slice = remaining;
       if (tithe > 0 && tithe < slice) slice = tithe;
       if (night > 0 && night < slice) slice = night;
+      if (hymn > 0 && hymn < slice) slice = hymn;
       applyRates(slice);
       if (tithe > 0) {
         state.titheLeft = tithe - slice;
@@ -977,6 +1026,10 @@
       if (night > 0) {
         state.nightLeft = night - slice;
         if (state.nightLeft < 0) state.nightLeft = 0;
+      }
+      if (hymn > 0) {
+        state.hymnLeft = hymn - slice;
+        if (state.hymnLeft < 0) state.hymnLeft = 0;
       }
       remaining -= slice;
     }
@@ -1298,6 +1351,16 @@
     render();
   }
 
+  function buyChoirEdict() {
+    var cost = choirEdictCost(state.choirEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.choirEdictLevel += 1;
+    markChronicle("choirEdict");
+    save();
+    render();
+  }
+
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
     if (N.cmp(state.souls, cost) < 0) return;
@@ -1512,6 +1575,17 @@
       }
       markChronicle("giftThrone");
       showToast("A vessel is returned.");
+      granted = true;
+    }
+
+    if (
+      !state.giftFiveTributes &&
+      (Number(state.tributesLaid) || 0) >= 5
+    ) {
+      state.giftFiveTributes = true;
+      state.favor = (Number(state.favor) || 0) + 2;
+      markChronicle("giftFiveTributes");
+      showToast("The GodKing returns two Favor.");
       granted = true;
     }
 
@@ -1744,8 +1818,11 @@
     "bonusFirstThrone",
     "giftCrown",
     "giftFirstName",
+    "giftFiveTributes",
     "choirLevel",
     "unlockedChoir",
+    "choirEdictLevel",
+    "hymnLeft",
     "crownWeight",
     "longMemoryLevel",
     "quietCourtLevel",
@@ -1836,8 +1913,11 @@
       bonusFirstThrone: !!state.bonusFirstThrone,
       giftCrown: !!state.giftCrown,
       giftFirstName: !!state.giftFirstName,
+      giftFiveTributes: !!state.giftFiveTributes,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
+      choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
+      hymnLeft: Number(state.hymnLeft) || 0,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
       quietCourtLevel: Number(state.quietCourtLevel) || 0,
@@ -1923,6 +2003,8 @@
     if (state.titheLeft < 0) state.titheLeft = 0;
     state.nightLeft = Number(data.nightLeft) || 0;
     if (state.nightLeft < 0) state.nightLeft = 0;
+    state.hymnLeft = Number(data.hymnLeft) || 0;
+    if (state.hymnLeft < 0) state.hymnLeft = 0;
     state.tithePaid = !!data.tithePaid || (Number(data.titheLeft) || 0) > 0;
     state.autobind = !!data.autobind;
     state.autobindSpirits = !!data.autobindSpirits;
@@ -1953,8 +2035,14 @@
     } else {
       state.giftFirstName = !!data.giftFirstName;
     }
+    if (data.giftFiveTributes == null) {
+      state.giftFiveTributes = (Number(data.tributesLaid) || 0) >= 5;
+    } else {
+      state.giftFiveTributes = !!data.giftFiveTributes;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
+    state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -2186,6 +2274,8 @@
     var keptBonusFirstThrone = !!state.bonusFirstThrone;
     var keptGiftCrown = !!state.giftCrown;
     var keptGiftFirstName = !!state.giftFirstName;
+    var keptGiftFiveTributes = !!state.giftFiveTributes;
+    var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -2222,6 +2312,8 @@
     state.bonusFirstThrone = keptBonusFirstThrone;
     state.giftCrown = keptGiftCrown;
     state.giftFirstName = keptGiftFirstName;
+    state.giftFiveTributes = keptGiftFiveTributes;
+    state.choirEdictLevel = keptChoirEdict;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -2231,6 +2323,7 @@
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
+    state.hymnLeft = HYMN_SECS;
     state.tithePaid = false;
     state.autobind = false;
     state.autobindSpirits = false;
@@ -2270,6 +2363,11 @@
       state.autobind = true;
       state.unlockedAutobind = true;
     }
+    state.choirLevel = Math.min(CHOIR_MAX, keptChoirEdict);
+    if (state.choirLevel >= 1) {
+      state.unlockedChoir = true;
+    }
+    markChronicle("hymn");
     hideToast(true);
     hideUnlockCards();
     checkUnlock();
@@ -2285,6 +2383,7 @@
     if (firstTributeBonus > 0) {
       showToast("The GodKing's first remembrance is generous.");
     }
+    showToast("A hymn follows the emptying.");
   }
 
 
@@ -2636,6 +2735,16 @@
       }
     }
 
+    if (els.soulsHymn) {
+      if (hymnActive()) {
+        var hLeft = Number(state.hymnLeft) || 0;
+        els.soulsHymn.textContent = "Hymn ×1.25 — " + Math.ceil(hLeft) + "s";
+        els.soulsHymn.classList.remove("is-hidden");
+      } else {
+        els.soulsHymn.classList.add("is-hidden");
+      }
+    }
+
     if (els.buyMode) {
       var buttons = els.buyMode.querySelectorAll("[data-mode]");
       var bi;
@@ -2738,8 +2847,11 @@
       }
       var censerC = censerCost(state.censers);
       var censerRate = N.mul(
-        N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
-        nightMult(nightActive())
+        N.mul(
+          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
+          nightMult(nightActive())
+        ),
+        hymnMult(hymnActive())
       );
       var canCenser = N.cmp(state.vessels, censerC) >= 0;
       els.censerOwned.textContent = F.formatNumber(state.censers);
@@ -3180,6 +3292,19 @@
       if (els.depthBuy) {
         els.depthBuy.disabled = state.favor < dCost;
       }
+
+      var ceCost = choirEdictCost(state.choirEdictLevel);
+      var choirEdictN = Math.min(CHOIR_MAX, Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)));
+      if (els.choirEdictEffect) {
+        els.choirEdictEffect.textContent =
+          "+" +
+          F.formatNumber(choirEdictN) +
+          (choirEdictN === 1 ? " Choir at tribute" : " Choir at tribute");
+      }
+      if (els.choirEdictCost) els.choirEdictCost.textContent = F.formatNumber(ceCost) + " Favor";
+      if (els.choirEdictBuy) {
+        els.choirEdictBuy.disabled = !isFinite(ceCost) || state.favor < ceCost;
+      }
     }
 
     var crownOpen = crownUnlocked();
@@ -3323,6 +3448,7 @@
     els.soulsRate = document.getElementById("souls-rate");
     els.soulsAsh = document.getElementById("souls-ash");
     els.soulsFavor = document.getElementById("souls-favor");
+    els.soulsHymn = document.getElementById("souls-hymn");
     els.gatherBtn = document.getElementById("gather-btn");
     els.buyMode = document.getElementById("buy-mode");
     els.wellCard = document.getElementById("well-card");
@@ -3395,6 +3521,9 @@
     els.depthEffect = document.getElementById("depth-effect");
     els.depthCost = document.getElementById("depth-cost");
     els.depthBuy = document.getElementById("depth-buy");
+    els.choirEdictEffect = document.getElementById("choir-edict-effect");
+    els.choirEdictCost = document.getElementById("choir-edict-cost");
+    els.choirEdictBuy = document.getElementById("choir-edict-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -3510,6 +3639,7 @@
     if (els.kindleBuy) els.kindleBuy.addEventListener("click", buyKindle);
     if (els.ashenBuy) els.ashenBuy.addEventListener("click", buyAshen);
     if (els.depthBuy) els.depthBuy.addEventListener("click", buyDepth);
+    if (els.choirEdictBuy) els.choirEdictBuy.addEventListener("click", buyChoirEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
@@ -3715,6 +3845,10 @@
     deeperNightCost: deeperNightCost,
     ashenTideCost: ashenTideCost,
     choirAshRate: choirAshRate,
+    choirEdictCost: choirEdictCost,
+    hymnMult: hymnMult,
+    hymnSecs: hymnSecs,
+    hymnLeftAfterTribute: hymnLeftAfterTribute,
     formatBlessing: formatBlessing,
     nightTitheSecs: nightTitheSecs,
     nightSecs: nightSecs,
