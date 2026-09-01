@@ -745,6 +745,7 @@ assertTrue("formatBlessing(1.05) is not x1.1", F.formatBlessing(1.05) !== "\u00d
 assertEqual("hymnMult(true)", hymnMult(true), 1.25);
 assertEqual("hymnMult(false)", hymnMult(false), 1);
 assertEqual("choirEdictCost(0)", choirEdictCost(0), 5);
+assertEqual("choirEdictCost(1)", choirEdictCost(1), 10);
 assertEqual("hymnLeft after tribute", hymnLeftAfterTribute(), 45);
 
 if (failed > 0) {
