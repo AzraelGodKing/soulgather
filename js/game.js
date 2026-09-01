@@ -3328,7 +3328,6 @@
     els.crownCourtEffect = document.getElementById("crown-court-effect");
     els.crownCourtCost = document.getElementById("crown-court-cost");
     els.crownCourtBuy = document.getElementById("crown-court-buy");
-    els.crownRemembranceWrap = document.getElementById("crown-remembrance-wrap");
     els.crownRemembrance = document.getElementById("crown-remembrance");
     els.crownRemembranceCount = document.getElementById("crown-remembrance-count");
     els.remembranceLayRow = document.getElementById("remembrance-lay-row");
