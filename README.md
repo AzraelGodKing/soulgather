@@ -15,6 +15,25 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) / Thrones. Ash feeds Marks and Night's Tithe. Rites, Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels this-run. Tribute for Favor. Reliquary + Aspects after first Tribute. The Crown after 2 tributes or 3 Favor earned.
 
+## Design notes (v1.1)
+
+Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
+
+**v1.1 extras.**
+
+**More milestone gifts (one-time).** Same flag rules as v1.0: persist through Tribute; wipe on Footer Reset. Check flag before granting; set flag then grant; save — so load cannot double-fire. `Num.add` for the bonus.
+
+- 1000 lifetime/all-time souls (`lifetimeSouls` or `allTimeSouls`): +200 souls now. Toast: "The well returns two hundred souls." Chronicle: "A thousand souls. The well returned a greater gift."
+- First Lantern: +10 souls. Toast: "Ten souls for the first lantern." Chronicle: "The first lantern. The well returned ten souls."
+- First Censer: +5 Ash. Toast: "Ash from the first censer." Chronicle: "The first censer. Ash remains in the smoke."
+- First Fetter: +2 Shades (and lifetime Shades). Toast: "Two shades for the first fetter." Chronicle: "The first fetter. Two shades were given."
+
+Toasts are queued (array). A new toast waits until the current one hides, so several gifts plus the away-harvest line do not overwrite each other.
+
+**Autobind Vessels (QoL).** Unlock at 3 Vessels this run. Third quiet toggle in Rites. Flavor: *The hollow fills itself.* When on, each live tick buys exactly 1 Vessel if affordable (always ×1, ignores buy-mode). Persist `autobindVessels` this-run; wipe on Tribute. Offline catchup does not autobind.
+
+**Edict of Depth (Reliquary).** Start each emptying with Well Depth equal to the edict level (`wellDepth = depthLevel`; unlocks the Well if > 0). Cost `4 × 2^n` Favor. Flavor: *The well was always deeper.* Button: Speak the Depth. Persist through Tribute; wipe on Footer Reset. ×1 only.
+
 ## Design notes (v1.0)
 
 Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
@@ -36,25 +55,6 @@ Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson
 - Long Memory — start each emptying with +1 Fetter per level. Cost `5 × 2^n` Favor. Button: Lengthen Memory. On Tribute meta: `fetters = longMemoryLevel`; unlock Fetters if > 0.
 
 **Hotkeys.** T pays the Tithe if affordable. N pays Night's Tithe if available. Neither fires while typing in Memory. Neither steals if a button that is not Draw from the Well is focused.
-
-## Design notes (v1.1)
-
-Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
-
-**v1.1 extras.**
-
-**More milestone gifts (one-time).** Same flag pattern as v1.0: persist through Tribute; wipe on Footer Reset. Check flag before granting; set flag then grant; save — so load cannot double-fire. `Num.add` for the bonus.
-
-- 1000 lifetime or all-time souls (`lifetimeSouls` or `allTimeSouls`): +200 souls now. Toast: "The well returns two hundred souls." Chronicle: "A thousand souls. The well returned a greater gift."
-- First Lantern: +10 souls. Toast: "Ten souls for the first lantern." Chronicle: "The first lantern. The well returned ten souls."
-- First Censer: +5 Ash. Toast: "Ash from the first censer." Chronicle: "The first censer. Ash remains in the smoke."
-- First Fetter: +2 Shades (and lifetime Shades). Toast: "Two shades for the first fetter." Chronicle: "The first fetter. Two shades were given."
-
-If several gifts fire in one `checkUnlock`, toasts **queue** (simple array; the next shows when the current toast hides) so they are not overwritten. On load, gift toasts also queue behind the away-harvest toast if both would fire.
-
-**Autobind Vessels (QoL).** Unlock at 3 Vessels this run. Third quiet toggle in Rites next to Autobind Spirits. Flavor: *The hollow fills itself.* When on, each live tick buys exactly 1 Vessel if affordable (always ×1, ignores buy-mode). Persist `autobindVessels` this-run; wipe on Tribute. Offline catchup does not autobind.
-
-**Edict of Depth (Reliquary).** Persist through Tribute; spend Favor on hand. Cost `4 × 2^n` Favor. Each level: start the emptying with +1 Well Depth (`wellDepth = depthLevel` after Tribute clear; unlocks the Well if > 0). Flavor: *The well was always deeper.* Button: Speak the Depth.
 
 ## Design notes (v0.9)
 
@@ -110,6 +110,7 @@ Flavor: *Ash is what the well will not keep.* Buttons: Press the Mark.
 - Edict of Seats: each level starts the emptying with +1 Throne (unlocks Thrones if `thrones > 0`). Cost `5×2^n` Favor (5, 10, 20…). Flavor: *A seat waits empty.* Button: Raise the Seat. On Tribute, `thrones = seatLevel` (not added to leftover thrones).
 - Edict of Kindling: each level starts the emptying with +1 Lantern (`lanterns = kindleLevel`; `unlockedLanterns` if > 0). Cost `4×2^n` Favor (4, 8, 16…). Flavor: *A lantern waits in the emptied dark.* Button: Speak the Kindling.
 - Edict of Ashen Memory: each level starts the emptying with Ash = `10 * ashenLevel` (Num). Cost `3×2^n` Favor (3, 6, 12…). Flavor: *The well remembers what it would not keep.* Button: Remember the Ash. On Tribute, `ash = fromNumber(10 * ashenLevel)`. Marks unlock via the usual Ash check.
+- Edict of Depth: each level starts the emptying with Well Depth = `depthLevel` (`unlockedWell` if > 0). Cost `4×2^n` Favor (4, 8, 16…). Flavor: *The well was always deeper.* Button: Speak the Depth. On Tribute, `wellDepth = depthLevel`.
 
 **Multiplier.** `prodMult = (1 + 0.5 * favorEarned) * (1 + throneWeight * thrones) * (1 + 0.25 * edictLevel) * (1 + 0.10 * crownWeight)`, `throneWeight` 0.15 if Dominion else 0.10.
 
