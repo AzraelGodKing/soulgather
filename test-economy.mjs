@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.8 economy smoke test.
+ * Soulgather v1.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -224,6 +224,10 @@ function quietCourtCost(level) {
 }
 
 function quietCourtStartsLanternAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function quietCourtStartsFetterAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -784,6 +788,9 @@ assertEqual("veilCost(200)", veilCost(200), 30);
 assertTrue("quietCourtStartsLanternAutobind(0) is false", !quietCourtStartsLanternAutobind(0));
 assertTrue("quietCourtStartsLanternAutobind(1) is true", quietCourtStartsLanternAutobind(1));
 assertTrue("quietCourtStartsLanternAutobind(2) is true", quietCourtStartsLanternAutobind(2));
+
+assertTrue("quietCourtStartsFetterAutobind(0) is false", !quietCourtStartsFetterAutobind(0));
+assertTrue("quietCourtStartsFetterAutobind(1) is true", quietCourtStartsFetterAutobind(1));
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
