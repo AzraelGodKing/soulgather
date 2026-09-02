@@ -28,6 +28,10 @@
   var HEARTH_COST_BASE = 4;
   var HEARTH_COST_MULT = 1.2;
   var UNLOCK_HEARTHS = 4;
+  var BEACON_ASH_PER_SEC = 0.06;
+  var BEACON_COST_BASE = 4;
+  var BEACON_COST_MULT = 1.2;
+  var UNLOCK_BEACONS = 4;
   var UNLOCK_CHALICES = 5;
   var CHALICE_MAX = 12;
   var CHALICE_COST_BASE = 20;
@@ -184,6 +188,10 @@
 
   function hearthCost(owned) {
     return N.cost(HEARTH_COST_BASE, HEARTH_COST_MULT, owned);
+  }
+
+  function beaconCost(owned) {
+    return N.cost(BEACON_COST_BASE, BEACON_COST_MULT, owned);
   }
 
   function chaliceCost(owned) {
@@ -588,6 +596,16 @@
     return n;
   }
 
+  function beaconEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 10 * Math.pow(2, n);
+  }
+
+  function beaconEdictStartsBeacons(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return n;
+  }
+
   function cinderEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 8 * Math.pow(2, n);
@@ -947,6 +965,7 @@
     "pyre",
     "urn",
     "hearth",
+    "beacon",
     "fetter",
     "giftSouls",
     "giftShades",
@@ -970,6 +989,7 @@
     "giftFirstPyre",
     "giftFirstUrn",
     "giftFirstHearth",
+    "giftFirstBeacon",
     "giftEightTributes",
     "giftPeakPyres",
     "giftPeakUrns",
@@ -1024,6 +1044,7 @@
     "embersEdict",
     "urnEdict",
     "hearthEdict",
+    "beaconEdict",
     "cinderEdict",
     "cutEdict",
     "tendingEdict",
@@ -1082,6 +1103,7 @@
     pyre: "A pyre was raised.",
     urn: "An urn was raised.",
     hearth: "A hearth was kindled.",
+    beacon: "A beacon was raised.",
     fetter: "A fetter was bound.",
     giftSouls: "A hundred souls. The well returned a gift.",
     giftShades: "Ten shades. One more was given.",
@@ -1105,6 +1127,7 @@
     giftFirstPyre: "The first pyre. The well returned five ash.",
     giftFirstUrn: "The first urn. The well returned six ash.",
     giftFirstHearth: "The first hearth. The well returned eight ash.",
+    giftFirstBeacon: "The first beacon. The well returned eight ash.",
     giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     giftPeakPyres: "Five pyres. The well returned ten ash.",
     giftPeakUrns: "Five urns. The well returned eight ash.",
@@ -1159,6 +1182,7 @@
     embersEdict: "The embers were spoken.",
     urnEdict: "The urn was spoken.",
     hearthEdict: "The hearth was spoken.",
+    beaconEdict: "The beacon was spoken.",
     cinderEdict: "The cinders were spoken.",
     cutEdict: "The cut was spoken.",
     tendingEdict: "The tending was spoken.",
@@ -1218,6 +1242,7 @@
     var pyres = nVal(view.pyres);
     var urns = nVal(view.urns);
     var hearths = nVal(view.hearths);
+    var beacons = nVal(view.beacons);
     var fetters = nVal(view.fetters);
     var chalices = Number(view.chalices) || 0;
     var unlockedSpirits = !!view.unlockedSpirits;
@@ -1280,6 +1305,9 @@
     }
     if (view.unlockedHearths && hearths < 1) {
       return "Kindle a Hearth. The last heat.";
+    }
+    if (view.unlockedBeacons && beacons < 1) {
+      return "Raise a Beacon. A light after the fire.";
     }
     if (view.unlockedChalices && chalices < 1) {
       return "Raise a Chalice. He drinks from the emptied well.";
@@ -1424,6 +1452,9 @@
     if (N.cmp(state.hearths, 1) >= 0) {
       if (markChronicle("hearth")) added = true;
     }
+    if (N.cmp(state.beacons, 1) >= 0) {
+      if (markChronicle("beacon")) added = true;
+    }
     if (N.cmp(state.fetters, 1) >= 0) {
       if (markChronicle("fetter")) added = true;
     }
@@ -1465,6 +1496,9 @@
     }
     if ((Number(state.hearthEdictLevel) || 0) >= 1) {
       if (markChronicle("hearthEdict")) added = true;
+    }
+    if ((Number(state.beaconEdictLevel) || 0) >= 1) {
+      if (markChronicle("beaconEdict")) added = true;
     }
     if ((Number(state.cinderEdictLevel) || 0) >= 1) {
       if (markChronicle("cinderEdict")) added = true;
@@ -1581,6 +1615,7 @@
       pyres: N.fromNumber(0),
       urns: N.fromNumber(0),
       hearths: N.fromNumber(0),
+      beacons: N.fromNumber(0),
       fetters: N.fromNumber(0),
       emberLevel: 0,
       chainLevel: 0,
@@ -1596,6 +1631,7 @@
       unlockedPyres: false,
       unlockedUrns: false,
       unlockedHearths: false,
+      unlockedBeacons: false,
       unlockedFetters: false,
       unlockedAutobind: false,
       unlockedAutobindSpirits: false,
@@ -1664,6 +1700,7 @@
       peakPyres: N.fromNumber(0),
       peakUrns: N.fromNumber(0),
       peakHearths: N.fromNumber(0),
+      peakBeacons: N.fromNumber(0),
       bonusLifetimeSouls: false,
       bonusPeakShades: false,
       bonusFirstVessel: false,
@@ -1686,6 +1723,7 @@
       giftFirstPyre: false,
       giftFirstUrn: false,
       giftFirstHearth: false,
+      giftFirstBeacon: false,
       giftEightTributes: false,
       giftPeakPyres: false,
       giftPeakUrns: false,
@@ -1729,6 +1767,7 @@
       embersEdictLevel: 0,
       urnEdictLevel: 0,
       hearthEdictLevel: 0,
+      beaconEdictLevel: 0,
       cinderEdictLevel: 0,
       cutEdictLevel: 0,
       tendingEdictLevel: 0,
@@ -1947,7 +1986,17 @@
       ),
       wakeMult(wakeActive())
     );
-    return N.add(N.add(N.add(N.add(fromShades, fromCensers), fromPyres), fromUrns), fromHearths);
+    var fromBeacons = N.mul(
+      N.mul(
+        N.mul(
+          N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+          nightMult(nightActive())
+        ),
+        hymnMult(hymnActive())
+      ),
+      wakeMult(wakeActive())
+    );
+    return N.add(N.add(N.add(N.add(N.add(fromShades, fromCensers), fromPyres), fromUrns), fromHearths), fromBeacons);
   }
 
   function applyRates(dt) {
@@ -2124,6 +2173,13 @@
       if (N.cmp(state.urns, UNLOCK_HEARTHS) >= 0 || N.cmp(state.hearths, 1) >= 0) {
         state.unlockedHearths = true;
         revealHearths(true);
+      }
+    }
+
+    if (!state.unlockedBeacons) {
+      if (N.cmp(state.hearths, UNLOCK_BEACONS) >= 0 || N.cmp(state.beacons, 1) >= 0) {
+        state.unlockedBeacons = true;
+        revealBeacons(true);
       }
     }
 
@@ -2392,6 +2448,18 @@
     render();
   }
 
+  function buyBeacon() {
+    if (!state.unlockedBeacons) return;
+    var plan = purchasePlan(state.beacons, state.hearths, BEACON_COST_BASE, BEACON_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.hearths = N.sub(state.hearths, plan.cost);
+    state.beacons = N.add(state.beacons, plan.k);
+    markChronicle("beacon");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function chalicePlan() {
     var owned = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0)));
     var room = CHALICE_MAX - owned;
@@ -2564,6 +2632,16 @@
     state.favor -= cost;
     state.hearthEdictLevel += 1;
     markChronicle("hearthEdict");
+    save();
+    render();
+  }
+
+  function buyBeaconEdict() {
+    var cost = beaconEdictCost(state.beaconEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.beaconEdictLevel += 1;
+    markChronicle("beaconEdict");
     save();
     render();
   }
@@ -2965,7 +3043,7 @@
   }
 
   function tryAutobindHearths() {
-    /* No extra hold-back vs saving Urns for a manual hearth. */
+    /* No extra hold-back vs saving Urns for a manual hearth. Autobind Hearths does not hold back Hearths for a Beacon. */
     if (!state.autobindHearths) return;
     if (!state.unlockedHearths) return;
     var cost = hearthCost(state.hearths);
@@ -3060,6 +3138,10 @@
     state.peakHearths = N.max(num(state.peakHearths), num(state.hearths));
   }
 
+  function bumpPeakBeacons() {
+    state.peakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
+  }
+
   function tryMilestoneGifts() {
     var granted = false;
     bumpPeakShades();
@@ -3069,6 +3151,7 @@
     bumpPeakPyres();
     bumpPeakUrns();
     bumpPeakHearths();
+    bumpPeakBeacons();
 
     if (
       !state.bonusLifetimeSouls &&
@@ -3201,6 +3284,20 @@
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstHearth");
         showToast("Eight ash for the first hearth.");
+        granted = true;
+      }
+    }
+
+    bumpPeakBeacons();
+    if (!state.giftFirstBeacon) {
+      var hasBeaconNow = N.cmp(state.beacons, 1) >= 0;
+      var hasBeaconPeak = N.cmp(state.peakBeacons, 1) >= 0;
+      var hasBeaconChron = hasChronicle("beacon") || hasChronicle("giftFirstBeacon");
+      if (hasBeaconNow || (hasBeaconPeak && !hasBeaconChron)) {
+        state.giftFirstBeacon = true;
+        state.ash = N.add(state.ash, 8);
+        markChronicle("giftFirstBeacon");
+        showToast("Eight ash for the first beacon.");
         granted = true;
       }
     }
@@ -3882,6 +3979,7 @@
     "pyres",
     "urns",
     "hearths",
+    "beacons",
     "fetters",
     "emberLevel",
     "chainLevel",
@@ -3897,6 +3995,7 @@
     "unlockedPyres",
     "unlockedUrns",
     "unlockedHearths",
+    "unlockedBeacons",
     "unlockedFetters",
     "unlockedAutobind",
     "unlockedAutobindSpirits",
@@ -3965,6 +4064,7 @@
     "peakPyres",
     "peakUrns",
     "peakHearths",
+    "peakBeacons",
     "bonusLifetimeSouls",
     "bonusPeakShades",
     "bonusFirstVessel",
@@ -3987,6 +4087,7 @@
     "giftFirstPyre",
     "giftFirstUrn",
     "giftFirstHearth",
+    "giftFirstBeacon",
     "giftEightTributes",
     "giftPeakPyres",
     "giftPeakUrns",
@@ -4030,6 +4131,7 @@
     "embersEdictLevel",
     "urnEdictLevel",
     "hearthEdictLevel",
+    "beaconEdictLevel",
     "cinderEdictLevel",
     "cutEdictLevel",
     "tendingEdictLevel",
@@ -4088,6 +4190,7 @@
       pyres: dumpNum(state.pyres),
       urns: dumpNum(state.urns),
       hearths: dumpNum(state.hearths),
+      beacons: dumpNum(state.beacons),
       fetters: dumpNum(state.fetters),
       emberLevel: state.emberLevel,
       chainLevel: state.chainLevel,
@@ -4103,6 +4206,7 @@
       unlockedPyres: !!state.unlockedPyres,
       unlockedUrns: !!state.unlockedUrns,
       unlockedHearths: !!state.unlockedHearths,
+      unlockedBeacons: !!state.unlockedBeacons,
       unlockedFetters: !!state.unlockedFetters,
       unlockedAutobind: !!state.unlockedAutobind,
       unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
@@ -4171,6 +4275,7 @@
       peakPyres: dumpNum(state.peakPyres),
       peakUrns: dumpNum(state.peakUrns),
       peakHearths: dumpNum(state.peakHearths),
+      peakBeacons: dumpNum(state.peakBeacons),
       bonusLifetimeSouls: !!state.bonusLifetimeSouls,
       bonusPeakShades: !!state.bonusPeakShades,
       bonusFirstVessel: !!state.bonusFirstVessel,
@@ -4193,6 +4298,7 @@
       giftFirstPyre: !!state.giftFirstPyre,
       giftFirstUrn: !!state.giftFirstUrn,
       giftFirstHearth: !!state.giftFirstHearth,
+      giftFirstBeacon: !!state.giftFirstBeacon,
       giftEightTributes: !!state.giftEightTributes,
       giftPeakPyres: !!state.giftPeakPyres,
       giftPeakUrns: !!state.giftPeakUrns,
@@ -4236,6 +4342,7 @@
       embersEdictLevel: Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0)),
       urnEdictLevel: Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0)),
       hearthEdictLevel: Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0)),
+      beaconEdictLevel: Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0)),
       cinderEdictLevel: Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0)),
       cutEdictLevel: Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0)),
       tendingEdictLevel: Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0)),
@@ -4299,6 +4406,7 @@
     state.pyres = N.load(data.pyres);
     state.urns = N.load(data.urns);
     state.hearths = N.load(data.hearths);
+    state.beacons = N.load(data.beacons);
     state.fetters = N.load(data.fetters);
     state.emberLevel = Number(data.emberLevel) || 0;
     state.chainLevel = Number(data.chainLevel) || 0;
@@ -4314,6 +4422,7 @@
     state.unlockedPyres = !!data.unlockedPyres;
     state.unlockedUrns = !!data.unlockedUrns || N.cmp(state.urns, 1) >= 0 || N.cmp(state.pyres, UNLOCK_URNS) >= 0;
     state.unlockedHearths = !!data.unlockedHearths || N.cmp(state.hearths, 1) >= 0 || N.cmp(state.urns, UNLOCK_HEARTHS) >= 0;
+    state.unlockedBeacons = !!data.unlockedBeacons || N.cmp(state.beacons, 1) >= 0 || N.cmp(state.hearths, UNLOCK_BEACONS) >= 0;
     state.unlockedFetters = !!data.unlockedFetters;
     state.unlockedAutobind = !!data.unlockedAutobind;
     state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
@@ -4409,6 +4518,7 @@
     state.peakPyres = N.max(N.load(data.peakPyres), N.load(data.pyres));
     state.peakUrns = N.max(N.load(data.peakUrns), N.load(data.urns));
     state.peakHearths = N.max(N.load(data.peakHearths), N.load(data.hearths));
+    state.peakBeacons = N.max(N.load(data.peakBeacons), N.load(data.beacons));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
     state.bonusFirstVessel = !!data.bonusFirstVessel;
@@ -4533,6 +4643,14 @@
         (hearthEdictStartsHearths(data.hearthEdictLevel) > 0 && N.cmp(state.hearths, 1) >= 0);
     } else {
       state.giftFirstHearth = !!data.giftFirstHearth;
+    }
+    if (data.giftFirstBeacon == null) {
+      state.giftFirstBeacon =
+        hasChronicle("beacon") ||
+        hasChronicle("giftFirstBeacon") ||
+        (beaconEdictStartsBeacons(data.beaconEdictLevel) > 0 && N.cmp(state.beacons, 1) >= 0);
+    } else {
+      state.giftFirstBeacon = !!data.giftFirstBeacon;
     }
     if (data.giftPeakPyres == null) {
       state.giftPeakPyres = false;
@@ -4727,6 +4845,7 @@
     state.embersEdictLevel = Math.max(0, Math.floor(Number(data.embersEdictLevel) || 0));
     state.urnEdictLevel = Math.max(0, Math.floor(Number(data.urnEdictLevel) || 0));
     state.hearthEdictLevel = Math.max(0, Math.floor(Number(data.hearthEdictLevel) || 0));
+    state.beaconEdictLevel = Math.max(0, Math.floor(Number(data.beaconEdictLevel) || 0));
     state.cinderEdictLevel = Math.max(0, Math.floor(Number(data.cinderEdictLevel) || 0));
     state.cutEdictLevel = Math.max(0, Math.floor(Number(data.cutEdictLevel) || 0));
     var tendingLoaded = data.tendingEdictLevel;
@@ -4786,6 +4905,7 @@
     if (state.unlockedPyres) revealPyres(false);
     if (state.unlockedUrns) revealUrns(false);
     if (state.unlockedHearths) revealHearths(false);
+    if (state.unlockedBeacons) revealBeacons(false);
     if (state.unlockedChalices) revealChalices(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
@@ -4922,6 +5042,7 @@
     hideCard(els.pyreCard);
     hideCard(els.urnCard);
     hideCard(els.hearthCard);
+    hideCard(els.beaconCard);
     hideCard(els.fetterCard);
     hideCard(els.chaliceCard);
     hideTribute();
@@ -4987,6 +5108,7 @@
     var keptPeakPyres = N.max(num(state.peakPyres), num(state.pyres));
     var keptPeakUrns = N.max(num(state.peakUrns), num(state.urns));
     var keptPeakHearths = N.max(num(state.peakHearths), num(state.hearths));
+    var keptPeakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
     var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
     var keptBonusPeakShades = !!state.bonusPeakShades;
     var keptBonusFirstVessel = !!state.bonusFirstVessel;
@@ -5009,6 +5131,7 @@
     var keptGiftFirstPyre = !!state.giftFirstPyre;
     var keptGiftFirstUrn = !!state.giftFirstUrn;
     var keptGiftFirstHearth = !!state.giftFirstHearth;
+    var keptGiftFirstBeacon = !!state.giftFirstBeacon;
     var keptGiftEightTributes = !!state.giftEightTributes;
     var keptGiftPeakPyres = !!state.giftPeakPyres;
     var keptGiftPeakUrns = !!state.giftPeakUrns;
@@ -5051,6 +5174,7 @@
     var keptEmbersEdict = Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0));
     var keptUrnEdict = Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0));
     var keptHearthEdict = Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0));
+    var keptBeaconEdict = Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0));
     var keptCinderEdict = Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0));
     var keptCutEdict = Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0));
     var keptTendingEdict = Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0));
@@ -5100,6 +5224,7 @@
     state.peakPyres = keptPeakPyres;
     state.peakUrns = keptPeakUrns;
     state.peakHearths = keptPeakHearths;
+    state.peakBeacons = keptPeakBeacons;
     state.bonusLifetimeSouls = keptBonusLifetimeSouls;
     state.bonusPeakShades = keptBonusPeakShades;
     state.bonusFirstVessel = keptBonusFirstVessel;
@@ -5122,6 +5247,7 @@
     state.giftFirstPyre = keptGiftFirstPyre;
     state.giftFirstUrn = keptGiftFirstUrn;
     state.giftFirstHearth = keptGiftFirstHearth;
+    state.giftFirstBeacon = keptGiftFirstBeacon;
     state.giftEightTributes = keptGiftEightTributes;
     state.giftPeakPyres = keptGiftPeakPyres;
     state.giftPeakUrns = keptGiftPeakUrns;
@@ -5164,6 +5290,7 @@
     state.embersEdictLevel = keptEmbersEdict;
     state.urnEdictLevel = keptUrnEdict;
     state.hearthEdictLevel = keptHearthEdict;
+    state.beaconEdictLevel = keptBeaconEdict;
     state.cinderEdictLevel = keptCinderEdict;
     state.cutEdictLevel = keptCutEdict;
     state.tendingEdictLevel = keptTendingEdict;
@@ -5315,6 +5442,11 @@
       state.hearths = N.fromNumber(startHearths);
       state.unlockedHearths = true;
     }
+    var startBeacons = beaconEdictStartsBeacons(keptBeaconEdict);
+    if (startBeacons > 0) {
+      state.beacons = N.fromNumber(startBeacons);
+      state.unlockedBeacons = true;
+    }
     if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
       state.autobindUrns = true;
       if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
@@ -5374,6 +5506,7 @@
     if (state.unlockedPyres) revealPyres(false);
     if (state.unlockedUrns) revealUrns(false);
     if (state.unlockedHearths) revealHearths(false);
+    if (state.unlockedBeacons) revealBeacons(false);
     if (state.unlockedChalices) revealChalices(false);
     save();
     render();
@@ -5510,6 +5643,10 @@
 
   function revealHearths(withToast) {
     revealCard(els.hearthCard);
+  }
+
+  function revealBeacons(withToast) {
+    revealCard(els.beaconCard);
   }
 
   function revealChalices(withToast) {
@@ -5754,6 +5891,7 @@
         state.unlockedPyres ||
         state.unlockedUrns ||
         state.unlockedHearths ||
+        state.unlockedBeacons ||
         state.unlockedNightTithe ||
         state.unlockedChoir ||
         state.unlockedVeil ||
@@ -5762,7 +5900,8 @@
         N.cmp(state.ash, 0) > 0 ||
         N.cmp(state.pyres, 0) > 0 ||
         N.cmp(state.urns, 0) > 0 ||
-        N.cmp(state.hearths, 0) > 0;
+        N.cmp(state.hearths, 0) > 0 ||
+        N.cmp(state.beacons, 0) > 0;
       if (showAsh) {
         els.soulsAsh.textContent = "Ash " + F.formatNumber(state.ash);
         els.soulsAsh.classList.remove("is-hidden");
@@ -6012,6 +6151,31 @@
         els.hearthBuy.textContent = bindLabel("Kindle a Hearth", "Kindle", hearthPlan.k, "Hearth", "Hearths");
       }
       if (els.hearthCard) els.hearthCard.classList.toggle("can-buy", hearthPlan.can);
+    }
+
+    if (state.unlockedBeacons) {
+      if (els.beaconCard && els.beaconCard.classList.contains("is-hidden")) {
+        revealBeacons(false);
+      }
+      var beaconPlan = purchasePlan(state.beacons, state.hearths, BEACON_COST_BASE, BEACON_COST_MULT);
+      var beaconRate = N.mul(
+        N.mul(
+          N.mul(
+            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
+        ),
+        wakeMult(wakeActive())
+      );
+      if (els.beaconOwned) els.beaconOwned.textContent = F.formatNumber(state.beacons);
+      if (els.beaconProd) els.beaconProd.textContent = F.formatNumber(beaconRate) + " ash / sec";
+      if (els.beaconCost) els.beaconCost.textContent = F.formatNumber(beaconPlan.cost) + " Hearths";
+      if (els.beaconBuy) {
+        els.beaconBuy.disabled = !beaconPlan.can;
+        els.beaconBuy.textContent = bindLabel("Raise a Beacon", "Raise", beaconPlan.k, "Beacon", "Beacons");
+      }
+      if (els.beaconCard) els.beaconCard.classList.toggle("can-buy", beaconPlan.can);
     }
 
     if (state.unlockedThrones) {
@@ -6781,6 +6945,19 @@
         els.hearthEdictBuy.disabled = !isFinite(hearthECost) || state.favor < hearthECost;
       }
 
+      var beaconECost = beaconEdictCost(state.beaconEdictLevel);
+      var beaconsN = beaconEdictStartsBeacons(state.beaconEdictLevel);
+      if (els.beaconEdictEffect) {
+        els.beaconEdictEffect.textContent =
+          "+" +
+          F.formatNumber(beaconsN) +
+          (beaconsN === 1 ? " Beacon at tribute" : " Beacons at tribute");
+      }
+      if (els.beaconEdictCost) els.beaconEdictCost.textContent = F.formatNumber(beaconECost) + " Favor";
+      if (els.beaconEdictBuy) {
+        els.beaconEdictBuy.disabled = !isFinite(beaconECost) || state.favor < beaconECost;
+      }
+
       var cinECost = cinderEdictCost(state.cinderEdictLevel);
       if (els.cinderEdictEffect) {
         els.cinderEdictEffect.textContent = "Autobind Pyres at tribute";
@@ -7304,6 +7481,11 @@
     els.hearthProd = document.getElementById("hearth-prod");
     els.hearthCost = document.getElementById("hearth-cost");
     els.hearthBuy = document.getElementById("hearth-buy");
+    els.beaconCard = document.getElementById("beacon-card");
+    els.beaconOwned = document.getElementById("beacon-owned");
+    els.beaconProd = document.getElementById("beacon-prod");
+    els.beaconCost = document.getElementById("beacon-cost");
+    els.beaconBuy = document.getElementById("beacon-buy");
     els.throneCard = document.getElementById("throne-card");
     els.throneOwned = document.getElementById("throne-owned");
     els.throneProd = document.getElementById("throne-prod");
@@ -7362,6 +7544,9 @@
     els.hearthEdictEffect = document.getElementById("hearth-edict-effect");
     els.hearthEdictCost = document.getElementById("hearth-edict-cost");
     els.hearthEdictBuy = document.getElementById("hearth-edict-buy");
+    els.beaconEdictEffect = document.getElementById("beacon-edict-effect");
+    els.beaconEdictCost = document.getElementById("beacon-edict-cost");
+    els.beaconEdictBuy = document.getElementById("beacon-edict-buy");
     els.cinderEdictEffect = document.getElementById("cinder-edict-effect");
     els.cinderEdictCost = document.getElementById("cinder-edict-cost");
     els.cinderEdictBuy = document.getElementById("cinder-edict-buy");
@@ -7594,6 +7779,7 @@
     if (els.pyreBuy) els.pyreBuy.addEventListener("click", buyPyre);
     if (els.urnBuy) els.urnBuy.addEventListener("click", buyUrn);
     if (els.hearthBuy) els.hearthBuy.addEventListener("click", buyHearth);
+    if (els.beaconBuy) els.beaconBuy.addEventListener("click", buyBeacon);
     els.throneBuy.addEventListener("click", buyThrone);
     if (els.chaliceBuy) els.chaliceBuy.addEventListener("click", buyChalice);
     els.tributeBtn.addEventListener("click", layTribute);
@@ -7611,6 +7797,7 @@
     if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
     if (els.urnEdictBuy) els.urnEdictBuy.addEventListener("click", buyUrnEdict);
     if (els.hearthEdictBuy) els.hearthEdictBuy.addEventListener("click", buyHearthEdict);
+    if (els.beaconEdictBuy) els.beaconEdictBuy.addEventListener("click", buyBeaconEdict);
     if (els.cinderEdictBuy) els.cinderEdictBuy.addEventListener("click", buyCinderEdict);
     if (els.cutEdictBuy) els.cutEdictBuy.addEventListener("click", buyCutEdict);
     if (els.tendingEdictBuy) els.tendingEdictBuy.addEventListener("click", buyTendingEdict);
@@ -7889,6 +8076,7 @@
     if (state.unlockedPyres) revealPyres(false);
     if (state.unlockedUrns) revealUrns(false);
     if (state.unlockedHearths) revealHearths(false);
+    if (state.unlockedBeacons) revealBeacons(false);
     if (state.unlockedChalices) revealChalices(false);
     render();
     if (pendingAwayToast) {
@@ -7921,6 +8109,7 @@
     pyreCost: pyreCost,
     urnCost: urnCost,
     hearthCost: hearthCost,
+    beaconCost: beaconCost,
     chaliceCost: chaliceCost,
     markCost: markCost,
     favorGain: favorGain,
@@ -7954,6 +8143,8 @@
     urnEdictStartsUrns: urnEdictStartsUrns,
     hearthEdictCost: hearthEdictCost,
     hearthEdictStartsHearths: hearthEdictStartsHearths,
+    beaconEdictCost: beaconEdictCost,
+    beaconEdictStartsBeacons: beaconEdictStartsBeacons,
     cinderEdictCost: cinderEdictCost,
     cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
     cutEdictCost: cutEdictCost,

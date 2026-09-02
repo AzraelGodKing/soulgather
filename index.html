@@ -180,6 +180,17 @@
         <button type="button" class="card-buy" id="hearth-buy" disabled>Kindle a Hearth</button>
       </article>
 
+      <article class="card is-hidden" id="beacon-card">
+        <h2 class="card-name">Beacons</h2>
+        <div class="card-owned" id="beacon-owned">0</div>
+        <p class="card-flavor">A light after the fire.</p>
+        <div class="card-stats">
+          <div>Kindle: <span id="beacon-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="beacon-cost">4 Hearths</span></div>
+        </div>
+        <button type="button" class="card-buy" id="beacon-buy" disabled>Raise a Beacon</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -777,6 +788,18 @@
         <button type="button" class="card-buy" id="hearth-edict-buy" disabled>Speak the Hearth</button>
       </div>
 
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Beacons</h3>
+          <p class="edict-flavor">The last light is remembered.</p>
+          <p class="edict-stats">
+            Effect: <span id="beacon-edict-effect">+0 Beacon at tribute</span>
+            · Cost: <span id="beacon-edict-cost">10 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="beacon-edict-buy" disabled>Speak the Beacon</button>
+      </div>
+
 
       <div class="edict-row">
         <div class="edict-copy">
@@ -1131,7 +1154,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v5.7 · prototype</span>
+      <span>Soulgather v5.8 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
