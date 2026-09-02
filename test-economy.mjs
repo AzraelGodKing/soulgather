@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.6 economy smoke test.
+ * Soulgather v1.7 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -261,8 +261,18 @@ function hymnMult(on) {
   return on ? 1.25 : 1;
 }
 
-function hymnLeftAfterTribute() {
-  return 45;
+function hymnSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 45 + 15 * n;
+}
+
+function hymnLeftAfterTribute(level) {
+  return hymnSecs(level);
+}
+
+function hymnEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 4 * Math.pow(2, n);
 }
 
 function veilMult(on) {
@@ -757,6 +767,10 @@ assertEqual("hymnMult(false)", hymnMult(false), 1);
 assertEqual("choirEdictCost(0)", choirEdictCost(0), 5);
 assertEqual("choirEdictCost(1)", choirEdictCost(1), 10);
 assertEqual("hymnLeft after tribute", hymnLeftAfterTribute(), 45);
+assertEqual("hymnSecs(0)", hymnSecs(0), 45);
+assertEqual("hymnSecs(2)", hymnSecs(2), 75);
+assertEqual("hymnEdictCost(0)", hymnEdictCost(0), 4);
+assertEqual("hymnEdictCost(1)", hymnEdictCost(1), 8);
 
 assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
