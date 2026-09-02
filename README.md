@@ -7,13 +7,25 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 Live: https://azraelgodking.github.io/soulgather/
 Open `index.html` in a browser (`file://` is fine). Or `python3 -m http.server` in this folder. Vanilla HTML/CSS/JS, no build, no npm. Pushes to main redeploy Pages.
 
-Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, C Cut the Cinders, B Lay the Bone, W Keep the Wake (not while typing in Memory; do not steal if another button is focused). Ember vow no-ops N and W.
+Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, C Cut the Cinders, B Lay the Bone, W Keep the Wake, P Begin the Procession (not while typing in Memory; do not steal if another button is focused). Ember vow no-ops N and W.
 
 Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everything including Favor.
 
 ## Loop (short)
 
-Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) → Pyres (ash half-step) / Thrones → Chalices (late ash sink at 5 Thrones). Ash feeds Marks, Night's Tithe, The Wake, Thin the Veil, and Chalices. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Wake after Tribute if Edict of the Wake (`wakeSecs` when level >= 1). Rites (Siphon / Levy / Rite of Cinders), Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns / Autobind Fetters / Autobind Censers / Autobind Thrones / Autobind Pyres / Autobind Chalices this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned. Ossuary in Remembrance / The Crown (late Remembrance sink).
+Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) → Pyres (ash half-step) / Thrones → Chalices (late ash sink at 5 Thrones). Ash feeds Marks, Night's Tithe, The Wake, Thin the Veil, and Chalices. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Wake after Tribute if Edict of the Wake (`wakeSecs` when level >= 1). Rites (Siphon / Levy / Rite of Cinders), Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns / Autobind Fetters / Autobind Censers / Autobind Thrones / Autobind Pyres / Autobind Chalices this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned. Ossuary in Remembrance / The Crown (late Remembrance sink). The Procession in Remembrance / The Crown (this-run Remembrance burst, 45s ×1.2).
+
+## Design notes (v3.5)
+
+Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
+
+**v3.5 extras.**
+
+**The Procession (Remembrance / The Crown).** Late this-run Remembrance burst so Remembrance has a spend besides Ossuary / Deeper Night / Ashen Tide. Visible when the Remembrance panel is visible (same gate as Ossuary / Deeper Night — 3 tributes or 5 Favor earned). Compact crown-row after Ossuary. Cost: 1 Remembrance (`PROCESSION_COST = 1`). ×1. Cannot pay while already active (`processionLeft > 0`). Duration: `PROCESSION_SECS = 45`. `processionMult(on) = on ? 1.2 : 1`, folded into `currentMult` / `rateMult` as an extra factor so it blesses the same rates as other prodMult factors (souls/s, producers, clicks). Flavor: *They walk the emptied hall.* Button: **Begin the Procession**. Remaining time on the button while walking. Persist `processionLeft` this-run; wipe Tribute and Reset. Chronicle first: "The procession began." Offline catchup ticks the timer.
+
+**Hotkey P.** P pays Begin the Procession if Remembrance is unlocked, not already walking, and remembrance >= 1. Same T/N/V/C/B/W rules: ignore Memory textarea; do not steal a focused non-gather button.
+
+**Gift: first Procession.** Once when first paid: +5 souls (`Num.add`). Flag `giftFirstProcession` persist Tribute, wipe Reset. Toast: "Five souls for the first procession." Chronicle: "The first procession. The well returned five souls." If Chronicle already has procession or remaining `processionLeft` > 0 on old save, seed flag without grant (like first veil / first wake).
 
 ## Design notes (v3.4)
 
@@ -21,9 +33,9 @@ Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson
 
 **v3.4 extras.**
 
-**Per-vow Chronicle.** Swearing a vow still marks the generic first-any line (`vow`: "A vow was sworn."). It also marks a specific key so later emptyings can tell which vow it was: stillness → "A stillness vow was sworn." (`vowStillness`); poverty → "A poverty vow was sworn." (`vowPoverty`); hunger → "A hunger vow was sworn." (`vowHunger`); ember keeps the existing ember line (`vowEmber`: "An ember vow was sworn."). On load, seed `vowsKnown.<id>` from those specific Chronicle keys (and existing ember lines `vowEmber` / `giftFirstEmberVow`, plus this-run `vow`). Do not grant gifts from seeding.
+**Gift: two vows remembered.** Once when `vowsKnownCount` >= 2: +10 souls (`Num.add`). Flag `giftTwoVows` persist Tribute, wipe Reset. Same pattern as other gifts (check flag, set, grant, save). Toast: "Ten souls for two vows." Chronicle: "Two vows remembered. The well returned ten souls." If Chronicle already has this gift, seed without grant. If missing flag and count already >= 2, grant once then save. In `tryMilestoneGifts` / `checkUnlock`, check two-vows BEFORE all-four so a jump to 4 in one swear can pay two (if not already) then all-four.
 
-**Gift: two vows remembered.** Once when `vowsKnownCount` >= 2: +10 souls (`Num.add`). Flag `giftTwoVows` persist Tribute, wipe Reset. Same pattern as other gifts (check flag, set, grant, save). Toast: "Ten souls for two vows." Chronicle: "Two vows remembered. The well returned ten souls." If Chronicle already has this gift, seed without grant. If missing flag and count already >= 2, grant once then save. Must not double-pay with all-four: check two-vows first then all-four in the same unlock pass so both can fire if count jumps to 4 in one swear (ember as fourth still pays two if somehow skipped — if count goes 1→2 pay two; 3→4 pay all-four only if two already flagged). Typical: 1st swear no two-gift; 2nd pays two; 4th pays all-four.
+**Per-vow Chronicle (already from v3.3).** Per-vow Chronicle keys already exist from v3.3 — do not duplicate them; seed from them. Swearing a vow still marks the generic first-any line (`vow`: "A vow was sworn."). It also marks a specific key so later emptyings can tell which vow it was: stillness → "A stillness vow was sworn." (`vowStillness`); poverty → "A poverty vow was sworn." (`vowPoverty`); hunger → "A hunger vow was sworn." (`vowHunger`); ember keeps the existing ember line (`vowEmber`: "An ember vow was sworn."). On load, seed `vowsKnown.<id>` from those specific Chronicle keys (and existing ember lines `vowEmber` / `giftFirstEmberVow`, plus this-run `vow`). Do not grant gifts from seeding.
 
 ## Design notes (v3.3)
 

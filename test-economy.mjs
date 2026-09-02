@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.4 economy smoke test.
+ * Soulgather v3.5 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -394,6 +394,10 @@ function veilMult(on) {
 
 function wakeMult(on) {
   return on ? 2 : 1;
+}
+
+function processionMult(on) {
+  return on ? 1.2 : 1;
 }
 
 const WAKE_COST = 30;
@@ -955,6 +959,8 @@ assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
 assertEqual("wakeMult(false)", wakeMult(false), 1);
 assertEqual("wakeMult(true)", wakeMult(true), 2);
+assertEqual("processionMult(false)", processionMult(false), 1);
+assertEqual("processionMult(true)", processionMult(true), 1.2);
 assertEqual("WAKE_COST", WAKE_COST, 30);
 assertEqual("WAKE_SECS", WAKE_SECS, 40);
 assertEqual("wakeEdictCost(0)", wakeEdictCost(0), 8);

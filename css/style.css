@@ -1,4 +1,4 @@
-/* Soulgather v3.4 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v3.5 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -1064,6 +1064,10 @@ body::before {
 
 .crown-row.is-hidden {
   display: none;
+}
+
+.crown-row#procession-row.is-burning .crown-upgrade-name {
+  color: var(--crimson-hot);
 }
 
 /* ----- Rites (this-run; Reliquary language, dark gold) ----- */
