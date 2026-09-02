@@ -336,6 +336,10 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function quietCourtStartsPyreAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
@@ -556,6 +560,7 @@
     "giftFirstPyre",
     "giftEightTributes",
     "giftPeakPyres",
+    "giftFirstCinders",
     "choir",
     "veil",
     "choirEdict",
@@ -622,6 +627,7 @@
     giftFirstPyre: "The first pyre. The well returned five ash.",
     giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     giftPeakPyres: "Five pyres. The well returned ten ash.",
+    giftFirstCinders: "The first cinders. The well returned eight ash.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -1005,6 +1011,7 @@
       giftFirstPyre: false,
       giftEightTributes: false,
       giftPeakPyres: false,
+      giftFirstCinders: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1664,6 +1671,7 @@
     state.cinderLevel += 1;
     markChronicle("cinders");
     syncChronicle();
+    checkUnlock();
     save();
     render();
   }
@@ -1992,6 +2000,14 @@
       state.ash = N.add(state.ash, 10);
       markChronicle("giftPeakPyres");
       showToast("Ten ash for five pyres.");
+      granted = true;
+    }
+
+    if (!state.giftFirstCinders && (Number(state.cinderLevel) || 0) >= 1) {
+      state.giftFirstCinders = true;
+      state.ash = N.add(state.ash, 8);
+      markChronicle("giftFirstCinders");
+      showToast("Eight ash for the first cinders.");
       granted = true;
     }
 
@@ -2333,6 +2349,7 @@
     "giftFirstPyre",
     "giftEightTributes",
     "giftPeakPyres",
+    "giftFirstCinders",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2460,6 +2477,7 @@
       giftFirstPyre: !!state.giftFirstPyre,
       giftEightTributes: !!state.giftEightTributes,
       giftPeakPyres: !!state.giftPeakPyres,
+      giftFirstCinders: !!state.giftFirstCinders,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2654,6 +2672,14 @@
       state.giftPeakPyres = false;
     } else {
       state.giftPeakPyres = !!data.giftPeakPyres;
+    }
+    if (data.giftFirstCinders == null) {
+      state.giftFirstCinders =
+        hasChronicle("giftFirstCinders") ||
+        hasChronicle("cinders") ||
+        (Number(data.cinderLevel) || 0) > 0;
+    } else {
+      state.giftFirstCinders = !!data.giftFirstCinders;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -2911,6 +2937,7 @@
     var keptGiftFirstPyre = !!state.giftFirstPyre;
     var keptGiftEightTributes = !!state.giftEightTributes;
     var keptGiftPeakPyres = !!state.giftPeakPyres;
+    var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -2965,6 +2992,7 @@
     state.giftFirstPyre = keptGiftFirstPyre;
     state.giftEightTributes = keptGiftEightTributes;
     state.giftPeakPyres = keptGiftPeakPyres;
+    state.giftFirstCinders = keptGiftFirstCinders;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -3036,6 +3064,12 @@
       state.autobindFetters = true;
       if (N.cmp(state.fetters, UNLOCK_AUTOBIND_FETTERS) >= 0) {
         state.unlockedAutobindFetters = true;
+      }
+    }
+    if (quietCourtStartsPyreAutobind(keptQuietCourt)) {
+      state.autobindPyres = true;
+      if (N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
+        state.unlockedAutobindPyres = true;
       }
     }
     if (smokeStartsCenserAutobind(keptSmokeEdict)) {
@@ -4230,9 +4264,9 @@
       var qcN = Number(state.quietCourtLevel) || 0;
       if (els.crownCourtEffect) {
         els.crownCourtEffect.textContent =
-          quietCourtStartsFetterAutobind(qcN)
-            ? "Autobind Shades, Lanterns, and Fetters at tribute"
-            : "Autobind Shades, Lanterns, and Fetters at tribute";
+          quietCourtStartsPyreAutobind(qcN)
+            ? "Autobind Shades, Lanterns, Fetters, and Pyres at tribute"
+            : "Autobind Shades, Lanterns, Fetters, and Pyres at tribute";
       }
       if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
       if (els.crownCourtBuy) {
@@ -4803,6 +4837,7 @@
     quietCourtCost: quietCourtCost,
     quietCourtStartsLanternAutobind: quietCourtStartsLanternAutobind,
     quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
+    quietCourtStartsPyreAutobind: quietCourtStartsPyreAutobind,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,

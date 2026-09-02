@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.3 economy smoke test.
+ * Soulgather v2.4 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -232,6 +232,10 @@ function quietCourtStartsLanternAutobind(level) {
 }
 
 function quietCourtStartsFetterAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function quietCourtStartsPyreAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -836,6 +840,9 @@ assertTrue("quietCourtStartsLanternAutobind(2) is true", quietCourtStartsLantern
 
 assertTrue("quietCourtStartsFetterAutobind(0) is false", !quietCourtStartsFetterAutobind(0));
 assertTrue("quietCourtStartsFetterAutobind(1) is true", quietCourtStartsFetterAutobind(1));
+
+assertTrue("quietCourtStartsPyreAutobind(0) is false", !quietCourtStartsPyreAutobind(0));
+assertTrue("quietCourtStartsPyreAutobind(1) is true", quietCourtStartsPyreAutobind(1));
 
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));
