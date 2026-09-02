@@ -339,6 +339,25 @@
     return 8 * Math.pow(2, n);
   }
 
+  function processionSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return PROCESSION_SECS + 15 * n;
+  }
+
+  function processionEdictStartsProcession(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
+  function processionLeftAfterTribute(level) {
+    if (!processionEdictStartsProcession(level)) return 0;
+    return processionSecs(level);
+  }
+
+  function processionEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 9 * Math.pow(2, n);
+  }
+
   function choirEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 5 * Math.pow(2, n);
@@ -699,6 +718,7 @@
     "giftThreeChalices",
     "giftTwelveTributes",
     "giftSixteenTributes",
+    "giftTwentyTributes",
     "giftFullCup",
     "giftFirstOssuary",
     "giftFullOssuary",
@@ -719,6 +739,7 @@
     "cupEdict",
     "draughtEdict",
     "wakeEdict",
+    "processionEdict",
     "chalice",
     "ossuary",
     "hymn",
@@ -789,6 +810,7 @@
     giftFirstChalice: "The first chalice. The well returned fifteen souls.",
     giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
     giftSixteenTributes: "Sixteen emptyings. The well returned fifty souls.",
+    giftTwentyTributes: "Twenty emptyings. The well returned sixty souls.",
     giftFullCup: "The cup was full. The well returned twenty-five souls.",
     giftThreeChalices: "Three chalices. The well returned ten ash.",
     giftFirstOssuary: "The first bone. The well returned ten souls.",
@@ -810,6 +832,7 @@
     cupEdict: "The cup was spoken.",
     draughtEdict: "The draught was spoken.",
     wakeEdict: "The wake was spoken.",
+    processionEdict: "The procession was spoken.",
     chalice: "A chalice was raised.",
     ossuary: "A bone was laid.",
     hymn: "A hymn followed the emptying.",
@@ -1092,6 +1115,9 @@
     if ((Number(state.wakeEdictLevel) || 0) >= 1) {
       if (markChronicle("wakeEdict")) added = true;
     }
+    if ((Number(state.processionEdictLevel) || 0) >= 1) {
+      if (markChronicle("processionEdict")) added = true;
+    }
     if ((Number(state.chalices) || 0) >= 1) {
       if (markChronicle("chalice")) added = true;
     }
@@ -1241,6 +1267,7 @@
       giftFirstChalice: false,
       giftTwelveTributes: false,
       giftSixteenTributes: false,
+      giftTwentyTributes: false,
       giftFullCup: false,
       giftThreeChalices: false,
       giftFirstOssuary: false,
@@ -1260,6 +1287,7 @@
       cupEdictLevel: 0,
       draughtEdictLevel: 0,
       wakeEdictLevel: 0,
+      processionEdictLevel: 0,
       hymnLeft: 0,
       crownWeight: 0,
       longMemoryLevel: 0,
@@ -1995,6 +2023,16 @@
     render();
   }
 
+  function buyProcessionEdict() {
+    var cost = processionEdictCost(state.processionEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.processionEdictLevel += 1;
+    markChronicle("processionEdict");
+    save();
+    render();
+  }
+
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
     if (N.cmp(state.souls, cost) < 0) return;
@@ -2565,6 +2603,17 @@
       granted = true;
     }
 
+    if (
+      !state.giftTwentyTributes &&
+      (Number(state.tributesLaid) || 0) >= 20
+    ) {
+      state.giftTwentyTributes = true;
+      state.souls = N.add(state.souls, 60);
+      markChronicle("giftTwentyTributes");
+      showToast("Sixty souls for twenty emptyings.");
+      granted = true;
+    }
+
     if (tryNamesBound()) granted = true;
 
     if (granted) save();
@@ -2898,6 +2947,7 @@
     "giftThreeChalices",
     "giftTwelveTributes",
     "giftSixteenTributes",
+    "giftTwentyTributes",
     "giftFullCup",
     "giftFirstOssuary",
     "giftFullOssuary",
@@ -2916,6 +2966,7 @@
     "cupEdictLevel",
     "draughtEdictLevel",
     "wakeEdictLevel",
+    "processionEdictLevel",
     "hymnLeft",
     "crownWeight",
     "longMemoryLevel",
@@ -3050,6 +3101,7 @@
       giftFirstChalice: !!state.giftFirstChalice,
       giftTwelveTributes: !!state.giftTwelveTributes,
       giftSixteenTributes: !!state.giftSixteenTributes,
+      giftTwentyTributes: !!state.giftTwentyTributes,
       giftFullCup: !!state.giftFullCup,
       giftThreeChalices: !!state.giftThreeChalices,
       giftFirstOssuary: !!state.giftFirstOssuary,
@@ -3069,6 +3121,7 @@
       cupEdictLevel: Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0)),
       draughtEdictLevel: Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0)),
       wakeEdictLevel: Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0)),
+      processionEdictLevel: Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0)),
       hymnLeft: Number(state.hymnLeft) || 0,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
@@ -3251,6 +3304,11 @@
     } else {
       state.giftSixteenTributes = !!data.giftSixteenTributes;
     }
+    if (data.giftTwentyTributes == null) {
+      state.giftTwentyTributes = (Number(data.tributesLaid) || 0) >= 20;
+    } else {
+      state.giftTwentyTributes = !!data.giftTwentyTributes;
+    }
     if (data.giftNamesComplete == null) {
       state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 12;
     } else {
@@ -3371,6 +3429,7 @@
     state.cupEdictLevel = Math.max(0, Math.floor(Number(data.cupEdictLevel) || 0));
     state.draughtEdictLevel = Math.max(0, Math.floor(Number(data.draughtEdictLevel) || 0));
     state.wakeEdictLevel = Math.max(0, Math.floor(Number(data.wakeEdictLevel) || 0));
+    state.processionEdictLevel = Math.max(0, Math.floor(Number(data.processionEdictLevel) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -3629,6 +3688,7 @@
     var keptGiftFirstChalice = !!state.giftFirstChalice;
     var keptGiftTwelveTributes = !!state.giftTwelveTributes;
     var keptGiftSixteenTributes = !!state.giftSixteenTributes;
+    var keptGiftTwentyTributes = !!state.giftTwentyTributes;
     var keptGiftFullCup = !!state.giftFullCup;
     var keptGiftThreeChalices = !!state.giftThreeChalices;
     var keptGiftFirstOssuary = !!state.giftFirstOssuary;
@@ -3647,6 +3707,7 @@
     var keptCupEdict = Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0));
     var keptDraughtEdict = Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0));
     var keptWakeEdict = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
+    var keptProcessionEdict = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -3702,6 +3763,7 @@
     state.giftFirstChalice = keptGiftFirstChalice;
     state.giftTwelveTributes = keptGiftTwelveTributes;
     state.giftSixteenTributes = keptGiftSixteenTributes;
+    state.giftTwentyTributes = keptGiftTwentyTributes;
     state.giftFullCup = keptGiftFullCup;
     state.giftThreeChalices = keptGiftThreeChalices;
     state.giftFirstOssuary = keptGiftFirstOssuary;
@@ -3720,6 +3782,7 @@
     state.cupEdictLevel = keptCupEdict;
     state.draughtEdictLevel = keptDraughtEdict;
     state.wakeEdictLevel = keptWakeEdict;
+    state.processionEdictLevel = keptProcessionEdict;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -3736,7 +3799,7 @@
     if (state.wakeLeft > 0) {
       state.unlockedWake = true;
     }
-    state.processionLeft = 0;
+    state.processionLeft = processionLeftAfterTribute(keptProcessionEdict);
     state.tithePaid = false;
     state.autobind = false;
     state.autobindSpirits = false;
@@ -5109,6 +5172,17 @@
       if (els.wakeEdictBuy) {
         els.wakeEdictBuy.disabled = !isFinite(weCost) || state.favor < weCost;
       }
+
+      var peCost = processionEdictCost(state.processionEdictLevel);
+      var processionEdictN = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
+      var processionDur = processionEdictStartsProcession(processionEdictN) ? processionSecs(processionEdictN) : 0;
+      if (els.processionEdictEffect) {
+        els.processionEdictEffect.textContent = "Procession " + processionDur + "s at tribute";
+      }
+      if (els.processionEdictCost) els.processionEdictCost.textContent = F.formatNumber(peCost) + " Favor";
+      if (els.processionEdictBuy) {
+        els.processionEdictBuy.disabled = !isFinite(peCost) || state.favor < peCost;
+      }
     }
 
     var crownOpen = crownUnlocked();
@@ -5403,6 +5477,9 @@
     els.wakeEdictEffect = document.getElementById("wake-edict-effect");
     els.wakeEdictCost = document.getElementById("wake-edict-cost");
     els.wakeEdictBuy = document.getElementById("wake-edict-buy");
+    els.processionEdictEffect = document.getElementById("procession-edict-effect");
+    els.processionEdictCost = document.getElementById("procession-edict-cost");
+    els.processionEdictBuy = document.getElementById("procession-edict-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -5569,6 +5646,7 @@
     if (els.cupBuy) els.cupBuy.addEventListener("click", buyCupEdict);
     if (els.draughtEdictBuy) els.draughtEdictBuy.addEventListener("click", buyDraughtEdict);
     if (els.wakeEdictBuy) els.wakeEdictBuy.addEventListener("click", buyWakeEdict);
+    if (els.processionEdictBuy) els.processionEdictBuy.addEventListener("click", buyProcessionEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
@@ -5866,6 +5944,10 @@
     wakeSecs: wakeSecs,
     wakeEdictStartsWake: wakeEdictStartsWake,
     wakeLeftAfterTribute: wakeLeftAfterTribute,
+    processionEdictCost: processionEdictCost,
+    processionSecs: processionSecs,
+    processionEdictStartsProcession: processionEdictStartsProcession,
+    processionLeftAfterTribute: processionLeftAfterTribute,
     formatBlessing: formatBlessing,
     nightTitheSecs: nightTitheSecs,
     nightSecs: nightSecs,

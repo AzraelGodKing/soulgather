@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.5 economy smoke test.
+ * Soulgather v3.6 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -400,6 +400,24 @@ function processionMult(on) {
   return on ? 1.2 : 1;
 }
 
+function processionSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 45 + 15 * n;
+}
+
+function processionEdictStartsProcession(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function processionLeftAfterTribute(level) {
+  return processionEdictStartsProcession(level) ? processionSecs(level) : 0;
+}
+
+function processionEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 9 * Math.pow(2, n);
+}
+
 const WAKE_COST = 30;
 const WAKE_SECS = 40;
 
@@ -544,6 +562,9 @@ function giftTwelveTributesReady(n) {
 function giftSixteenTributesReady(n) {
   return (Number(n) || 0) >= 16;
 }
+function giftTwentyTributesReady(n) {
+  return (Number(n) || 0) >= 20;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
@@ -552,6 +573,8 @@ assertTrue("giftTwelveTributesReady(11) is false", !giftTwelveTributesReady(11))
 assertTrue("giftTwelveTributesReady(12) is true", giftTwelveTributesReady(12));
 assertTrue("giftSixteenTributesReady(15) is false", !giftSixteenTributesReady(15));
 assertTrue("giftSixteenTributesReady(16) is true", giftSixteenTributesReady(16));
+assertTrue("giftTwentyTributesReady(19) is false", !giftTwentyTributesReady(19));
+assertTrue("giftTwentyTributesReady(20) is true", giftTwentyTributesReady(20));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
@@ -971,6 +994,14 @@ assertTrue("wakeEdictStartsWake(0) is false", !wakeEdictStartsWake(0));
 assertTrue("wakeEdictStartsWake(1) is true", wakeEdictStartsWake(1));
 assertEqual("wakeLeftAfterTribute(0)", wakeLeftAfterTribute(0), 0);
 assertEqual("wakeLeftAfterTribute(1)", wakeLeftAfterTribute(1), 55);
+assertEqual("processionEdictCost(0)", processionEdictCost(0), 9);
+assertEqual("processionSecs(0)", processionSecs(0), 45);
+assertEqual("processionSecs(1)", processionSecs(1), 60);
+assertEqual("processionSecs(2)", processionSecs(2), 75);
+assertTrue("processionEdictStartsProcession(0) is false", !processionEdictStartsProcession(0));
+assertTrue("processionEdictStartsProcession(1) is true", processionEdictStartsProcession(1));
+assertEqual("processionLeftAfterTribute(0)", processionLeftAfterTribute(0), 0);
+assertEqual("processionLeftAfterTribute(1)", processionLeftAfterTribute(1), 60);
 assertEqual("veilCost(20)", veilCost(20), 20);
 assertEqual("veilCost(200)", veilCost(200), 30);
 
