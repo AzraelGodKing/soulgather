@@ -75,6 +75,7 @@
   var CINDER_COST = 15;
   var URN_RITE_COST = 12;
   var HEARTH_RITE_COST = 14;
+  var BEACON_RITE_COST = 16;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
   var UNLOCK_TOLL_CLICKS = 80;
@@ -827,6 +828,10 @@
     return siphonMult(level);
   }
 
+  function beaconRiteMult(level) {
+    return siphonMult(level);
+  }
+
   function lanternMult(lanterns) {
     if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
       if (lanterns.e < 12) {
@@ -958,6 +963,7 @@
     "cinders",
     "urnRite",
     "hearthRite",
+    "beaconRite",
     "wellDraw",
     "tribute",
     "aspect",
@@ -1003,6 +1009,7 @@
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
+    "giftFirstBeaconRite",
     "giftFirstChalice",
     "giftThreeChalices",
     "giftTwelveTributes",
@@ -1097,6 +1104,7 @@
     cinders: "The cinders were cut.",
     urnRite: "The urn was cut.",
     hearthRite: "The hearth was cut.",
+    beaconRite: "The beacon was cut.",
     wellDraw: "The well began to draw.",
     tribute: "Tribute was laid. The GodKing remembers.",
     aspect: "An aspect was sworn.",
@@ -1142,6 +1150,7 @@
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstUrnRite: "The first cut urn. The well returned six ash.",
     giftFirstHearthRite: "The first cut hearth. The well returned eight ash.",
+    giftFirstBeaconRite: "The first cut beacon. The well returned ten ash.",
     giftFirstChalice: "The first chalice. The well returned fifteen souls.",
     giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
     giftSixteenTributes: "Sixteen emptyings. The well returned fifty souls.",
@@ -1422,6 +1431,9 @@
     if ((Number(state.hearthRiteLevel) || 0) >= 1) {
       if (markChronicle("hearthRite")) added = true;
     }
+    if ((Number(state.beaconRiteLevel) || 0) >= 1) {
+      if (markChronicle("beaconRite")) added = true;
+    }
     if (state.wellDraws) {
       if (markChronicle("wellDraw")) added = true;
     }
@@ -1676,6 +1688,7 @@
       cinderLevel: 0,
       urnRiteLevel: 0,
       hearthRiteLevel: 0,
+      beaconRiteLevel: 0,
       wellDraws: false,
       unlockedWellDraws: false,
       aspect: "",
@@ -1741,6 +1754,7 @@
       giftFirstCinders: false,
       giftFirstUrnRite: false,
       giftFirstHearthRite: false,
+      giftFirstBeaconRite: false,
       giftFirstChalice: false,
       giftTwelveTributes: false,
       giftSixteenTributes: false,
@@ -1999,10 +2013,13 @@
     var fromBeacons = N.mul(
       N.mul(
         N.mul(
-          N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
-          nightMult(nightActive())
+          N.mul(
+            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
         ),
-        hymnMult(hymnActive())
+        beaconRiteMult(state.beaconRiteLevel)
       ),
       wakeMult(wakeActive())
     );
@@ -2831,6 +2848,19 @@
     render();
   }
 
+  function buyBeaconRite() {
+    if (!state.unlockedBeacons) return;
+    var cost = N.fromNumber(BEACON_RITE_COST);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state.beaconRiteLevel += 1;
+    markChronicle("beaconRite");
+    syncChronicle();
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyWellDraws() {
     if (state.wellDraws) return;
     if (!state.unlockedWellDraws && N.cmp(state.shades, UNLOCK_WELL_DRAWS_SHADES) < 0) return;
@@ -3373,6 +3403,14 @@
       state.ash = N.add(state.ash, 8);
       markChronicle("giftFirstHearthRite");
       showToast("Eight ash for the first cut hearth.");
+      granted = true;
+    }
+
+    if (!state.giftFirstBeaconRite && (Number(state.beaconRiteLevel) || 0) >= 1) {
+      state.giftFirstBeaconRite = true;
+      state.ash = N.add(state.ash, 10);
+      markChronicle("giftFirstBeaconRite");
+      showToast("Ten ash for the first cut beacon.");
       granted = true;
     }
 
@@ -4074,6 +4112,7 @@
     "cinderLevel",
     "urnRiteLevel",
     "hearthRiteLevel",
+    "beaconRiteLevel",
     "wellDraws",
     "unlockedWellDraws",
     "aspect",
@@ -4139,6 +4178,7 @@
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
+    "giftFirstBeaconRite",
     "giftFirstChalice",
     "giftThreeChalices",
     "giftTwelveTributes",
@@ -4288,6 +4328,7 @@
       cinderLevel: Number(state.cinderLevel) || 0,
       urnRiteLevel: Number(state.urnRiteLevel) || 0,
       hearthRiteLevel: Number(state.hearthRiteLevel) || 0,
+      beaconRiteLevel: Number(state.beaconRiteLevel) || 0,
       wellDraws: state.wellDraws,
       unlockedWellDraws: state.unlockedWellDraws,
       aspect: normalizeAspect(state.aspect),
@@ -4353,6 +4394,7 @@
       giftFirstCinders: !!state.giftFirstCinders,
       giftFirstUrnRite: !!state.giftFirstUrnRite,
       giftFirstHearthRite: !!state.giftFirstHearthRite,
+      giftFirstBeaconRite: !!state.giftFirstBeaconRite,
       giftFirstChalice: !!state.giftFirstChalice,
       giftTwelveTributes: !!state.giftTwelveTributes,
       giftSixteenTributes: !!state.giftSixteenTributes,
@@ -4512,6 +4554,7 @@
     state.cinderLevel = Number(data.cinderLevel) || 0;
     state.urnRiteLevel = Number(data.urnRiteLevel) || 0;
     state.hearthRiteLevel = Number(data.hearthRiteLevel) || 0;
+    state.beaconRiteLevel = Number(data.beaconRiteLevel) || 0;
     state.wellDraws = !!data.wellDraws;
     state.unlockedWellDraws = !!data.unlockedWellDraws;
     state.aspect = normalizeAspect(data.aspect);
@@ -4744,6 +4787,14 @@
         (Number(data.hearthRiteLevel) || 0) > 0;
     } else {
       state.giftFirstHearthRite = !!data.giftFirstHearthRite;
+    }
+    if (data.giftFirstBeaconRite == null) {
+      state.giftFirstBeaconRite =
+        hasChronicle("giftFirstBeaconRite") ||
+        hasChronicle("beaconRite") ||
+        (Number(data.beaconRiteLevel) || 0) > 0;
+    } else {
+      state.giftFirstBeaconRite = !!data.giftFirstBeaconRite;
     }
     if (data.giftFirstChalice == null) {
       state.giftFirstChalice =
@@ -5194,6 +5245,7 @@
     var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptGiftFirstUrnRite = !!state.giftFirstUrnRite;
     var keptGiftFirstHearthRite = !!state.giftFirstHearthRite;
+    var keptGiftFirstBeaconRite = !!state.giftFirstBeaconRite;
     var keptGiftFirstChalice = !!state.giftFirstChalice;
     var keptGiftTwelveTributes = !!state.giftTwelveTributes;
     var keptGiftSixteenTributes = !!state.giftSixteenTributes;
@@ -5311,6 +5363,7 @@
     state.giftFirstCinders = keptGiftFirstCinders;
     state.giftFirstUrnRite = keptGiftFirstUrnRite;
     state.giftFirstHearthRite = keptGiftFirstHearthRite;
+    state.giftFirstBeaconRite = keptGiftFirstBeaconRite;
     state.giftFirstChalice = keptGiftFirstChalice;
     state.giftTwelveTributes = keptGiftTwelveTributes;
     state.giftSixteenTributes = keptGiftSixteenTributes;
@@ -5753,6 +5806,7 @@
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.urnRiteRow) els.urnRiteRow.classList.add("is-hidden");
     if (els.hearthRiteRow) els.hearthRiteRow.classList.add("is-hidden");
+    if (els.beaconRiteRow) els.beaconRiteRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
     if (els.tollRow) els.tollRow.classList.add("is-hidden");
     if (els.wakeRow) els.wakeRow.classList.add("is-hidden");
@@ -6231,10 +6285,13 @@
       var beaconRate = N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
-            nightMult(nightActive())
+            N.mul(
+              N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+              nightMult(nightActive())
+            ),
+            hymnMult(hymnActive())
           ),
-          hymnMult(hymnActive())
+          beaconRiteMult(state.beaconRiteLevel)
         ),
         wakeMult(wakeActive())
       );
@@ -6343,6 +6400,18 @@
         if (els.hearthRiteEffect) els.hearthRiteEffect.textContent = "Hearth \u00d7" + formatTimes(hMult);
         if (els.hearthRiteCost) els.hearthRiteCost.textContent = F.formatNumber(hCost) + " Ash";
         if (els.hearthRiteBuy) els.hearthRiteBuy.disabled = N.cmp(state.ash, hCost) < 0;
+      }
+
+      var beaconRiteOpen = !!state.unlockedBeacons;
+      if (els.beaconRiteRow) {
+        els.beaconRiteRow.classList.toggle("is-hidden", !beaconRiteOpen);
+      }
+      if (beaconRiteOpen) {
+        var bCost = N.fromNumber(BEACON_RITE_COST);
+        var bMult = beaconRiteMult(state.beaconRiteLevel);
+        if (els.beaconRiteEffect) els.beaconRiteEffect.textContent = "Beacon \u00d7" + formatTimes(bMult);
+        if (els.beaconRiteCost) els.beaconRiteCost.textContent = F.formatNumber(bCost) + " Ash";
+        if (els.beaconRiteBuy) els.beaconRiteBuy.disabled = N.cmp(state.ash, bCost) < 0;
       }
 
       var drawsOpen = !!state.unlockedWellDraws || !!state.wellDraws;
@@ -7686,6 +7755,10 @@
     els.hearthRiteEffect = document.getElementById("hearth-rite-effect");
     els.hearthRiteCost = document.getElementById("hearth-rite-cost");
     els.hearthRiteBuy = document.getElementById("hearth-rite-buy");
+    els.beaconRiteRow = document.getElementById("beacon-rite-row");
+    els.beaconRiteEffect = document.getElementById("beacon-rite-effect");
+    els.beaconRiteCost = document.getElementById("beacon-rite-cost");
+    els.beaconRiteBuy = document.getElementById("beacon-rite-buy");
     els.wellDrawsRow = document.getElementById("well-draws-row");
     els.wellDrawsEffect = document.getElementById("well-draws-effect");
     els.wellDrawsCost = document.getElementById("well-draws-cost");
@@ -7903,6 +7976,7 @@
     if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
     if (els.urnRiteBuy) els.urnRiteBuy.addEventListener("click", buyUrnRite);
     if (els.hearthRiteBuy) els.hearthRiteBuy.addEventListener("click", buyHearthRite);
+    if (els.beaconRiteBuy) els.beaconRiteBuy.addEventListener("click", buyBeaconRite);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
@@ -8102,6 +8176,14 @@
         if (state.unlockedHearths && N.cmp(state.ash, hearthRiteCost) >= 0) {
           ev.preventDefault();
           buyHearthRite();
+        }
+        return;
+      }
+      if ((ev.key === "l" || ev.key === "L") && !otherButton) {
+        var beaconRiteCost = N.fromNumber(BEACON_RITE_COST);
+        if (state.unlockedBeacons && N.cmp(state.ash, beaconRiteCost) >= 0) {
+          ev.preventDefault();
+          buyBeaconRite();
         }
         return;
       }
@@ -8317,7 +8399,9 @@
     cinderMult: cinderMult,
     urnRiteMult: urnRiteMult,
     hearthRiteMult: hearthRiteMult,
+    beaconRiteMult: beaconRiteMult,
     HEARTH_RITE_COST: HEARTH_RITE_COST,
+    BEACON_RITE_COST: BEACON_RITE_COST,
     harvestMult: harvestMult,
     bindingMult: bindingMult,
     throneWeight: throneWeight,

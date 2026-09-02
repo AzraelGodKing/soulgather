@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.9 economy smoke test.
+ * Soulgather v6.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -506,7 +506,12 @@ function hearthRiteMult(level) {
   return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
 }
 
+function beaconRiteMult(level) {
+  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
 const HEARTH_RITE_COST = 14;
+const BEACON_RITE_COST = 16;
 
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
@@ -777,6 +782,10 @@ assertEqual("hearthRiteMult(0)", hearthRiteMult(0), 1);
 assertEqual("hearthRiteMult(1)", hearthRiteMult(1), 2);
 assertEqual("hearthRiteMult(2)", hearthRiteMult(2), 4);
 assertEqual("HEARTH_RITE_COST", HEARTH_RITE_COST, 14);
+assertEqual("beaconRiteMult(0)", beaconRiteMult(0), 1);
+assertEqual("beaconRiteMult(1)", beaconRiteMult(1), 2);
+assertEqual("beaconRiteMult(2)", beaconRiteMult(2), 4);
+assertEqual("BEACON_RITE_COST", BEACON_RITE_COST, 16);
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
