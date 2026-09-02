@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.7 economy smoke test.
+ * Soulgather v3.8 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -269,6 +269,10 @@ function quietCourtStartsPyreAutobind(level) {
 }
 
 function quietCourtStartsChaliceAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function quietCourtStartsUrnAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -1034,6 +1038,9 @@ assertTrue("quietCourtStartsPyreAutobind(1) is true", quietCourtStartsPyreAutobi
 
 assertTrue("quietCourtStartsChaliceAutobind(0) is false", !quietCourtStartsChaliceAutobind(0));
 assertTrue("quietCourtStartsChaliceAutobind(1) is true", quietCourtStartsChaliceAutobind(1));
+
+assertTrue("quietCourtStartsUrnAutobind(0) is false", !quietCourtStartsUrnAutobind(0));
+assertTrue("quietCourtStartsUrnAutobind(1) is true", quietCourtStartsUrnAutobind(1));
 
 assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
 assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));

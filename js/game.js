@@ -61,6 +61,7 @@
   var UNLOCK_AUTOBIND_THRONES = 4;
   var UNLOCK_AUTOBIND_PYRES = 4;
   var UNLOCK_AUTOBIND_CHALICES = 3;
+  var UNLOCK_AUTOBIND_URNS = 3;
   var CINDER_COST = 15;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
@@ -428,6 +429,10 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function quietCourtStartsUrnAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
@@ -733,6 +738,7 @@
     "giftFirstUrn",
     "giftEightTributes",
     "giftPeakPyres",
+    "giftPeakUrns",
     "giftFirstCinders",
     "giftFirstChalice",
     "giftThreeChalices",
@@ -829,6 +835,7 @@
     giftFirstUrn: "The first urn. The well returned six ash.",
     giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     giftPeakPyres: "Five pyres. The well returned ten ash.",
+    giftPeakUrns: "Five urns. The well returned eight ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstChalice: "The first chalice. The well returned fifteen souls.",
     giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
@@ -1230,6 +1237,7 @@
       unlockedAutobindThrones: false,
       unlockedAutobindPyres: false,
       unlockedAutobindChalices: false,
+      unlockedAutobindUrns: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       unlockedWake: false,
@@ -1268,6 +1276,7 @@
       autobindThrones: false,
       autobindPyres: false,
       autobindChalices: false,
+      autobindUrns: false,
       clicksThisRun: 0,
       veilLeft: 0,
       wakeLeft: 0,
@@ -1301,6 +1310,7 @@
       giftFirstUrn: false,
       giftEightTributes: false,
       giftPeakPyres: false,
+      giftPeakUrns: false,
       giftFirstCinders: false,
       giftFirstChalice: false,
       giftTwelveTributes: false,
@@ -1586,6 +1596,7 @@
     if (live) tryAutobindCensers();
     if (live) tryAutobindThrones();
     if (live) tryAutobindPyres();
+    if (live) tryAutobindUrns();
     if (live) tryAutobindChalices();
     checkUnlock();
   }
@@ -1707,6 +1718,10 @@
 
     if (!state.unlockedAutobindPyres && N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
       state.unlockedAutobindPyres = true;
+    }
+
+    if (!state.unlockedAutobindUrns && N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
+      state.unlockedAutobindUrns = true;
     }
 
     if (!state.unlockedAutobindChalices && (Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
@@ -2347,6 +2362,23 @@
     state.pyres = N.add(state.pyres, 1);
   }
 
+  function toggleAutobindUrns() {
+    if (!state.unlockedAutobindUrns) return;
+    state.autobindUrns = !state.autobindUrns;
+    save();
+    render();
+  }
+
+  function tryAutobindUrns() {
+    /* No extra hold-back: autobind urns spend Pyres; autobind pyres buy Pyres. */
+    if (!state.autobindUrns) return;
+    if (!state.unlockedUrns) return;
+    var cost = urnCost(state.urns);
+    if (N.cmp(state.pyres, cost) < 0) return;
+    state.pyres = N.sub(state.pyres, cost);
+    state.urns = N.add(state.urns, 1);
+  }
+
   function toggleAutobindChalices() {
     if (!state.unlockedAutobindChalices) return;
     state.autobindChalices = !state.autobindChalices;
@@ -2529,6 +2561,15 @@
         showToast("Six ash for the first urn.");
         granted = true;
       }
+    }
+
+    bumpPeakUrns();
+    if (!state.giftPeakUrns && N.cmp(state.peakUrns, 5) >= 0) {
+      state.giftPeakUrns = true;
+      state.ash = N.add(state.ash, 8);
+      markChronicle("giftPeakUrns");
+      showToast("Eight ash for five urns.");
+      granted = true;
     }
 
     if (!state.giftFirstCinders && (Number(state.cinderLevel) || 0) >= 1) {
@@ -2972,6 +3013,7 @@
     "unlockedAutobindThrones",
     "unlockedAutobindPyres",
     "unlockedAutobindChalices",
+    "unlockedAutobindUrns",
     "unlockedNightTithe",
     "unlockedVeil",
     "unlockedWake",
@@ -3010,6 +3052,7 @@
     "autobindThrones",
     "autobindPyres",
     "autobindChalices",
+    "autobindUrns",
     "clicksThisRun",
     "veilLeft",
     "wakeLeft",
@@ -3043,6 +3086,7 @@
     "giftFirstUrn",
     "giftEightTributes",
     "giftPeakPyres",
+    "giftPeakUrns",
     "giftFirstCinders",
     "giftFirstChalice",
     "giftThreeChalices",
@@ -3132,6 +3176,7 @@
       unlockedAutobindThrones: !!state.unlockedAutobindThrones,
       unlockedAutobindPyres: !!state.unlockedAutobindPyres,
       unlockedAutobindChalices: !!state.unlockedAutobindChalices,
+      unlockedAutobindUrns: !!state.unlockedAutobindUrns,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       unlockedWake: !!state.unlockedWake,
@@ -3170,6 +3215,7 @@
       autobindThrones: !!state.autobindThrones,
       autobindPyres: !!state.autobindPyres,
       autobindChalices: !!state.autobindChalices,
+      autobindUrns: !!state.autobindUrns,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       wakeLeft: Number(state.wakeLeft) || 0,
@@ -3203,6 +3249,7 @@
       giftFirstUrn: !!state.giftFirstUrn,
       giftEightTributes: !!state.giftEightTributes,
       giftPeakPyres: !!state.giftPeakPyres,
+      giftPeakUrns: !!state.giftPeakUrns,
       giftFirstCinders: !!state.giftFirstCinders,
       giftFirstChalice: !!state.giftFirstChalice,
       giftTwelveTributes: !!state.giftTwelveTributes,
@@ -3297,6 +3344,7 @@
     state.unlockedAutobindThrones = !!data.unlockedAutobindThrones;
     state.unlockedAutobindPyres = !!data.unlockedAutobindPyres;
     state.unlockedAutobindChalices = !!data.unlockedAutobindChalices;
+    state.unlockedAutobindUrns = !!data.unlockedAutobindUrns;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
     state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
@@ -3353,6 +3401,7 @@
     state.autobindThrones = !!data.autobindThrones;
     state.autobindPyres = !!data.autobindPyres;
     state.autobindChalices = !!data.autobindChalices;
+    state.autobindUrns = !!data.autobindUrns;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
     if (
@@ -3469,6 +3518,11 @@
       state.giftPeakPyres = false;
     } else {
       state.giftPeakPyres = !!data.giftPeakPyres;
+    }
+    if (data.giftPeakUrns == null) {
+      state.giftPeakUrns = false;
+    } else {
+      state.giftPeakUrns = !!data.giftPeakUrns;
     }
     if (data.giftFirstCinders == null) {
       state.giftFirstCinders =
@@ -3807,6 +3861,7 @@
     var keptGiftFirstUrn = !!state.giftFirstUrn;
     var keptGiftEightTributes = !!state.giftEightTributes;
     var keptGiftPeakPyres = !!state.giftPeakPyres;
+    var keptGiftPeakUrns = !!state.giftPeakUrns;
     var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptGiftFirstChalice = !!state.giftFirstChalice;
     var keptGiftTwelveTributes = !!state.giftTwelveTributes;
@@ -3885,6 +3940,7 @@
     state.giftFirstUrn = keptGiftFirstUrn;
     state.giftEightTributes = keptGiftEightTributes;
     state.giftPeakPyres = keptGiftPeakPyres;
+    state.giftPeakUrns = keptGiftPeakUrns;
     state.giftFirstCinders = keptGiftFirstCinders;
     state.giftFirstChalice = keptGiftFirstChalice;
     state.giftTwelveTributes = keptGiftTwelveTributes;
@@ -3937,6 +3993,7 @@
     state.autobindThrones = false;
     state.autobindPyres = false;
     state.autobindChalices = false;
+    state.autobindUrns = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -3997,6 +4054,12 @@
         state.unlockedAutobindChalices = true;
       }
     }
+    if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
+      state.autobindUrns = true;
+      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
+        state.unlockedAutobindUrns = true;
+      }
+    }
     if (smokeStartsCenserAutobind(keptSmokeEdict)) {
       state.autobindCensers = true;
       if (N.cmp(state.censers, UNLOCK_AUTOBIND_CENSERS) >= 0) {
@@ -4012,6 +4075,12 @@
     if (startUrns > 0) {
       state.urns = N.fromNumber(startUrns);
       state.unlockedUrns = true;
+    }
+    if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
+      state.autobindUrns = true;
+      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
+        state.unlockedAutobindUrns = true;
+      }
     }
     if (cinderEdictStartsPyreAutobind(keptCinderEdict)) {
       state.autobindPyres = true;
@@ -4209,6 +4278,7 @@
     if (els.autobindCensersRow) els.autobindCensersRow.classList.add("is-hidden");
     if (els.autobindThronesRow) els.autobindThronesRow.classList.add("is-hidden");
     if (els.autobindPyresRow) els.autobindPyresRow.classList.add("is-hidden");
+    if (els.autobindUrnsRow) els.autobindUrnsRow.classList.add("is-hidden");
     if (els.autobindChalicesRow) els.autobindChalicesRow.classList.add("is-hidden");
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
@@ -4962,6 +5032,22 @@
         }
       }
 
+      var autoUrnOpen = !!state.unlockedAutobindUrns;
+      if (els.autobindUrnsRow) {
+        els.autobindUrnsRow.classList.toggle("is-hidden", !autoUrnOpen);
+        els.autobindUrnsRow.classList.toggle("is-on", autoUrnOpen && !!state.autobindUrns);
+      }
+      if (autoUrnOpen) {
+        if (els.autobindUrnsEffect) {
+          els.autobindUrnsEffect.textContent = state.autobindUrns ? "The vessel fills" : "Idle bind";
+        }
+        if (els.autobindUrnsBuy) {
+          els.autobindUrnsBuy.disabled = false;
+          els.autobindUrnsBuy.textContent = "Autobind Urns";
+          els.autobindUrnsBuy.setAttribute("aria-pressed", state.autobindUrns ? "true" : "false");
+        }
+      }
+
       var autoChaliceOpen = !!state.unlockedAutobindChalices;
       if (els.autobindChalicesRow) {
         els.autobindChalicesRow.classList.toggle("is-hidden", !autoChaliceOpen);
@@ -5394,9 +5480,9 @@
       var qcN = Number(state.quietCourtLevel) || 0;
       if (els.crownCourtEffect) {
         els.crownCourtEffect.textContent =
-          quietCourtStartsChaliceAutobind(qcN)
-            ? "Autobind Shades, Lanterns, Fetters, Pyres, and Chalices at tribute"
-            : "Autobind Shades, Lanterns, Fetters, Pyres, and Chalices at tribute";
+          quietCourtStartsUrnAutobind(qcN)
+            ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, and Urns at tribute"
+            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, and Urns at tribute";
       }
       if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
       if (els.crownCourtBuy) {
@@ -5721,6 +5807,9 @@
     els.autobindPyresRow = document.getElementById("autobind-pyres-row");
     els.autobindPyresEffect = document.getElementById("autobind-pyres-effect");
     els.autobindPyresBuy = document.getElementById("autobind-pyres-buy");
+    els.autobindUrnsRow = document.getElementById("autobind-urns-row");
+    els.autobindUrnsEffect = document.getElementById("autobind-urns-effect");
+    els.autobindUrnsBuy = document.getElementById("autobind-urns-buy");
     els.autobindChalicesRow = document.getElementById("autobind-chalices-row");
     els.autobindChalicesEffect = document.getElementById("autobind-chalices-effect");
     els.autobindChalicesBuy = document.getElementById("autobind-chalices-buy");
@@ -5850,6 +5939,7 @@
     if (els.autobindCensersBuy) els.autobindCensersBuy.addEventListener("click", toggleAutobindCensers);
     if (els.autobindThronesBuy) els.autobindThronesBuy.addEventListener("click", toggleAutobindThrones);
     if (els.autobindPyresBuy) els.autobindPyresBuy.addEventListener("click", toggleAutobindPyres);
+    if (els.autobindUrnsBuy) els.autobindUrnsBuy.addEventListener("click", toggleAutobindUrns);
     if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
@@ -6107,6 +6197,7 @@
     quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
     quietCourtStartsPyreAutobind: quietCourtStartsPyreAutobind,
     quietCourtStartsChaliceAutobind: quietCourtStartsChaliceAutobind,
+    quietCourtStartsUrnAutobind: quietCourtStartsUrnAutobind,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,
