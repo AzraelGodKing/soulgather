@@ -86,6 +86,7 @@
   var PROCESSION_SECS = 45;
   var LONGER_PROCESSION_MAX = 5;
   var DEEPER_TOLL_MAX = 5;
+  var LONGER_WAKE_MAX = 5;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -566,6 +567,18 @@
     return TOLL_SECS + 10 * n;
   }
 
+  function longerWakeCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= LONGER_WAKE_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
+  function paidWakeSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > LONGER_WAKE_MAX) n = LONGER_WAKE_MAX;
+    return WAKE_SECS + 10 * n;
+  }
+
   function ashenTideCost(level) {
     var n = Math.max(0, Math.floor(level));
     if (n >= ASHEN_TIDE_MAX) return Infinity;
@@ -825,6 +838,7 @@
     "giftFirstProcession",
     "giftFirstLongerProcession",
     "giftFirstDeeperToll",
+    "giftFirstLongerWake",
     "giftFirstToll",
     "choir",
     "veil",
@@ -833,6 +847,7 @@
     "procession",
     "longerProcession",
     "deeperToll",
+    "longerWake",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -934,6 +949,7 @@
     giftFirstProcession: "The first procession. The well returned five souls.",
     giftFirstLongerProcession: "The first longer walk. The well returned five souls.",
     giftFirstDeeperToll: "The first longer toll. The well returned five souls.",
+    giftFirstLongerWake: "The first longer wake. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
@@ -942,6 +958,7 @@
     procession: "The procession began.",
     longerProcession: "The walk was lengthened.",
     deeperToll: "The toll was lengthened.",
+    longerWake: "The wake was lengthened.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -1270,6 +1287,9 @@
     if ((Number(state.deeperTollLevel) || 0) >= 1) {
       if (markChronicle("deeperToll")) added = true;
     }
+    if ((Number(state.longerWakeLevel) || 0) >= 1) {
+      if (markChronicle("longerWake")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1441,6 +1461,7 @@
       giftFirstProcession: false,
       giftFirstLongerProcession: false,
       giftFirstDeeperToll: false,
+      giftFirstLongerWake: false,
       giftFirstToll: false,
       choirLevel: 0,
       unlockedChoir: false,
@@ -1468,6 +1489,7 @@
       ossuaryLevel: 0,
       longerProcessionLevel: 0,
       deeperTollLevel: 0,
+      longerWakeLevel: 0,
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
@@ -2393,7 +2415,7 @@
     var cost = N.fromNumber(WAKE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
     state.ash = N.sub(state.ash, cost);
-    state.wakeLeft = WAKE_SECS;
+    state.wakeLeft = paidWakeSecs(state.longerWakeLevel);
     markChronicle("wake");
     if (!state.giftFirstWake) {
       state.giftFirstWake = true;
@@ -2830,6 +2852,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstLongerWake && (Number(state.longerWakeLevel) || 0) >= 1) {
+      state.giftFirstLongerWake = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstLongerWake");
+      showToast("Five souls for the longer wake.");
+      granted = true;
+    }
+
     if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
       state.giftFullOssuary = true;
       state.souls = N.add(state.souls, 20);
@@ -3130,6 +3160,20 @@
     render();
   }
 
+  function buyLongerWake() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.longerWakeLevel) || 0));
+    if (level >= LONGER_WAKE_MAX) return;
+    var cost = longerWakeCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.longerWakeLevel = level + 1;
+    markChronicle("longerWake");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyAshenTide() {
     if (!remembranceUnlocked()) return;
     var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
@@ -3371,6 +3415,7 @@
     "giftFirstProcession",
     "giftFirstLongerProcession",
     "giftFirstDeeperToll",
+    "giftFirstLongerWake",
     "giftFirstToll",
     "choirLevel",
     "unlockedChoir",
@@ -3398,6 +3443,7 @@
     "ossuaryLevel",
     "longerProcessionLevel",
     "deeperTollLevel",
+    "longerWakeLevel",
     "vow",
     "vowHungerPaid",
     "vowsKnown",
@@ -3547,6 +3593,7 @@
       giftFirstProcession: !!state.giftFirstProcession,
       giftFirstLongerProcession: !!state.giftFirstLongerProcession,
       giftFirstDeeperToll: !!state.giftFirstDeeperToll,
+      giftFirstLongerWake: !!state.giftFirstLongerWake,
       giftFirstToll: !!state.giftFirstToll,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
@@ -3574,6 +3621,7 @@
       ossuaryLevel: Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0))),
       longerProcessionLevel: Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0))),
       deeperTollLevel: Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0))),
+      longerWakeLevel: Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
@@ -3918,6 +3966,14 @@
     } else {
       state.giftFirstDeeperToll = !!data.giftFirstDeeperToll;
     }
+    if (data.giftFirstLongerWake == null) {
+      state.giftFirstLongerWake =
+        hasChronicle("giftFirstLongerWake") ||
+        hasChronicle("longerWake") ||
+        (Number(data.longerWakeLevel) || 0) >= 1;
+    } else {
+      state.giftFirstLongerWake = !!data.giftFirstLongerWake;
+    }
     if (data.giftFirstToll == null) {
       state.giftFirstToll =
         hasChronicle("toll") ||
@@ -3950,6 +4006,7 @@
     state.ossuaryLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(data.ossuaryLevel) || 0)));
     state.longerProcessionLevel = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(data.longerProcessionLevel) || 0)));
     state.deeperTollLevel = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(data.deeperTollLevel) || 0)));
+    state.longerWakeLevel = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(data.longerWakeLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
@@ -4220,6 +4277,7 @@
     var keptGiftFirstProcession = !!state.giftFirstProcession;
     var keptGiftFirstLongerProcession = !!state.giftFirstLongerProcession;
     var keptGiftFirstDeeperToll = !!state.giftFirstDeeperToll;
+    var keptGiftFirstLongerWake = !!state.giftFirstLongerWake;
     var keptGiftFirstToll = !!state.giftFirstToll;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
@@ -4243,6 +4301,7 @@
     var keptOssuary = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0)));
     var keptLongerProcession = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0)));
     var keptDeeperToll = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0)));
+    var keptLongerWake = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -4309,6 +4368,7 @@
     state.giftFirstProcession = keptGiftFirstProcession;
     state.giftFirstLongerProcession = keptGiftFirstLongerProcession;
     state.giftFirstDeeperToll = keptGiftFirstDeeperToll;
+    state.giftFirstLongerWake = keptGiftFirstLongerWake;
     state.giftFirstToll = keptGiftFirstToll;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
@@ -4332,6 +4392,7 @@
     state.ossuaryLevel = keptOssuary;
     state.longerProcessionLevel = keptLongerProcession;
     state.deeperTollLevel = keptDeeperToll;
+    state.longerWakeLevel = keptLongerWake;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -5248,7 +5309,7 @@
         var wLeft = Number(state.wakeLeft) || 0;
         var wCost = N.fromNumber(WAKE_COST);
         if (els.wakeEffect) {
-          els.wakeEffect.textContent = wakeActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 40s";
+          els.wakeEffect.textContent = wakeActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidWakeSecs(state.longerWakeLevel) + "s";
         }
         if (els.wakeCost) {
           els.wakeCost.textContent = F.formatNumber(wCost) + " Ash";
@@ -5938,6 +5999,7 @@
       if (els.processionRow) els.processionRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerProcessionRow) els.longerProcessionRow.classList.toggle("is-hidden", !remOpen);
       if (els.deeperTollRow) els.deeperTollRow.classList.toggle("is-hidden", !remOpen);
+      if (els.longerWakeRow) els.longerWakeRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -6055,6 +6117,26 @@
           if (els.deeperTollBuy) {
             els.deeperTollBuy.disabled = !isFinite(dtCost) || (Number(state.remembrance) || 0) < dtCost;
             els.deeperTollBuy.textContent = "Lengthen the Toll";
+          }
+        }
+
+        var lwLevel = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0)));
+        var lwCost = longerWakeCost(lwLevel);
+        var lwSecs = paidWakeSecs(lwLevel);
+        if (els.longerWakeEffect) {
+          els.longerWakeEffect.textContent = "Wake " + lwSecs + "s";
+        }
+        if (lwLevel >= LONGER_WAKE_MAX) {
+          if (els.longerWakeCost) els.longerWakeCost.textContent = "\u2014";
+          if (els.longerWakeBuy) {
+            els.longerWakeBuy.disabled = true;
+            els.longerWakeBuy.textContent = "The fire lingers longest.";
+          }
+        } else {
+          if (els.longerWakeCost) els.longerWakeCost.textContent = F.formatNumber(lwCost) + " Remembrance";
+          if (els.longerWakeBuy) {
+            els.longerWakeBuy.disabled = !isFinite(lwCost) || (Number(state.remembrance) || 0) < lwCost;
+            els.longerWakeBuy.textContent = "Lengthen the Wake";
           }
         }
       }
@@ -6346,6 +6428,10 @@
     els.deeperTollEffect = document.getElementById("deeper-toll-effect");
     els.deeperTollCost = document.getElementById("deeper-toll-cost");
     els.deeperTollBuy = document.getElementById("deeper-toll-buy");
+    els.longerWakeRow = document.getElementById("longer-wake-row");
+    els.longerWakeEffect = document.getElementById("longer-wake-effect");
+    els.longerWakeCost = document.getElementById("longer-wake-cost");
+    els.longerWakeBuy = document.getElementById("longer-wake-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -6452,6 +6538,7 @@
     if (els.processionBuy) els.processionBuy.addEventListener("click", beginProcession);
     if (els.longerProcessionBuy) els.longerProcessionBuy.addEventListener("click", buyLongerProcession);
     if (els.deeperTollBuy) els.deeperTollBuy.addEventListener("click", buyDeeperToll);
+    if (els.longerWakeBuy) els.longerWakeBuy.addEventListener("click", buyLongerWake);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -6739,6 +6826,9 @@
     deeperTollCost: deeperTollCost,
     paidTollSecs: paidTollSecs,
     DEEPER_TOLL_MAX: DEEPER_TOLL_MAX,
+    longerWakeCost: longerWakeCost,
+    paidWakeSecs: paidWakeSecs,
+    LONGER_WAKE_MAX: LONGER_WAKE_MAX,
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,
