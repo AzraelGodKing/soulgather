@@ -98,6 +98,7 @@
   var LONGER_TITHE_MAX = 5;
   var LONGER_VEIL_MAX = 5;
   var LONGER_HYMN_MAX = 5;
+  var LONGER_KNELL_MAX = 5;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -713,6 +714,18 @@
     return 1 * Math.pow(2, n);
   }
 
+  function longerKnellCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= LONGER_KNELL_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
+  function paidKnellSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > LONGER_KNELL_MAX) n = LONGER_KNELL_MAX;
+    return KNELL_SECS + 10 * n;
+  }
+
   function ashenTideCost(level) {
     var n = Math.max(0, Math.floor(level));
     if (n >= ASHEN_TIDE_MAX) return Infinity;
@@ -989,6 +1002,7 @@
     "giftFirstLongerTithe",
     "giftFirstLongerVeil",
     "giftFirstLongerHymn",
+    "giftFirstLongerKnell",
     "giftFirstToll",
     "giftFirstKnell",
     "choir",
@@ -1003,6 +1017,7 @@
     "longerTithe",
     "longerVeil",
     "longerHymn",
+    "longerKnell",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -1122,6 +1137,7 @@
     giftFirstLongerTithe: "The first longer tithe. The well returned five souls.",
     giftFirstLongerVeil: "The first longer veil. The well returned five souls.",
     giftFirstLongerHymn: "The first longer hymn. The well returned five souls.",
+    giftFirstLongerKnell: "The first longer knell. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
     giftFirstKnell: "The first knell. The well returned five souls.",
     choir: "The choir of ash was raised.",
@@ -1136,6 +1152,7 @@
     longerTithe: "The tithe was lengthened.",
     longerVeil: "The veil was lengthened.",
     longerHymn: "The hymn was lengthened.",
+    longerKnell: "The knell was lengthened.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -1506,6 +1523,9 @@
     if ((Number(state.longerHymnLevel) || 0) >= 1) {
       if (markChronicle("longerHymn")) added = true;
     }
+    if ((Number(state.longerKnellLevel) || 0) >= 1) {
+      if (markChronicle("longerKnell")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1698,6 +1718,7 @@
       giftFirstLongerTithe: false,
       giftFirstLongerVeil: false,
       giftFirstLongerHymn: false,
+      giftFirstLongerKnell: false,
       giftFirstToll: false,
       giftFirstKnell: false,
       choirLevel: 0,
@@ -1735,6 +1756,7 @@
       longerTitheLevel: 0,
       longerVeilLevel: 0,
       longerHymnLevel: 0,
+      longerKnellLevel: 0,
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
@@ -3296,6 +3318,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstLongerKnell && (Number(state.longerKnellLevel) || 0) >= 1) {
+      state.giftFirstLongerKnell = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstLongerKnell");
+      showToast("Five souls for the longer knell.");
+      granted = true;
+    }
+
     if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
       state.giftFullOssuary = true;
       state.souls = N.add(state.souls, 20);
@@ -3693,6 +3723,20 @@
     render();
   }
 
+  function buyLongerKnell() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.longerKnellLevel) || 0));
+    if (level >= LONGER_KNELL_MAX) return;
+    var cost = longerKnellCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.longerKnellLevel = level + 1;
+    markChronicle("longerKnell");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyAshenTide() {
     if (!remembranceUnlocked()) return;
     var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
@@ -3744,7 +3788,7 @@
     var cost = KNELL_COST;
     if ((Number(state.remembrance) || 0) < cost) return;
     state.remembrance -= cost;
-    state.knellLeft = KNELL_SECS;
+    state.knellLeft = paidKnellSecs(state.longerKnellLevel);
     markChronicle("knell");
     if (!state.giftFirstKnell) {
       state.giftFirstKnell = true;
@@ -3975,6 +4019,7 @@
     "giftFirstLongerTithe",
     "giftFirstLongerVeil",
     "giftFirstLongerHymn",
+    "giftFirstLongerKnell",
     "giftFirstToll",
     "giftFirstKnell",
     "choirLevel",
@@ -4012,6 +4057,7 @@
     "longerTitheLevel",
     "longerVeilLevel",
     "longerHymnLevel",
+    "longerKnellLevel",
     "vow",
     "vowHungerPaid",
     "vowsKnown",
@@ -4179,6 +4225,7 @@
       giftFirstLongerTithe: !!state.giftFirstLongerTithe,
       giftFirstLongerVeil: !!state.giftFirstLongerVeil,
       giftFirstLongerHymn: !!state.giftFirstLongerHymn,
+      giftFirstLongerKnell: !!state.giftFirstLongerKnell,
       giftFirstToll: !!state.giftFirstToll,
       giftFirstKnell: !!state.giftFirstKnell,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
@@ -4216,6 +4263,7 @@
       longerTitheLevel: Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0))),
       longerVeilLevel: Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0))),
       longerHymnLevel: Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0))),
+      longerKnellLevel: Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(state.longerKnellLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
@@ -4647,6 +4695,14 @@
     } else {
       state.giftFirstLongerHymn = !!data.giftFirstLongerHymn;
     }
+    if (data.giftFirstLongerKnell == null) {
+      state.giftFirstLongerKnell =
+        hasChronicle("giftFirstLongerKnell") ||
+        hasChronicle("longerKnell") ||
+        (Number(data.longerKnellLevel) || 0) >= 1;
+    } else {
+      state.giftFirstLongerKnell = !!data.giftFirstLongerKnell;
+    }
     if (data.giftFirstToll == null) {
       state.giftFirstToll =
         hasChronicle("toll") ||
@@ -4700,6 +4756,7 @@
     state.longerTitheLevel = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(data.longerTitheLevel) || 0)));
     state.longerVeilLevel = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(data.longerVeilLevel) || 0)));
     state.longerHymnLevel = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(data.longerHymnLevel) || 0)));
+    state.longerKnellLevel = Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(data.longerKnellLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
@@ -4984,6 +5041,7 @@
     var keptGiftFirstLongerTithe = !!state.giftFirstLongerTithe;
     var keptGiftFirstLongerVeil = !!state.giftFirstLongerVeil;
     var keptGiftFirstLongerHymn = !!state.giftFirstLongerHymn;
+    var keptGiftFirstLongerKnell = !!state.giftFirstLongerKnell;
     var keptGiftFirstToll = !!state.giftFirstToll;
     var keptGiftFirstKnell = !!state.giftFirstKnell;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
@@ -5017,6 +5075,7 @@
     var keptLongerTithe = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0)));
     var keptLongerVeil = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0)));
     var keptLongerHymn = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0)));
+    var keptLongerKnell = Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(state.longerKnellLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -5095,6 +5154,7 @@
     state.giftFirstLongerTithe = keptGiftFirstLongerTithe;
     state.giftFirstLongerVeil = keptGiftFirstLongerVeil;
     state.giftFirstLongerHymn = keptGiftFirstLongerHymn;
+    state.giftFirstLongerKnell = keptGiftFirstLongerKnell;
     state.giftFirstToll = keptGiftFirstToll;
     state.giftFirstKnell = keptGiftFirstKnell;
     state.vowsKnown = keptVowsKnown;
@@ -5128,6 +5188,7 @@
     state.longerTitheLevel = keptLongerTithe;
     state.longerVeilLevel = keptLongerVeil;
     state.longerHymnLevel = keptLongerHymn;
+    state.longerKnellLevel = keptLongerKnell;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = nightLeftAfterTribute(keptNightEdict);
@@ -6900,6 +6961,7 @@
       if (els.longerTitheRow) els.longerTitheRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerVeilRow) els.longerVeilRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerHymnRow) els.longerHymnRow.classList.toggle("is-hidden", !remOpen);
+      if (els.longerKnellRow) els.longerKnellRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -6984,7 +7046,7 @@
         var kOn = knellActive();
         if (els.knellRow) els.knellRow.classList.toggle("is-burning", kOn);
         if (els.knellEffect) {
-          els.knellEffect.textContent = kOn ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + KNELL_SECS + "s";
+          els.knellEffect.textContent = kOn ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidKnellSecs(state.longerKnellLevel) + "s";
         }
         if (els.knellCost) {
           els.knellCost.textContent = F.formatNumber(KNELL_COST) + " Remembrance";
@@ -7116,6 +7178,26 @@
           if (els.longerHymnBuy) {
             els.longerHymnBuy.disabled = !isFinite(lhCost) || (Number(state.remembrance) || 0) < lhCost;
             els.longerHymnBuy.textContent = "Lengthen the Hymn";
+          }
+        }
+
+        var lkLevel = Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(state.longerKnellLevel) || 0)));
+        var lkCost = longerKnellCost(lkLevel);
+        var lkSecs = paidKnellSecs(lkLevel);
+        if (els.longerKnellEffect) {
+          els.longerKnellEffect.textContent = "Knell " + lkSecs + "s";
+        }
+        if (lkLevel >= LONGER_KNELL_MAX) {
+          if (els.longerKnellCost) els.longerKnellCost.textContent = "\u2014";
+          if (els.longerKnellBuy) {
+            els.longerKnellBuy.disabled = true;
+            els.longerKnellBuy.textContent = "The second answer lingers longest.";
+          }
+        } else {
+          if (els.longerKnellCost) els.longerKnellCost.textContent = F.formatNumber(lkCost) + " Remembrance";
+          if (els.longerKnellBuy) {
+            els.longerKnellBuy.disabled = !isFinite(lkCost) || (Number(state.remembrance) || 0) < lkCost;
+            els.longerKnellBuy.textContent = "Lengthen the Knell";
           }
         }
       }
@@ -7455,6 +7537,10 @@
     els.longerHymnEffect = document.getElementById("longer-hymn-effect");
     els.longerHymnCost = document.getElementById("longer-hymn-cost");
     els.longerHymnBuy = document.getElementById("longer-hymn-buy");
+    els.longerKnellRow = document.getElementById("longer-knell-row");
+    els.longerKnellEffect = document.getElementById("longer-knell-effect");
+    els.longerKnellCost = document.getElementById("longer-knell-cost");
+    els.longerKnellBuy = document.getElementById("longer-knell-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -7574,6 +7660,7 @@
     if (els.longerTitheBuy) els.longerTitheBuy.addEventListener("click", buyLongerTithe);
     if (els.longerVeilBuy) els.longerVeilBuy.addEventListener("click", buyLongerVeil);
     if (els.longerHymnBuy) els.longerHymnBuy.addEventListener("click", buyLongerHymn);
+    if (els.longerKnellBuy) els.longerKnellBuy.addEventListener("click", buyLongerKnell);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -7899,6 +7986,9 @@
     longerHymnCost: longerHymnCost,
     hymnBonusSecs: hymnBonusSecs,
     LONGER_HYMN_MAX: LONGER_HYMN_MAX,
+    longerKnellCost: longerKnellCost,
+    paidKnellSecs: paidKnellSecs,
+    LONGER_KNELL_MAX: LONGER_KNELL_MAX,
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,
