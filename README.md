@@ -13,7 +13,7 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 ## Loop (short)
 
-Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) / Thrones. Ash feeds Marks, Night's Tithe, and Thin the Veil. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds ×1.25). Rites, Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned.
+Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) / Thrones. Ash feeds Marks, Night's Tithe, and Thin the Veil. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Rites, Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned.
 
 ## Design notes (v1.7)
 
