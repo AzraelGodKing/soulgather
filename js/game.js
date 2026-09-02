@@ -68,6 +68,8 @@
   var NIGHT_TITHE_SECS = 30;
   var REMEMBRANCE_FAVOR_COST = 3;
   var ASHEN_TIDE_MAX = 5;
+  var OSSUARY_COST = 1;
+  var OSSUARY_MAX = 8;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -227,7 +229,13 @@
     return 1 + 0.08 * k;
   }
 
-  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices) {
+  function ossuaryMult(n) {
+    var k = Math.max(0, Math.floor(Number(n) || 0));
+    if (k > OSSUARY_MAX) k = OSSUARY_MAX;
+    return 1 + 0.05 * k;
+  }
+
+  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices, ossuary) {
     var w = weight == null ? 0.1 : Number(weight);
     if (!isFinite(w)) w = 0.1;
     return (
@@ -236,7 +244,8 @@
       (1 + 0.25 * (Number(edictLevel) || 0)) *
       (1 + 0.10 * (Number(crownWeight) || 0)) *
       namesCompleteMult(namesComplete) *
-      chaliceMult(chalices)
+      chaliceMult(chalices) *
+      ossuaryMult(ossuary)
     );
   }
 
@@ -427,6 +436,12 @@
     return 1 * Math.pow(2, n);
   }
 
+  function ossuaryCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= OSSUARY_MAX) return Infinity;
+    return OSSUARY_COST;
+  }
+
   function nightTitheSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     return NIGHT_TITHE_SECS + 10 * n;
@@ -602,9 +617,10 @@
     "giftPeakPyres",
     "giftFirstCinders",
     "giftFirstChalice",
+    "giftThreeChalices",
     "giftTwelveTributes",
     "giftFullCup",
-    "giftThreeChalices",
+    "giftFirstOssuary",
     "choir",
     "veil",
     "choirEdict",
@@ -615,6 +631,7 @@
     "cupEdict",
     "draughtEdict",
     "chalice",
+    "ossuary",
     "hymn",
     "vow",
     "quietCourt",
@@ -679,6 +696,7 @@
     giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
     giftFullCup: "The cup was full. The well returned twenty-five souls.",
     giftThreeChalices: "Three chalices. The well returned ten ash.",
+    giftFirstOssuary: "The first bone. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -689,6 +707,7 @@
     cupEdict: "The cup was spoken.",
     draughtEdict: "The draught was spoken.",
     chalice: "A chalice was raised.",
+    ossuary: "A bone was laid.",
     hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
@@ -953,6 +972,9 @@
     if ((Number(state.chalices) || 0) >= 1) {
       if (markChronicle("chalice")) added = true;
     }
+    if ((Number(state.ossuaryLevel) || 0) >= 1) {
+      if (markChronicle("ossuary")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1087,6 +1109,7 @@
       giftTwelveTributes: false,
       giftFullCup: false,
       giftThreeChalices: false,
+      giftFirstOssuary: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1105,6 +1128,7 @@
       remembrance: 0,
       deeperNightLevel: 0,
       ashenTideLevel: 0,
+      ossuaryLevel: 0,
       vow: "",
       vowHungerPaid: false,
       runStartedAt: Date.now(),
@@ -1134,7 +1158,8 @@
       throneWeight(normalizeAspect(state.aspect) === "dominion"),
       state.crownWeight,
       state.namesComplete,
-      state.chalices
+      state.chalices,
+      state.ossuaryLevel
     );
   }
 
@@ -2178,6 +2203,14 @@
       granted = true;
     }
 
+    if (!state.giftThreeChalices && (Number(state.chalices) || 0) >= 3) {
+      state.giftThreeChalices = true;
+      state.ash = N.add(state.ash, 10);
+      markChronicle("giftThreeChalices");
+      showToast("Ten ash for three chalices.");
+      granted = true;
+    }
+
     if (!state.giftFullCup && (Number(state.chalices) || 0) >= CHALICE_MAX) {
       state.giftFullCup = true;
       state.souls = N.add(state.souls, 25);
@@ -2186,11 +2219,11 @@
       granted = true;
     }
 
-    if (!state.giftThreeChalices && (Number(state.chalices) || 0) >= 3) {
-      state.giftThreeChalices = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftThreeChalices");
-      showToast("Ten ash for three chalices.");
+    if (!state.giftFirstOssuary && (Number(state.ossuaryLevel) || 0) >= 1) {
+      state.giftFirstOssuary = true;
+      state.souls = N.add(state.souls, 10);
+      markChronicle("giftFirstOssuary");
+      showToast("Ten souls for the first bone.");
       granted = true;
     }
 
@@ -2398,6 +2431,20 @@
     render();
   }
 
+  function buyOssuary() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.ossuaryLevel) || 0));
+    if (level >= OSSUARY_MAX) return;
+    var cost = ossuaryCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.ossuaryLevel = level + 1;
+    markChronicle("ossuary");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function raiseChoir() {
     if (!state.unlockedChoir) return;
     var level = Math.max(0, Math.floor(Number(state.choirLevel) || 0));
@@ -2549,9 +2596,10 @@
     "giftPeakPyres",
     "giftFirstCinders",
     "giftFirstChalice",
+    "giftThreeChalices",
     "giftTwelveTributes",
     "giftFullCup",
-    "giftThreeChalices",
+    "giftFirstOssuary",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2570,6 +2618,7 @@
     "remembrance",
     "deeperNightLevel",
     "ashenTideLevel",
+    "ossuaryLevel",
     "vow",
     "vowHungerPaid",
     "runStartedAt",
@@ -2690,6 +2739,7 @@
       giftTwelveTributes: !!state.giftTwelveTributes,
       giftFullCup: !!state.giftFullCup,
       giftThreeChalices: !!state.giftThreeChalices,
+      giftFirstOssuary: !!state.giftFirstOssuary,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2708,6 +2758,7 @@
       remembrance: Math.max(0, Math.floor(Number(state.remembrance) || 0)),
       deeperNightLevel: Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0)),
       ashenTideLevel: Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0))),
+      ossuaryLevel: Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
@@ -2922,6 +2973,14 @@
     } else {
       state.giftThreeChalices = !!data.giftThreeChalices;
     }
+    if (data.giftFirstOssuary == null) {
+      state.giftFirstOssuary =
+        hasChronicle("giftFirstOssuary") ||
+        hasChronicle("ossuary") ||
+        (Number(data.ossuaryLevel) || 0) >= 1;
+    } else {
+      state.giftFirstOssuary = !!data.giftFirstOssuary;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
@@ -2938,6 +2997,7 @@
     state.remembrance = Math.max(0, Math.floor(Number(data.remembrance) || 0));
     state.deeperNightLevel = Math.max(0, Math.floor(Number(data.deeperNightLevel) || 0));
     state.ashenTideLevel = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(data.ashenTideLevel) || 0)));
+    state.ossuaryLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(data.ossuaryLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
@@ -3187,6 +3247,7 @@
     var keptGiftTwelveTributes = !!state.giftTwelveTributes;
     var keptGiftFullCup = !!state.giftFullCup;
     var keptGiftThreeChalices = !!state.giftThreeChalices;
+    var keptGiftFirstOssuary = !!state.giftFirstOssuary;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -3200,6 +3261,7 @@
     var keptRemembrance = Math.max(0, Math.floor(Number(state.remembrance) || 0));
     var keptDeeperNight = Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0));
     var keptAshenTide = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0)));
+    var keptOssuary = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -3248,6 +3310,7 @@
     state.giftTwelveTributes = keptGiftTwelveTributes;
     state.giftFullCup = keptGiftFullCup;
     state.giftThreeChalices = keptGiftThreeChalices;
+    state.giftFirstOssuary = keptGiftFirstOssuary;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -3261,6 +3324,7 @@
     state.remembrance = keptRemembrance;
     state.deeperNightLevel = keptDeeperNight;
     state.ashenTideLevel = keptAshenTide;
+    state.ossuaryLevel = keptOssuary;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -4393,7 +4457,7 @@
       if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(tributeOffer) + " Favor";
       if (els.tributeMult) {
         els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete, cupStartsChalices(state.cupEdictLevel))
+          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete, cupStartsChalices(state.cupEdictLevel), state.ossuaryLevel)
         );
       }
     }
@@ -4629,6 +4693,7 @@
       if (els.remembranceLayRow) els.remembranceLayRow.classList.toggle("is-hidden", !remOpen);
       if (els.deeperNightRow) els.deeperNightRow.classList.toggle("is-hidden", !remOpen);
       if (els.ashenTideRow) els.ashenTideRow.classList.toggle("is-hidden", !remOpen);
+      if (els.ossuaryRow) els.ossuaryRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -4666,6 +4731,26 @@
           if (els.ashenTideBuy) {
             els.ashenTideBuy.disabled = !isFinite(atCost) || (Number(state.remembrance) || 0) < atCost;
             els.ashenTideBuy.textContent = "Raise the Tide";
+          }
+        }
+
+        var ossLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0)));
+        var ossPct = Math.round(5 * ossLevel);
+        var ossCost = ossuaryCost(ossLevel);
+        if (els.ossuaryEffect) {
+          els.ossuaryEffect.textContent = "+" + ossPct + "% production";
+        }
+        if (ossLevel >= OSSUARY_MAX) {
+          if (els.ossuaryCost) els.ossuaryCost.textContent = "\u2014";
+          if (els.ossuaryBuy) {
+            els.ossuaryBuy.disabled = true;
+            els.ossuaryBuy.textContent = "The ossuary is full.";
+          }
+        } else {
+          if (els.ossuaryCost) els.ossuaryCost.textContent = F.formatNumber(ossCost) + " Remembrance";
+          if (els.ossuaryBuy) {
+            els.ossuaryBuy.disabled = !isFinite(ossCost) || (Number(state.remembrance) || 0) < ossCost;
+            els.ossuaryBuy.textContent = "Lay the Bone";
           }
         }
       }
@@ -4905,6 +4990,10 @@
     els.ashenTideEffect = document.getElementById("ashen-tide-effect");
     els.ashenTideCost = document.getElementById("ashen-tide-cost");
     els.ashenTideBuy = document.getElementById("ashen-tide-buy");
+    els.ossuaryRow = document.getElementById("ossuary-row");
+    els.ossuaryEffect = document.getElementById("ossuary-effect");
+    els.ossuaryCost = document.getElementById("ossuary-cost");
+    els.ossuaryBuy = document.getElementById("ossuary-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -4994,6 +5083,7 @@
     if (els.remembranceLayBuy) els.remembranceLayBuy.addEventListener("click", layRemembrance);
     if (els.deeperNightBuy) els.deeperNightBuy.addEventListener("click", buyDeeperNight);
     if (els.ashenTideBuy) els.ashenTideBuy.addEventListener("click", buyAshenTide);
+    if (els.ossuaryBuy) els.ossuaryBuy.addEventListener("click", buyOssuary);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -5186,6 +5276,7 @@
     prestigeMult: prestigeMult,
     prodMult: prodMult,
     chaliceMult: chaliceMult,
+    ossuaryMult: ossuaryMult,
     producerCost: producerCost,
     bulkCost: bulkCost,
     edictCost: edictCost,
@@ -5217,6 +5308,7 @@
     remembranceFavorCost: remembranceFavorCost,
     deeperNightCost: deeperNightCost,
     ashenTideCost: ashenTideCost,
+    ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,
     choirEdictCost: choirEdictCost,
     hymnEdictCost: hymnEdictCost,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.7 economy smoke test.
+ * Soulgather v2.8 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -76,6 +76,11 @@ function chaliceMult(n) {
   return 1 + 0.08 * k;
 }
 
+function ossuaryMult(n) {
+  const k = Math.max(0, Math.min(8, Math.floor(Number(n) || 0)));
+  return 1 + 0.05 * k;
+}
+
 function cupEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 9 * Math.pow(2, n);
@@ -137,7 +142,7 @@ function namesCompleteMult(on) {
   return on ? 1.05 : 1;
 }
 
-function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices) {
+function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices, ossuary) {
   const w = weight == null ? 0.1 : Number(weight);
   return (
     prestigeMult(favorEarned) *
@@ -145,7 +150,8 @@ function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesCo
     (1 + 0.25 * (Number(edictLevel) || 0)) *
     (1 + 0.10 * (Number(crownWeight) || 0)) *
     namesCompleteMult(namesComplete) *
-    chaliceMult(chalices)
+    chaliceMult(chalices) *
+    ossuaryMult(ossuary)
   );
 }
 
@@ -919,6 +925,10 @@ assertTrue("quietCourtStartsChaliceAutobind(1) is true", quietCourtStartsChalice
 assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
 assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));
 assertTrue("draughtStartsChaliceAutobind(1) is true", draughtStartsChaliceAutobind(1));
+
+assertEqual("ossuaryMult(0)", ossuaryMult(0), 1);
+assertEqual("ossuaryMult(1)", ossuaryMult(1), 1.05);
+assertEqual("ossuaryMult(8)", ossuaryMult(8), 1.40);
 
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));
