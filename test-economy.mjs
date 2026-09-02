@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.6 economy smoke test.
+ * Soulgather v2.7 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -258,6 +258,10 @@ function quietCourtStartsPyreAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
+function quietCourtStartsChaliceAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function smokeEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 6 * Math.pow(2, n);
@@ -282,6 +286,15 @@ function cinderEdictCost(level) {
 }
 
 function cinderEdictStartsPyreAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function draughtEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 10 * Math.pow(2, n);
+}
+
+function draughtStartsChaliceAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -899,6 +912,13 @@ assertTrue("quietCourtStartsFetterAutobind(1) is true", quietCourtStartsFetterAu
 
 assertTrue("quietCourtStartsPyreAutobind(0) is false", !quietCourtStartsPyreAutobind(0));
 assertTrue("quietCourtStartsPyreAutobind(1) is true", quietCourtStartsPyreAutobind(1));
+
+assertTrue("quietCourtStartsChaliceAutobind(0) is false", !quietCourtStartsChaliceAutobind(0));
+assertTrue("quietCourtStartsChaliceAutobind(1) is true", quietCourtStartsChaliceAutobind(1));
+
+assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
+assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));
+assertTrue("draughtStartsChaliceAutobind(1) is true", draughtStartsChaliceAutobind(1));
 
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));

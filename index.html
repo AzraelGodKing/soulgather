@@ -673,6 +673,18 @@
         </div>
         <button type="button" class="card-buy" id="cup-buy" disabled>Speak the Cup</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Draught</h3>
+          <p class="edict-flavor">The draught is remembered.</p>
+          <p class="edict-stats">
+            Effect: <span id="draught-edict-effect">Autobind Chalices at tribute</span>
+            · Cost: <span id="draught-edict-cost">10 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="draught-edict-buy" disabled>Speak the Draught</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -714,7 +726,7 @@
           <h3 class="crown-upgrade-name">Quiet Court</h3>
           <p class="crown-upgrade-flavor">They bind in his sleep.</p>
           <p class="crown-stats">
-            Effect: <span id="crown-court-effect">Autobind Shades, Lanterns, Fetters, and Pyres at tribute</span>
+            Effect: <span id="crown-court-effect">Autobind Shades, Lanterns, Fetters, Pyres, and Chalices at tribute</span>
             · Cost: <span id="crown-court-cost">8 Favor</span>
           </p>
         </div>
@@ -774,7 +786,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v2.6 · prototype</span>
+      <span>Soulgather v2.7 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
