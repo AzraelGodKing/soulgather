@@ -597,6 +597,50 @@
     return 0;
   }
 
+  function emptyVowsKnown() {
+    return { stillness: false, poverty: false, hunger: false, ember: false };
+  }
+
+  function vowsKnownCount(known) {
+    if (!known || typeof known !== "object") return 0;
+    var n = 0;
+    if (known.stillness || known.knownStillness) n += 1;
+    if (known.poverty || known.knownPoverty) n += 1;
+    if (known.hunger || known.knownHunger) n += 1;
+    if (known.ember || known.knownEmber) n += 1;
+    return n;
+  }
+
+  function normalizeVowsKnown(raw) {
+    var out = emptyVowsKnown();
+    if (!raw || typeof raw !== "object") return out;
+    if (raw.stillness || raw.knownStillness) out.stillness = true;
+    if (raw.poverty || raw.knownPoverty) out.poverty = true;
+    if (raw.hunger || raw.knownHunger) out.hunger = true;
+    if (raw.ember || raw.knownEmber) out.ember = true;
+    return out;
+  }
+
+  function rememberVow(id) {
+    var v = normalizeVow(id);
+    if (!v) return;
+    if (!state.vowsKnown || typeof state.vowsKnown !== "object") {
+      state.vowsKnown = emptyVowsKnown();
+    }
+    state.vowsKnown[v] = true;
+  }
+
+  function seedVowsKnown(raw) {
+    var known = normalizeVowsKnown(raw);
+    if (hasChronicle("vowStillness")) known.stillness = true;
+    if (hasChronicle("vowPoverty")) known.poverty = true;
+    if (hasChronicle("vowHunger")) known.hunger = true;
+    if (hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow")) known.ember = true;
+    var v = normalizeVow(state.vow);
+    if (v) known[v] = true;
+    return known;
+  }
+
   function normalizeBuyMode(mode) {
     if (mode === "10" || mode === "max" || mode === "1") return mode;
     return "1";
@@ -654,6 +698,7 @@
     "giftFullOssuary",
     "giftHundredDraws",
     "giftFirstEmberVow",
+    "giftAllVows",
     "choir",
     "veil",
     "wake",
@@ -669,6 +714,9 @@
     "ossuary",
     "hymn",
     "vow",
+    "vowStillness",
+    "vowPoverty",
+    "vowHunger",
     "vowEmber",
     "quietCourt",
     "name1",
@@ -738,6 +786,7 @@
     giftFullOssuary: "Eight bones. The well returned twenty souls.",
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
     giftFirstEmberVow: "The ember vow. The well returned eight ash.",
+    giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     wake: "The wake was kept.",
@@ -753,6 +802,9 @@
     ossuary: "A bone was laid.",
     hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
+    vowStillness: "A stillness vow was sworn.",
+    vowPoverty: "A poverty vow was sworn.",
+    vowHunger: "A hunger vow was sworn.",
     vowEmber: "An ember vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
     name1: "The First Siphon.",
@@ -986,6 +1038,15 @@
     if (normalizeVow(state.vow)) {
       if (markChronicle("vow")) added = true;
     }
+    if (normalizeVow(state.vow) === "stillness") {
+      if (markChronicle("vowStillness")) added = true;
+    }
+    if (normalizeVow(state.vow) === "poverty") {
+      if (markChronicle("vowPoverty")) added = true;
+    }
+    if (normalizeVow(state.vow) === "hunger") {
+      if (markChronicle("vowHunger")) added = true;
+    }
     if (normalizeVow(state.vow) === "ember") {
       if (markChronicle("vowEmber")) added = true;
     }
@@ -1170,6 +1231,7 @@
       giftFullOssuary: false,
       giftHundredDraws: false,
       giftFirstEmberVow: false,
+      giftAllVows: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1192,6 +1254,7 @@
       ossuaryLevel: 0,
       vow: "",
       vowHungerPaid: false,
+      vowsKnown: emptyVowsKnown(),
       runStartedAt: Date.now(),
       allTimeSouls: N.fromNumber(0),
       tributesLaid: 0
@@ -2366,6 +2429,16 @@
       granted = true;
     }
 
+    if (normalizeVow(state.vow)) rememberVow(state.vow);
+
+    if (!state.giftAllVows && vowsKnownCount(state.vowsKnown) >= 4) {
+      state.giftAllVows = true;
+      state.souls = N.add(state.souls, 25);
+      markChronicle("giftAllVows");
+      showToast("Twenty-five souls for four vows.");
+      granted = true;
+    }
+
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
       state.bonusFirstFetter = true;
       state.shades = N.add(state.shades, 2);
@@ -2628,9 +2701,19 @@
     if (!v) return;
     state.vow = v;
     state.vowHungerPaid = false;
+    rememberVow(v);
     markChronicle("vow");
+    if (v === "stillness") markChronicle("vowStillness");
+    if (v === "poverty") markChronicle("vowPoverty");
+    if (v === "hunger") markChronicle("vowHunger");
     if (v === "ember") {
       markChronicle("vowEmber");
+      if (!state.giftFirstEmberVow) {
+        state.giftFirstEmberVow = true;
+        state.ash = N.add(state.ash, 8);
+        markChronicle("giftFirstEmberVow");
+        showToast("Eight ash for the ember vow.");
+      }
     }
     checkUnlock();
     save();
@@ -2761,6 +2844,7 @@
     "giftFullOssuary",
     "giftHundredDraws",
     "giftFirstEmberVow",
+    "giftAllVows",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2783,6 +2867,7 @@
     "ossuaryLevel",
     "vow",
     "vowHungerPaid",
+    "vowsKnown",
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
@@ -2909,6 +2994,7 @@
       giftFullOssuary: !!state.giftFullOssuary,
       giftHundredDraws: !!state.giftHundredDraws,
       giftFirstEmberVow: !!state.giftFirstEmberVow,
+      giftAllVows: !!state.giftAllVows,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2931,6 +3017,7 @@
       ossuaryLevel: Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
+      vowsKnown: normalizeVowsKnown(state.vowsKnown),
       runStartedAt: Number(state.runStartedAt) || Date.now(),
       allTimeSouls: dumpNum(state.allTimeSouls),
       tributesLaid: Number(state.tributesLaid) || 0
@@ -3190,6 +3277,11 @@
     } else {
       state.giftFirstEmberVow = !!data.giftFirstEmberVow;
     }
+    if (data.giftAllVows == null) {
+      state.giftAllVows = hasChronicle("giftAllVows");
+    } else {
+      state.giftAllVows = !!data.giftAllVows;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
@@ -3210,6 +3302,7 @@
     state.ossuaryLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(data.ossuaryLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
+    state.vowsKnown = seedVowsKnown(data.vowsKnown);
     state.runStartedAt = Number(data.runStartedAt) || Date.now();
     if (data.allTimeSouls == null) {
       state.allTimeSouls = N.load(data.lifetimeSouls);
@@ -3463,6 +3556,8 @@
     var keptGiftFullOssuary = !!state.giftFullOssuary;
     var keptGiftHundredDraws = !!state.giftHundredDraws;
     var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
+    var keptGiftAllVows = !!state.giftAllVows;
+    var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -3532,6 +3627,8 @@
     state.giftFullOssuary = keptGiftFullOssuary;
     state.giftHundredDraws = keptGiftHundredDraws;
     state.giftFirstEmberVow = keptGiftFirstEmberVow;
+    state.giftAllVows = keptGiftAllVows;
+    state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -3925,6 +4022,15 @@
         els.statNames.classList.remove("is-hidden");
       } else {
         els.statNames.classList.add("is-hidden");
+      }
+    }
+    if (els.statVows) {
+      var remembered = vowsKnownCount(state.vowsKnown);
+      if (remembered >= 1) {
+        els.statVows.textContent = "Vows remembered: " + remembered + " / 4";
+        els.statVows.classList.remove("is-hidden");
+      } else {
+        els.statVows.classList.add("is-hidden");
       }
     }
   }
@@ -5325,6 +5431,7 @@
     els.statAllTime = document.getElementById("stat-alltime");
     els.statTributes = document.getElementById("stat-tributes");
     els.statNames = document.getElementById("stat-names");
+    els.statVows = document.getElementById("stat-vows");
 
     els.gatherBtn.addEventListener("click", harvest);
     els.wellBuy.addEventListener("click", buyWell);
@@ -5644,6 +5751,7 @@
     nightSecs: nightSecs,
     ashFromShadeFrac: ashFromShadeFrac,
     vowExtraFavor: vowExtraFavor,
+    vowsKnownCount: vowsKnownCount,
     normalizeVow: normalizeVow,
     siphonCost: siphonCost,
     levyCost: levyCost,

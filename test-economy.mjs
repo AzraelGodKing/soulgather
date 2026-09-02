@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.2 economy smoke test.
+ * Soulgather v3.3 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -314,6 +314,16 @@ function vowExtraFavor(vow, hungerPaid) {
   if (v === "stillness" || v === "poverty" || v === "ember") return 1;
   if (v === "hunger") return hungerPaid ? 1 : 0;
   return 0;
+}
+
+function vowsKnownCount(known) {
+  if (!known || typeof known !== "object") return 0;
+  let n = 0;
+  if (known.stillness || known.knownStillness) n += 1;
+  if (known.poverty || known.knownPoverty) n += 1;
+  if (known.hunger || known.knownHunger) n += 1;
+  if (known.ember || known.knownEmber) n += 1;
+  return n;
 }
 
 function siphonCost(level) {
@@ -816,6 +826,11 @@ assertEqual("quietCourtCost(1)", quietCourtCost(1), 16);
 assertEqual("vowExtraFavor stillness", vowExtraFavor("stillness"), 1);
 assertEqual("vowExtraFavor none", vowExtraFavor(""), 0);
 assertEqual("vowExtraFavor ember", vowExtraFavor("ember"), 1);
+assertEqual("vowExtraFavor stillness still 1", vowExtraFavor("stillness"), 1);
+assertEqual("vowExtraFavor none still 0", vowExtraFavor(""), 0);
+assertEqual("vowsKnownCount empty", vowsKnownCount({}), 0);
+assertEqual("vowsKnownCount all-false", vowsKnownCount({ stillness: false, poverty: false, hunger: false, ember: false }), 0);
+assertEqual("vowsKnownCount all four", vowsKnownCount({ stillness: true, poverty: true, hunger: true, ember: true }), 4);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 
 assertEqual("crownCost(0)", crownCost(0), 6);
