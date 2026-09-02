@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.4 economy smoke test.
+ * Soulgather v2.5 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -67,6 +67,24 @@ function pyreCost(owned) {
   return N.cost(2, 1.2, owned);
 }
 
+function chaliceCost(owned) {
+  return N.cost(20, 1.5, owned);
+}
+
+function chaliceMult(n) {
+  const k = Math.max(0, Math.min(12, Math.floor(Number(n) || 0)));
+  return 1 + 0.08 * k;
+}
+
+function cupEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 9 * Math.pow(2, n);
+}
+
+function cupStartsChalices(level) {
+  return Math.min(12, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
 function markCost(level) {
   return N.cost(8, 2, level);
 }
@@ -119,14 +137,15 @@ function namesCompleteMult(on) {
   return on ? 1.05 : 1;
 }
 
-function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete) {
+function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices) {
   const w = weight == null ? 0.1 : Number(weight);
   return (
     prestigeMult(favorEarned) *
     (1 + w * (Number(thrones) || 0)) *
     (1 + 0.25 * (Number(edictLevel) || 0)) *
     (1 + 0.10 * (Number(crownWeight) || 0)) *
-    namesCompleteMult(namesComplete)
+    namesCompleteMult(namesComplete) *
+    chaliceMult(chalices)
   );
 }
 
@@ -446,6 +465,13 @@ assertEqual("cinderMult(2)", cinderMult(2), 4);
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
+assertEqual("chaliceMult(0)", chaliceMult(0), 1);
+assertEqual("chaliceMult(1)", chaliceMult(1), 1.08);
+assertEqual("chaliceCost(0)", chaliceCost(0), 20);
+assertEqual("cupEdictCost(0)", cupEdictCost(0), 9);
+assertEqual("cupStartsChalices(0)", cupStartsChalices(0), 0);
+assertEqual("cupStartsChalices(2)", cupStartsChalices(2), 2);
+assertEqual("cupStartsChalices(20)", cupStartsChalices(20), 12);
 
 function nextGoal(view, format) {
   view = view || {};
@@ -458,6 +484,7 @@ function nextGoal(view, format) {
   const censers = Number(view.censers) || 0;
   const pyres = Number(view.pyres) || 0;
   const fetters = Number(view.fetters) || 0;
+  const chalices = Number(view.chalices) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
   const unlockedVessels = !!view.unlockedVessels;
   const unlockedThrones = !!view.unlockedThrones;
@@ -510,6 +537,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedPyres && pyres < 1) {
     return "Raise a Pyre. A pyre for what remains.";
+  }
+  if (view.unlockedChalices && chalices < 1) {
+    return "Raise a Chalice. He drinks from the emptied well.";
   }
   if (favorEarned >= 1 && sworn && view.vow === "") {
     return "A vow may be sworn.";
@@ -887,6 +917,43 @@ assertEqual(
     unlockedThrones: true,
     unlockedPyres: true,
     pyres: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual(
+  "nextGoal chalice after thrones",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedChalices: true,
+    chalices: 0,
+    lifetimeSouls: 412,
+  }),
+  "Raise a Chalice. He drinks from the emptied well."
+);
+assertEqual(
+  "nextGoal chalice does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedChalices: true,
+    chalices: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal chalice does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedChalices: true,
+    chalices: 0,
     favorEarned: 1,
   }),
   "Swear an Aspect. The GodKing waits."

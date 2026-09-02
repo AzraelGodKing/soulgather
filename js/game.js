@@ -20,6 +20,10 @@
   var PYRE_COST_BASE = 2;
   var PYRE_COST_MULT = 1.2;
   var UNLOCK_PYRES = 3;
+  var UNLOCK_CHALICES = 5;
+  var CHALICE_MAX = 12;
+  var CHALICE_COST_BASE = 20;
+  var CHALICE_COST_MULT = 1.5;
   var ASH_FROM_SHADE_FRAC = 0.01;
   var UNLOCK_SHADES = 10;
   var UNLOCK_LIFETIME = 100;
@@ -142,6 +146,10 @@
     return N.cost(PYRE_COST_BASE, PYRE_COST_MULT, owned);
   }
 
+  function chaliceCost(owned) {
+    return N.cost(CHALICE_COST_BASE, CHALICE_COST_MULT, owned);
+  }
+
   function markCost(level) {
     return N.cost(MARK_COST_BASE, MARK_COST_MULT, level);
   }
@@ -212,7 +220,13 @@
     return dominion ? 0.15 : 0.1;
   }
 
-  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete) {
+  function chaliceMult(n) {
+    var k = Math.max(0, Math.floor(Number(n) || 0));
+    if (k > CHALICE_MAX) k = CHALICE_MAX;
+    return 1 + 0.08 * k;
+  }
+
+  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices) {
     var w = weight == null ? 0.1 : Number(weight);
     if (!isFinite(w)) w = 0.1;
     return (
@@ -220,7 +234,8 @@
       (1 + w * (Number(thrones) || 0)) *
       (1 + 0.25 * (Number(edictLevel) || 0)) *
       (1 + 0.10 * (Number(crownWeight) || 0)) *
-      namesCompleteMult(namesComplete)
+      namesCompleteMult(namesComplete) *
+      chaliceMult(chalices)
     );
   }
 
@@ -366,6 +381,17 @@
 
   function cinderEdictStartsPyreAutobind(level) {
     return (Number(level) || 0) >= 1;
+  }
+
+  function cupEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 9 * Math.pow(2, n);
+  }
+
+  function cupStartsChalices(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > CHALICE_MAX) n = CHALICE_MAX;
+    return n;
   }
 
   function remembranceCostFavor() {
@@ -561,6 +587,7 @@
     "giftEightTributes",
     "giftPeakPyres",
     "giftFirstCinders",
+    "giftFirstChalice",
     "choir",
     "veil",
     "choirEdict",
@@ -568,6 +595,8 @@
     "smokeEdict",
     "embersEdict",
     "cinderEdict",
+    "cupEdict",
+    "chalice",
     "hymn",
     "vow",
     "quietCourt",
@@ -628,6 +657,7 @@
     giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     giftPeakPyres: "Five pyres. The well returned ten ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
+    giftFirstChalice: "The first chalice. The well returned fifteen souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -635,6 +665,8 @@
     smokeEdict: "The smoke was spoken.",
     embersEdict: "The embers were spoken.",
     cinderEdict: "The cinders were spoken.",
+    cupEdict: "The cup was spoken.",
+    chalice: "A chalice was raised.",
     hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
@@ -676,6 +708,7 @@
     var censers = nVal(view.censers);
     var pyres = nVal(view.pyres);
     var fetters = nVal(view.fetters);
+    var chalices = Number(view.chalices) || 0;
     var unlockedSpirits = !!view.unlockedSpirits;
     var unlockedVessels = !!view.unlockedVessels;
     var unlockedThrones = !!view.unlockedThrones;
@@ -730,6 +763,9 @@
     }
     if (view.unlockedPyres && pyres < 1) {
       return "Raise a Pyre. A pyre for what remains.";
+    }
+    if (view.unlockedChalices && chalices < 1) {
+      return "Raise a Chalice. He drinks from the emptied well.";
     }
     if (favorEarned >= 1 && sworn && !normalizeVow(view.vow)) {
       return "A vow may be sworn.";
@@ -886,6 +922,12 @@
     if ((Number(state.cinderEdictLevel) || 0) >= 1) {
       if (markChronicle("cinderEdict")) added = true;
     }
+    if ((Number(state.cupEdictLevel) || 0) >= 1) {
+      if (markChronicle("cupEdict")) added = true;
+    }
+    if ((Number(state.chalices) || 0) >= 1) {
+      if (markChronicle("chalice")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -921,6 +963,7 @@
       spirits: N.fromNumber(0),
       vessels: N.fromNumber(0),
       thrones: 0,
+      chalices: 0,
       wellDepth: 0,
       lanterns: N.fromNumber(0),
       ash: N.fromNumber(0),
@@ -934,6 +977,7 @@
       unlockedVessels: false,
       unlockedWell: false,
       unlockedThrones: false,
+      unlockedChalices: false,
       unlockedLanterns: false,
       unlockedMarks: false,
       unlockedCensers: false,
@@ -1012,6 +1056,7 @@
       giftEightTributes: false,
       giftPeakPyres: false,
       giftFirstCinders: false,
+      giftFirstChalice: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1019,6 +1064,7 @@
       smokeEdictLevel: 0,
       embersEdictLevel: 0,
       cinderEdictLevel: 0,
+      cupEdictLevel: 0,
       hymnLeft: 0,
       crownWeight: 0,
       longMemoryLevel: 0,
@@ -1056,7 +1102,8 @@
       state.edictLevel,
       throneWeight(normalizeAspect(state.aspect) === "dominion"),
       state.crownWeight,
-      state.namesComplete
+      state.namesComplete,
+      state.chalices
     );
   }
 
@@ -1338,6 +1385,13 @@
       state.unlockedAutobindThrones = true;
     }
 
+    if (!state.unlockedChalices) {
+      if ((Number(state.thrones) || 0) >= UNLOCK_CHALICES || (Number(state.chalices) || 0) >= 1) {
+        state.unlockedChalices = true;
+        revealChalices(true);
+      }
+    }
+
     if (!state.unlockedAutobindPyres && N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
       state.unlockedAutobindPyres = true;
     }
@@ -1506,6 +1560,36 @@
     render();
   }
 
+  function chalicePlan() {
+    var owned = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0)));
+    var room = CHALICE_MAX - owned;
+    if (room <= 0) {
+      return { k: 0, cost: N.fromNumber(0), can: false, capped: true, owned: owned };
+    }
+    var plan = purchasePlan(owned, state.ash, CHALICE_COST_BASE, CHALICE_COST_MULT);
+    if (plan.k > room) {
+      plan.k = room;
+      plan.cost = bulkCost(CHALICE_COST_BASE, owned, room, CHALICE_COST_MULT);
+      plan.can = N.cmp(state.ash, plan.cost) >= 0;
+    }
+    plan.capped = false;
+    plan.owned = owned;
+    return plan;
+  }
+
+  function buyChalice() {
+    if (!state.unlockedChalices) return;
+    var plan = chalicePlan();
+    if (!plan.can || plan.k < 1) return;
+    state.ash = N.sub(state.ash, plan.cost);
+    state.chalices = plan.owned + plan.k;
+    if (state.chalices > CHALICE_MAX) state.chalices = CHALICE_MAX;
+    markChronicle("chalice");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyMark(kind) {
     if (!state.unlockedMarks) return;
     var levelKey;
@@ -1638,6 +1722,16 @@
     state.favor -= cost;
     state.cinderEdictLevel += 1;
     markChronicle("cinderEdict");
+    save();
+    render();
+  }
+
+  function buyCupEdict() {
+    var cost = cupEdictCost(state.cupEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.cupEdictLevel += 1;
+    markChronicle("cupEdict");
     save();
     render();
   }
@@ -2011,6 +2105,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstChalice && (Number(state.chalices) || 0) >= 1) {
+      state.giftFirstChalice = true;
+      state.souls = N.add(state.souls, 15);
+      markChronicle("giftFirstChalice");
+      showToast("Fifteen souls for the first chalice.");
+      granted = true;
+    }
+
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
       state.bonusFirstFetter = true;
       state.shades = N.add(state.shades, 2);
@@ -2259,6 +2361,7 @@
     "spirits",
     "vessels",
     "thrones",
+    "chalices",
     "wellDepth",
     "lanterns",
     "ash",
@@ -2272,6 +2375,7 @@
     "unlockedVessels",
     "unlockedWell",
     "unlockedThrones",
+    "unlockedChalices",
     "unlockedLanterns",
     "unlockedMarks",
     "unlockedCensers",
@@ -2350,6 +2454,7 @@
     "giftEightTributes",
     "giftPeakPyres",
     "giftFirstCinders",
+    "giftFirstChalice",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2357,6 +2462,7 @@
     "smokeEdictLevel",
     "embersEdictLevel",
     "cinderEdictLevel",
+    "cupEdictLevel",
     "hymnLeft",
     "crownWeight",
     "longMemoryLevel",
@@ -2387,6 +2493,7 @@
       spirits: dumpNum(state.spirits),
       vessels: dumpNum(state.vessels),
       thrones: state.thrones,
+      chalices: Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0))),
       wellDepth: state.wellDepth,
       lanterns: dumpNum(state.lanterns),
       ash: dumpNum(state.ash),
@@ -2400,6 +2507,7 @@
       unlockedVessels: state.unlockedVessels,
       unlockedWell: state.unlockedWell,
       unlockedThrones: state.unlockedThrones,
+      unlockedChalices: !!state.unlockedChalices || (Number(state.chalices) || 0) >= 1,
       unlockedLanterns: state.unlockedLanterns,
       unlockedMarks: state.unlockedMarks,
       unlockedCensers: state.unlockedCensers,
@@ -2478,6 +2586,7 @@
       giftEightTributes: !!state.giftEightTributes,
       giftPeakPyres: !!state.giftPeakPyres,
       giftFirstCinders: !!state.giftFirstCinders,
+      giftFirstChalice: !!state.giftFirstChalice,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2485,6 +2594,7 @@
       smokeEdictLevel: Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0)),
       embersEdictLevel: Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0)),
       cinderEdictLevel: Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0)),
+      cupEdictLevel: Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0)),
       hymnLeft: Number(state.hymnLeft) || 0,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
@@ -2520,6 +2630,7 @@
     state.spirits = N.load(data.spirits);
     state.vessels = N.load(data.vessels);
     state.thrones = Number(data.thrones) || 0;
+    state.chalices = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(data.chalices) || 0)));
     state.wellDepth = Number(data.wellDepth) || 0;
     state.lanterns = N.load(data.lanterns);
     state.ash = N.load(data.ash);
@@ -2533,6 +2644,7 @@
     state.unlockedVessels = !!data.unlockedVessels;
     state.unlockedWell = !!data.unlockedWell;
     state.unlockedThrones = !!data.unlockedThrones;
+    state.unlockedChalices = !!data.unlockedChalices || (Number(data.chalices) || 0) >= 1 || (Number(data.thrones) || 0) >= UNLOCK_CHALICES;
     state.unlockedLanterns = !!data.unlockedLanterns;
     state.unlockedMarks = !!data.unlockedMarks;
     state.unlockedCensers = !!data.unlockedCensers;
@@ -2681,6 +2793,14 @@
     } else {
       state.giftFirstCinders = !!data.giftFirstCinders;
     }
+    if (data.giftFirstChalice == null) {
+      state.giftFirstChalice =
+        hasChronicle("giftFirstChalice") ||
+        hasChronicle("chalice") ||
+        (cupStartsChalices(data.cupEdictLevel) > 0 && (Number(state.chalices) || 0) >= 1);
+    } else {
+      state.giftFirstChalice = !!data.giftFirstChalice;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
@@ -2688,6 +2808,7 @@
     state.smokeEdictLevel = Math.max(0, Math.floor(Number(data.smokeEdictLevel) || 0));
     state.embersEdictLevel = Math.max(0, Math.floor(Number(data.embersEdictLevel) || 0));
     state.cinderEdictLevel = Math.max(0, Math.floor(Number(data.cinderEdictLevel) || 0));
+    state.cupEdictLevel = Math.max(0, Math.floor(Number(data.cupEdictLevel) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -2721,6 +2842,7 @@
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
     if (state.unlockedPyres) revealPyres(false);
+    if (state.unlockedChalices) revealChalices(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
     }
@@ -2855,6 +2977,7 @@
     hideCard(els.censerCard);
     hideCard(els.pyreCard);
     hideCard(els.fetterCard);
+    hideCard(els.chaliceCard);
     hideTribute();
     hideRites();
     hideMarks();
@@ -2938,11 +3061,13 @@
     var keptGiftEightTributes = !!state.giftEightTributes;
     var keptGiftPeakPyres = !!state.giftPeakPyres;
     var keptGiftFirstCinders = !!state.giftFirstCinders;
+    var keptGiftFirstChalice = !!state.giftFirstChalice;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
     var keptEmbersEdict = Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0));
     var keptCinderEdict = Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0));
+    var keptCupEdict = Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -2993,11 +3118,13 @@
     state.giftEightTributes = keptGiftEightTributes;
     state.giftPeakPyres = keptGiftPeakPyres;
     state.giftFirstCinders = keptGiftFirstCinders;
+    state.giftFirstChalice = keptGiftFirstChalice;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
     state.embersEdictLevel = keptEmbersEdict;
     state.cinderEdictLevel = keptCinderEdict;
+    state.cupEdictLevel = keptCupEdict;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -3089,6 +3216,11 @@
         state.unlockedAutobindPyres = true;
       }
     }
+    var startChalices = cupStartsChalices(keptCupEdict);
+    if (startChalices > 0) {
+      state.chalices = startChalices;
+      state.unlockedChalices = true;
+    }
     state.choirLevel = Math.min(CHOIR_MAX, keptChoirEdict);
     if (state.choirLevel >= 1) {
       state.unlockedChoir = true;
@@ -3105,6 +3237,7 @@
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
     if (state.unlockedPyres) revealPyres(false);
+    if (state.unlockedChalices) revealChalices(false);
     save();
     render();
     if (firstTributeBonus > 0) {
@@ -3232,6 +3365,10 @@
 
   function revealPyres(withToast) {
     revealCard(els.pyreCard);
+  }
+
+  function revealChalices(withToast) {
+    revealCard(els.chaliceCard);
   }
 
   function revealFetters(withToast) {
@@ -3457,6 +3594,7 @@
         state.unlockedNightTithe ||
         state.unlockedChoir ||
         state.unlockedVeil ||
+        state.unlockedChalices ||
         N.cmp(state.ash, 0) > 0 ||
         N.cmp(state.pyres, 0) > 0;
       if (showAsh) {
@@ -3643,6 +3781,28 @@
       els.throneBuy.disabled = !thronePlan.can || throneBlocked;
       els.throneBuy.textContent = bindLabel("Raise a Throne", "Raise", thronePlan.k, "Throne", "Thrones");
       els.throneCard.classList.toggle("can-buy", thronePlan.can && !throneBlocked);
+    }
+
+    if (state.unlockedChalices) {
+      if (els.chaliceCard && els.chaliceCard.classList.contains("is-hidden")) {
+        revealChalices(false);
+      }
+      var cupPlan = chalicePlan();
+      var chalicePct = Math.round(8 * (Number(state.chalices) || 0));
+      if (els.chaliceOwned) els.chaliceOwned.textContent = F.formatNumber(state.chalices);
+      if (els.chaliceProd) els.chaliceProd.textContent = "+" + chalicePct + "% production";
+      if (els.chaliceCost) {
+        els.chaliceCost.textContent = cupPlan.capped ? "\u2014" : F.formatNumber(cupPlan.cost) + " Ash";
+      }
+      if (els.chaliceBuy) {
+        els.chaliceBuy.disabled = !cupPlan.can;
+        if (cupPlan.capped) {
+          els.chaliceBuy.textContent = "Raise a Chalice";
+        } else {
+          els.chaliceBuy.textContent = bindLabel("Raise a Chalice", "Raise", cupPlan.k, "Chalice", "Chalices");
+        }
+      }
+      if (els.chaliceCard) els.chaliceCard.classList.toggle("can-buy", cupPlan.can);
     }
 
     var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedPyres;
@@ -4073,7 +4233,7 @@
       if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(tributeOffer) + " Favor";
       if (els.tributeMult) {
         els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete)
+          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete, cupStartsChalices(state.cupEdictLevel))
         );
       }
     }
@@ -4229,6 +4389,19 @@
       if (els.cinderEdictCost) els.cinderEdictCost.textContent = F.formatNumber(cinECost) + " Favor";
       if (els.cinderEdictBuy) {
         els.cinderEdictBuy.disabled = !isFinite(cinECost) || state.favor < cinECost;
+      }
+
+      var cupECost = cupEdictCost(state.cupEdictLevel);
+      var cupN = cupStartsChalices(state.cupEdictLevel);
+      if (els.cupEffect) {
+        els.cupEffect.textContent =
+          "+" +
+          F.formatNumber(cupN) +
+          (cupN === 1 ? " Chalice at tribute" : " Chalices at tribute");
+      }
+      if (els.cupCost) els.cupCost.textContent = F.formatNumber(cupECost) + " Favor";
+      if (els.cupBuy) {
+        els.cupBuy.disabled = !isFinite(cupECost) || state.favor < cupECost;
       }
     }
 
@@ -4423,6 +4596,11 @@
     els.throneProd = document.getElementById("throne-prod");
     els.throneCost = document.getElementById("throne-cost");
     els.throneBuy = document.getElementById("throne-buy");
+    els.chaliceCard = document.getElementById("chalice-card");
+    els.chaliceOwned = document.getElementById("chalice-owned");
+    els.chaliceProd = document.getElementById("chalice-prod");
+    els.chaliceCost = document.getElementById("chalice-cost");
+    els.chaliceBuy = document.getElementById("chalice-buy");
     els.tributePanel = document.getElementById("tribute-panel");
     els.tributeFavor = document.getElementById("tribute-favor");
     els.tributeGain = document.getElementById("tribute-gain");
@@ -4468,6 +4646,9 @@
     els.cinderEdictEffect = document.getElementById("cinder-edict-effect");
     els.cinderEdictCost = document.getElementById("cinder-edict-cost");
     els.cinderEdictBuy = document.getElementById("cinder-edict-buy");
+    els.cupEffect = document.getElementById("cup-effect");
+    els.cupCost = document.getElementById("cup-cost");
+    els.cupBuy = document.getElementById("cup-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -4598,6 +4779,7 @@
     if (els.censerBuy) els.censerBuy.addEventListener("click", buyCenser);
     if (els.pyreBuy) els.pyreBuy.addEventListener("click", buyPyre);
     els.throneBuy.addEventListener("click", buyThrone);
+    if (els.chaliceBuy) els.chaliceBuy.addEventListener("click", buyChalice);
     els.tributeBtn.addEventListener("click", layTribute);
     els.tributeFootBtn.addEventListener("click", layTribute);
     els.edictBuy.addEventListener("click", buyEdict);
@@ -4612,6 +4794,7 @@
     if (els.smokeBuy) els.smokeBuy.addEventListener("click", buySmokeEdict);
     if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
     if (els.cinderEdictBuy) els.cinderEdictBuy.addEventListener("click", buyCinderEdict);
+    if (els.cupBuy) els.cupBuy.addEventListener("click", buyCupEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
@@ -4790,6 +4973,7 @@
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
     if (state.unlockedPyres) revealPyres(false);
+    if (state.unlockedChalices) revealChalices(false);
     render();
     if (pendingAwayToast) {
       toastQueue.unshift(pendingAwayToast);
@@ -4819,10 +5003,12 @@
     fetterCost: fetterCost,
     censerCost: censerCost,
     pyreCost: pyreCost,
+    chaliceCost: chaliceCost,
     markCost: markCost,
     favorGain: favorGain,
     prestigeMult: prestigeMult,
     prodMult: prodMult,
+    chaliceMult: chaliceMult,
     producerCost: producerCost,
     bulkCost: bulkCost,
     edictCost: edictCost,
@@ -4844,6 +5030,8 @@
     embersStartsPyres: embersStartsPyres,
     cinderEdictCost: cinderEdictCost,
     cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
+    cupEdictCost: cupEdictCost,
+    cupStartsChalices: cupStartsChalices,
     namesCompleteMult: namesCompleteMult,
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,

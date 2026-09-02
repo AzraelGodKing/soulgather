@@ -166,6 +166,17 @@
         </div>
         <button type="button" class="card-buy" id="throne-buy" disabled>Raise a Throne</button>
       </article>
+
+      <article class="card is-hidden" id="chalice-card">
+        <h2 class="card-name">Chalices</h2>
+        <div class="card-owned" id="chalice-owned">0</div>
+        <p class="card-flavor">He drinks from the emptied well.</p>
+        <div class="card-stats">
+          <div>Blessing: <span id="chalice-prod">+0% production</span></div>
+          <div>Raise cost: <span id="chalice-cost">20 Ash</span></div>
+        </div>
+        <button type="button" class="card-buy" id="chalice-buy" disabled>Raise a Chalice</button>
+      </article>
     </section>
 
     <section class="rites is-hidden" id="rites-panel">
@@ -639,6 +650,18 @@
         </div>
         <button type="button" class="card-buy" id="cinder-edict-buy" disabled>Speak the Cinders</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of the Cup</h3>
+          <p class="edict-flavor">The cup waits.</p>
+          <p class="edict-stats">
+            Effect: <span id="cup-effect">+0 Chalice at tribute</span>
+            · Cost: <span id="cup-cost">9 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="cup-buy" disabled>Speak the Cup</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -740,7 +763,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v2.4 · prototype</span>
+      <span>Soulgather v2.5 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
