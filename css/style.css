@@ -1196,6 +1196,19 @@ body::before {
 }
 
 
+.rite-row#autobind-pyres-row.is-on .rite-name {
+  color: var(--gold-bright);
+}
+
+.rite-row#autobind-pyres-row.is-on .card-buy {
+  background: linear-gradient(180deg, #5a3014 0%, #3a1c10 100%);
+  color: #fff6d8;
+  border-color: var(--gold-bright);
+  opacity: 1;
+}
+
+
+
 /* ----- Marks (this-run; Ash spend; Reliquary language) ----- */
 .marks {
   margin-top: 28px;

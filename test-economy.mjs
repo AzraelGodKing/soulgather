@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.1 economy smoke test.
+ * Soulgather v2.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -277,6 +277,10 @@ function siphonMult(level) {
   return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
 }
 
+function cinderMult(level) {
+  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
   const tenth = N.floor(N.mul(n, 0.1));
@@ -423,6 +427,9 @@ assertEqual("siphonCost(1)", siphonCost(1), 150);
 assertEqual("levyCost(0)", levyCost(0), 15);
 assertEqual("levyCost(1)", levyCost(1), 45);
 assertEqual("siphonMult(3)", siphonMult(3), 8);
+assertEqual("cinderMult(0)", cinderMult(0), 1);
+assertEqual("cinderMult(1)", cinderMult(1), 2);
+assertEqual("cinderMult(2)", cinderMult(2), 4);
 
 function nextGoal(view, format) {
   view = view || {};

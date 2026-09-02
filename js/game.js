@@ -51,6 +51,8 @@
   var UNLOCK_AUTOBIND_FETTERS = 6;
   var UNLOCK_AUTOBIND_CENSERS = 4;
   var UNLOCK_AUTOBIND_THRONES = 4;
+  var UNLOCK_AUTOBIND_PYRES = 4;
+  var CINDER_COST = 15;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
   var VEIL_MIN = 20;
@@ -426,6 +428,10 @@
     return siphonMult(level);
   }
 
+  function cinderMult(level) {
+    return siphonMult(level);
+  }
+
   function lanternMult(lanterns) {
     if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
       if (lanterns.e < 12) {
@@ -508,6 +514,7 @@
     "vessels",
     "throne",
     "rite",
+    "cinders",
     "wellDraw",
     "tribute",
     "aspect",
@@ -538,6 +545,7 @@
     "giftPeakFetters",
     "giftPeakCensers",
     "giftFirstPyre",
+    "giftEightTributes",
     "choir",
     "veil",
     "choirEdict",
@@ -570,6 +578,7 @@
     vessels: "A vessel opened to house a will.",
     throne: "A throne was raised.",
     rite: "The first rite was cut.",
+    cinders: "The cinders were cut.",
     wellDraw: "The well began to draw.",
     tribute: "Tribute was laid. The GodKing remembers.",
     aspect: "An aspect was sworn.",
@@ -600,6 +609,7 @@
     giftPeakFetters: "Eight fetters. The well returned fifteen shades.",
     giftPeakCensers: "Five censers. The well returned eight ash.",
     giftFirstPyre: "The first pyre. The well returned five ash.",
+    giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -796,6 +806,9 @@
     if ((Number(state.siphonLevel) || 0) >= 1 || (Number(state.levyLevel) || 0) >= 1) {
       if (markChronicle("rite")) added = true;
     }
+    if ((Number(state.cinderLevel) || 0) >= 1) {
+      if (markChronicle("cinders")) added = true;
+    }
     if (state.wellDraws) {
       if (markChronicle("wellDraw")) added = true;
     }
@@ -911,6 +924,7 @@
       unlockedAutobindFetters: false,
       unlockedAutobindCensers: false,
       unlockedAutobindThrones: false,
+      unlockedAutobindPyres: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       toastShown: false,
@@ -930,6 +944,7 @@
       buyMode: "1",
       siphonLevel: 0,
       levyLevel: 0,
+      cinderLevel: 0,
       wellDraws: false,
       unlockedWellDraws: false,
       aspect: "",
@@ -945,6 +960,7 @@
       autobindFetters: false,
       autobindCensers: false,
       autobindThrones: false,
+      autobindPyres: false,
       clicksThisRun: 0,
       veilLeft: 0,
       peakShades: N.fromNumber(0),
@@ -971,6 +987,7 @@
       giftPeakFetters: false,
       giftPeakCensers: false,
       giftFirstPyre: false,
+      giftEightTributes: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1109,10 +1126,13 @@
     );
     var fromPyres = N.mul(
       N.mul(
-        N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
-        nightMult(nightActive())
+        N.mul(
+          N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+          nightMult(nightActive())
+        ),
+        hymnMult(hymnActive())
       ),
-      hymnMult(hymnActive())
+      cinderMult(state.cinderLevel)
     );
     return N.add(N.add(fromShades, fromCensers), fromPyres);
   }
@@ -1188,6 +1208,7 @@
     if (live) tryAutobindFetters();
     if (live) tryAutobindCensers();
     if (live) tryAutobindThrones();
+    if (live) tryAutobindPyres();
     checkUnlock();
   }
 
@@ -1290,6 +1311,10 @@
 
     if (!state.unlockedAutobindThrones && (Number(state.thrones) || 0) >= UNLOCK_AUTOBIND_THRONES) {
       state.unlockedAutobindThrones = true;
+    }
+
+    if (!state.unlockedAutobindPyres && N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
+      state.unlockedAutobindPyres = true;
     }
 
     if (!state.unlockedVeil && (Number(state.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS) {
@@ -1603,6 +1628,18 @@
     render();
   }
 
+  function buyCinders() {
+    if (!state.unlockedPyres) return;
+    var cost = N.fromNumber(CINDER_COST);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state.cinderLevel += 1;
+    markChronicle("cinders");
+    syncChronicle();
+    save();
+    render();
+  }
+
   function buyWellDraws() {
     if (state.wellDraws) return;
     if (!state.unlockedWellDraws && N.cmp(state.shades, UNLOCK_WELL_DRAWS_SHADES) < 0) return;
@@ -1766,6 +1803,22 @@
     if (N.cmp(state.vessels, cost) < 0) return;
     state.vessels = N.sub(state.vessels, cost);
     state.thrones += 1;
+  }
+
+  function toggleAutobindPyres() {
+    if (!state.unlockedAutobindPyres) return;
+    state.autobindPyres = !state.autobindPyres;
+    save();
+    render();
+  }
+
+  function tryAutobindPyres() {
+    if (!state.autobindPyres) return;
+    if (!state.unlockedPyres) return;
+    var cost = pyreCost(state.pyres);
+    if (N.cmp(state.censers, cost) < 0) return;
+    state.censers = N.sub(state.censers, cost);
+    state.pyres = N.add(state.pyres, 1);
   }
 
   function thinVeil() {
@@ -1956,6 +2009,17 @@
       state.favor = (Number(state.favor) || 0) + 2;
       markChronicle("giftFiveTributes");
       showToast("The GodKing returns two Favor.");
+      granted = true;
+    }
+
+    if (
+      !state.giftEightTributes &&
+      (Number(state.tributesLaid) || 0) >= 8
+    ) {
+      state.giftEightTributes = true;
+      state.souls = N.add(state.souls, 25);
+      markChronicle("giftEightTributes");
+      showToast("Twenty-five souls for eight emptyings.");
       granted = true;
     }
 
@@ -2167,6 +2231,7 @@
     "unlockedAutobindFetters",
     "unlockedAutobindCensers",
     "unlockedAutobindThrones",
+    "unlockedAutobindPyres",
     "unlockedNightTithe",
     "unlockedVeil",
     "toastShown",
@@ -2186,6 +2251,7 @@
     "buyMode",
     "siphonLevel",
     "levyLevel",
+    "cinderLevel",
     "wellDraws",
     "unlockedWellDraws",
     "aspect",
@@ -2201,6 +2267,7 @@
     "autobindFetters",
     "autobindCensers",
     "autobindThrones",
+    "autobindPyres",
     "clicksThisRun",
     "veilLeft",
     "peakShades",
@@ -2227,6 +2294,7 @@
     "giftPeakFetters",
     "giftPeakCensers",
     "giftFirstPyre",
+    "giftEightTributes",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2288,6 +2356,7 @@
       unlockedAutobindFetters: !!state.unlockedAutobindFetters,
       unlockedAutobindCensers: !!state.unlockedAutobindCensers,
       unlockedAutobindThrones: !!state.unlockedAutobindThrones,
+      unlockedAutobindPyres: !!state.unlockedAutobindPyres,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       toastShown: state.toastShown,
@@ -2307,6 +2376,7 @@
       buyMode: state.buyMode,
       siphonLevel: state.siphonLevel,
       levyLevel: state.levyLevel,
+      cinderLevel: Number(state.cinderLevel) || 0,
       wellDraws: state.wellDraws,
       unlockedWellDraws: state.unlockedWellDraws,
       aspect: normalizeAspect(state.aspect),
@@ -2322,6 +2392,7 @@
       autobindFetters: !!state.autobindFetters,
       autobindCensers: !!state.autobindCensers,
       autobindThrones: !!state.autobindThrones,
+      autobindPyres: !!state.autobindPyres,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       peakShades: dumpNum(state.peakShades),
@@ -2348,6 +2419,7 @@
       giftPeakFetters: !!state.giftPeakFetters,
       giftPeakCensers: !!state.giftPeakCensers,
       giftFirstPyre: !!state.giftFirstPyre,
+      giftEightTributes: !!state.giftEightTributes,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2414,6 +2486,7 @@
     state.unlockedAutobindFetters = !!data.unlockedAutobindFetters;
     state.unlockedAutobindCensers = !!data.unlockedAutobindCensers;
     state.unlockedAutobindThrones = !!data.unlockedAutobindThrones;
+    state.unlockedAutobindPyres = !!data.unlockedAutobindPyres;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
     state.toastShown = !!data.toastShown;
@@ -2438,6 +2511,7 @@
     state.buyMode = normalizeBuyMode(data.buyMode);
     state.siphonLevel = Number(data.siphonLevel) || 0;
     state.levyLevel = Number(data.levyLevel) || 0;
+    state.cinderLevel = Number(data.cinderLevel) || 0;
     state.wellDraws = !!data.wellDraws;
     state.unlockedWellDraws = !!data.unlockedWellDraws;
     state.aspect = normalizeAspect(data.aspect);
@@ -2459,6 +2533,7 @@
     state.autobindFetters = !!data.autobindFetters;
     state.autobindCensers = !!data.autobindCensers;
     state.autobindThrones = !!data.autobindThrones;
+    state.autobindPyres = !!data.autobindPyres;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
     state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
@@ -2495,6 +2570,11 @@
       state.giftFiveTributes = (Number(data.tributesLaid) || 0) >= 5;
     } else {
       state.giftFiveTributes = !!data.giftFiveTributes;
+    }
+    if (data.giftEightTributes == null) {
+      state.giftEightTributes = (Number(data.tributesLaid) || 0) >= 8;
+    } else {
+      state.giftEightTributes = !!data.giftEightTributes;
     }
     if (data.giftNamesComplete == null) {
       state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 12;
@@ -2782,6 +2862,7 @@
     var keptGiftPeakFetters = !!state.giftPeakFetters;
     var keptGiftPeakCensers = !!state.giftPeakCensers;
     var keptGiftFirstPyre = !!state.giftFirstPyre;
+    var keptGiftEightTributes = !!state.giftEightTributes;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -2833,6 +2914,7 @@
     state.giftPeakFetters = keptGiftPeakFetters;
     state.giftPeakCensers = keptGiftPeakCensers;
     state.giftFirstPyre = keptGiftFirstPyre;
+    state.giftEightTributes = keptGiftEightTributes;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -2856,6 +2938,7 @@
     state.autobindFetters = false;
     state.autobindCensers = false;
     state.autobindThrones = false;
+    state.autobindPyres = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -3083,6 +3166,8 @@
     if (els.autobindFettersRow) els.autobindFettersRow.classList.add("is-hidden");
     if (els.autobindCensersRow) els.autobindCensersRow.classList.add("is-hidden");
     if (els.autobindThronesRow) els.autobindThronesRow.classList.add("is-hidden");
+    if (els.autobindPyresRow) els.autobindPyresRow.classList.add("is-hidden");
+    if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
   }
 
@@ -3434,10 +3519,13 @@
       var pyrePlan = purchasePlan(state.pyres, state.censers, PYRE_COST_BASE, PYRE_COST_MULT);
       var pyreRate = N.mul(
         N.mul(
-          N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
-          nightMult(nightActive())
+          N.mul(
+            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
         ),
-        hymnMult(hymnActive())
+        cinderMult(state.cinderLevel)
       );
       if (els.pyreOwned) els.pyreOwned.textContent = F.formatNumber(state.pyres);
       if (els.pyreProd) els.pyreProd.textContent = F.formatNumber(pyreRate) + " ash / sec";
@@ -3466,7 +3554,7 @@
       els.throneCard.classList.toggle("can-buy", thronePlan.can && !throneBlocked);
     }
 
-    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil;
+    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedPyres;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
@@ -3486,6 +3574,18 @@
         if (els.levyEffect) els.levyEffect.textContent = "Levy \u00d7" + formatTimes(levyM);
         if (els.levyCost) els.levyCost.textContent = F.formatNumber(lCost) + " Shades";
         if (els.levyBuy) els.levyBuy.disabled = N.cmp(state.shades, lCost) < 0;
+      }
+
+      var cinderOpen = !!state.unlockedPyres;
+      if (els.cinderRow) {
+        els.cinderRow.classList.toggle("is-hidden", !cinderOpen);
+      }
+      if (cinderOpen) {
+        var cCost = N.fromNumber(CINDER_COST);
+        var cMult = cinderMult(state.cinderLevel);
+        if (els.cinderEffect) els.cinderEffect.textContent = "Cinders \u00d7" + formatTimes(cMult);
+        if (els.cinderCost) els.cinderCost.textContent = F.formatNumber(cCost) + " Ash";
+        if (els.cinderBuy) els.cinderBuy.disabled = N.cmp(state.ash, cCost) < 0;
       }
 
       var drawsOpen = !!state.unlockedWellDraws || !!state.wellDraws;
@@ -3696,6 +3796,22 @@
           els.autobindThronesBuy.disabled = false;
           els.autobindThronesBuy.textContent = "Autobind Thrones";
           els.autobindThronesBuy.setAttribute("aria-pressed", state.autobindThrones ? "true" : "false");
+        }
+      }
+
+      var autoPyreOpen = !!state.unlockedAutobindPyres;
+      if (els.autobindPyresRow) {
+        els.autobindPyresRow.classList.toggle("is-hidden", !autoPyreOpen);
+        els.autobindPyresRow.classList.toggle("is-on", autoPyreOpen && !!state.autobindPyres);
+      }
+      if (autoPyreOpen) {
+        if (els.autobindPyresEffect) {
+          els.autobindPyresEffect.textContent = state.autobindPyres ? "The coals tend" : "Idle bind";
+        }
+        if (els.autobindPyresBuy) {
+          els.autobindPyresBuy.disabled = false;
+          els.autobindPyresBuy.textContent = "Autobind Pyres";
+          els.autobindPyresBuy.setAttribute("aria-pressed", state.autobindPyres ? "true" : "false");
         }
       }
 
@@ -4257,6 +4373,10 @@
     els.levyEffect = document.getElementById("levy-effect");
     els.levyCost = document.getElementById("levy-cost");
     els.levyBuy = document.getElementById("levy-buy");
+    els.cinderRow = document.getElementById("cinder-row");
+    els.cinderEffect = document.getElementById("cinder-effect");
+    els.cinderCost = document.getElementById("cinder-cost");
+    els.cinderBuy = document.getElementById("cinder-buy");
     els.wellDrawsRow = document.getElementById("well-draws-row");
     els.wellDrawsEffect = document.getElementById("well-draws-effect");
     els.wellDrawsCost = document.getElementById("well-draws-cost");
@@ -4294,6 +4414,9 @@
     els.autobindThronesRow = document.getElementById("autobind-thrones-row");
     els.autobindThronesEffect = document.getElementById("autobind-thrones-effect");
     els.autobindThronesBuy = document.getElementById("autobind-thrones-buy");
+    els.autobindPyresRow = document.getElementById("autobind-pyres-row");
+    els.autobindPyresEffect = document.getElementById("autobind-pyres-effect");
+    els.autobindPyresBuy = document.getElementById("autobind-pyres-buy");
     els.veilRow = document.getElementById("veil-row");
     els.veilEffect = document.getElementById("veil-effect");
     els.veilCost = document.getElementById("veil-cost");
@@ -4387,6 +4510,7 @@
     if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
+    if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
@@ -4398,6 +4522,7 @@
     if (els.autobindFettersBuy) els.autobindFettersBuy.addEventListener("click", toggleAutobindFetters);
     if (els.autobindCensersBuy) els.autobindCensersBuy.addEventListener("click", toggleAutobindCensers);
     if (els.autobindThronesBuy) els.autobindThronesBuy.addEventListener("click", toggleAutobindThrones);
+    if (els.autobindPyresBuy) els.autobindPyresBuy.addEventListener("click", toggleAutobindPyres);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
@@ -4625,6 +4750,7 @@
     levyCost: levyCost,
     siphonMult: siphonMult,
     levyMult: levyMult,
+    cinderMult: cinderMult,
     harvestMult: harvestMult,
     bindingMult: bindingMult,
     throneWeight: throneWeight,
