@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.2 economy smoke test.
+ * Soulgather v2.3 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -253,6 +253,15 @@ function embersStartsPyres(level) {
   return Math.max(0, Math.floor(Number(level) || 0));
 }
 
+function cinderEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 8 * Math.pow(2, n);
+}
+
+function cinderEdictStartsPyreAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function normalizeVow(raw) {
   if (raw === "stillness" || raw === "poverty" || raw === "hunger") return raw;
   return "";
@@ -430,6 +439,9 @@ assertEqual("siphonMult(3)", siphonMult(3), 8);
 assertEqual("cinderMult(0)", cinderMult(0), 1);
 assertEqual("cinderMult(1)", cinderMult(1), 2);
 assertEqual("cinderMult(2)", cinderMult(2), 4);
+assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
+assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
+assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
 
 function nextGoal(view, format) {
   view = view || {};
