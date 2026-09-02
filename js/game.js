@@ -66,6 +66,9 @@
   var URN_RITE_COST = 12;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
+  var UNLOCK_TOLL_CLICKS = 80;
+  var TOLL_COST = 40;
+  var TOLL_SECS = 25;
   var VEIL_MIN = 20;
   var VEIL_FRAC = 0.15;
   var VEIL_SECS = 20;
@@ -301,6 +304,10 @@
   }
 
   function veilMult(on) {
+    return on ? 2 : 1;
+  }
+
+  function tollMult(on) {
     return on ? 2 : 1;
   }
 
@@ -770,8 +777,10 @@
     "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
+    "giftFirstToll",
     "choir",
     "veil",
+    "toll",
     "wake",
     "procession",
     "choirEdict",
@@ -871,8 +880,10 @@
     giftThreeVows: "Three vows remembered. The well returned fifteen souls.",
     giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
     giftFirstProcession: "The first procession. The well returned five souls.",
+    giftFirstToll: "The first toll. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
+    toll: "The toll was sounded.",
     wake: "The wake was kept.",
     procession: "The procession began.",
     choirEdict: "The choir was spoken.",
@@ -1199,6 +1210,9 @@
     if ((Number(state.veilLeft) || 0) > 0) {
       if (markChronicle("veil")) added = true;
     }
+    if ((Number(state.tollLeft) || 0) > 0) {
+      if (markChronicle("toll")) added = true;
+    }
     if ((Number(state.wakeLeft) || 0) > 0) {
       if (markChronicle("wake")) added = true;
     }
@@ -1269,6 +1283,7 @@
       unlockedNightTithe: false,
       unlockedVeil: false,
       unlockedWake: false,
+      unlockedToll: false,
       toastShown: false,
       vesselToastShown: false,
       throneToastShown: false,
@@ -1308,6 +1323,7 @@
       autobindUrns: false,
       clicksThisRun: 0,
       veilLeft: 0,
+      tollLeft: 0,
       wakeLeft: 0,
       processionLeft: 0,
       peakShades: N.fromNumber(0),
@@ -1356,6 +1372,7 @@
       giftThreeVows: false,
       giftAllVows: false,
       giftFirstProcession: false,
+      giftFirstToll: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1432,6 +1449,10 @@
     return (Number(state.veilLeft) || 0) > 0;
   }
 
+  function tollActive() {
+    return (Number(state.tollLeft) || 0) > 0;
+  }
+
   function wakeActive() {
     return (Number(state.wakeLeft) || 0) > 0;
   }
@@ -1446,8 +1467,11 @@
 
   function clickPower() {
     return N.mul(
-      N.mul(1 + (Number(state.wellDepth) || 0), rateMult()),
-      veilMult(veilActive())
+      N.mul(
+        N.mul(1 + (Number(state.wellDepth) || 0), rateMult()),
+        veilMult(veilActive())
+      ),
+      tollMult(tollActive())
     );
   }
 
@@ -1584,6 +1608,8 @@
       if (hymn < 0) hymn = 0;
       var veil = Number(state.veilLeft) || 0;
       if (veil < 0) veil = 0;
+      var toll = Number(state.tollLeft) || 0;
+      if (toll < 0) toll = 0;
       var wake = Number(state.wakeLeft) || 0;
       if (wake < 0) wake = 0;
       var procession = Number(state.processionLeft) || 0;
@@ -1593,6 +1619,7 @@
       if (night > 0 && night < slice) slice = night;
       if (hymn > 0 && hymn < slice) slice = hymn;
       if (veil > 0 && veil < slice) slice = veil;
+      if (toll > 0 && toll < slice) slice = toll;
       if (wake > 0 && wake < slice) slice = wake;
       if (procession > 0 && procession < slice) slice = procession;
       applyRates(slice);
@@ -1611,6 +1638,10 @@
       if (veil > 0) {
         state.veilLeft = veil - slice;
         if (state.veilLeft < 0) state.veilLeft = 0;
+      }
+      if (toll > 0) {
+        state.tollLeft = toll - slice;
+        if (state.tollLeft < 0) state.tollLeft = 0;
       }
       if (wake > 0) {
         state.wakeLeft = wake - slice;
@@ -1765,6 +1796,10 @@
 
     if (!state.unlockedVeil && (Number(state.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS) {
       state.unlockedVeil = true;
+    }
+
+    if (!state.unlockedToll && ((Number(state.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0)) {
+      state.unlockedToll = true;
     }
 
     if (!state.unlockedNightTithe) {
@@ -2456,6 +2491,25 @@
     if (state.chalices > CHALICE_MAX) state.chalices = CHALICE_MAX;
   }
 
+  function soundToll() {
+    if (!state.unlockedToll) return;
+    if (tollActive()) return;
+    var cost = N.fromNumber(TOLL_COST);
+    if (N.cmp(state.souls, cost) < 0) return;
+    state.souls = N.sub(state.souls, cost);
+    state.tollLeft = TOLL_SECS;
+    markChronicle("toll");
+    if (!state.giftFirstToll) {
+      state.giftFirstToll = true;
+      state.souls = N.add(state.souls, 10);
+      markChronicle("giftFirstToll");
+      showToast("Ten souls for the first toll.");
+    }
+    showToast("The well answers twice.");
+    save();
+    render();
+  }
+
   function thinVeil() {
     if (!state.unlockedVeil) return;
     if (veilActive()) return;
@@ -3091,6 +3145,7 @@
     "unlockedNightTithe",
     "unlockedVeil",
     "unlockedWake",
+    "unlockedToll",
     "toastShown",
     "vesselToastShown",
     "throneToastShown",
@@ -3130,6 +3185,7 @@
     "autobindUrns",
     "clicksThisRun",
     "veilLeft",
+    "tollLeft",
     "wakeLeft",
     "processionLeft",
     "peakShades",
@@ -3178,6 +3234,7 @@
     "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
+    "giftFirstToll",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -3258,6 +3315,7 @@
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       unlockedWake: !!state.unlockedWake,
+      unlockedToll: !!state.unlockedToll,
       toastShown: state.toastShown,
       vesselToastShown: state.vesselToastShown,
       throneToastShown: state.throneToastShown,
@@ -3297,6 +3355,7 @@
       autobindUrns: !!state.autobindUrns,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
+      tollLeft: Number(state.tollLeft) || 0,
       wakeLeft: Number(state.wakeLeft) || 0,
       processionLeft: Number(state.processionLeft) || 0,
       peakShades: dumpNum(state.peakShades),
@@ -3345,6 +3404,7 @@
       giftThreeVows: !!state.giftThreeVows,
       giftAllVows: !!state.giftAllVows,
       giftFirstProcession: !!state.giftFirstProcession,
+      giftFirstToll: !!state.giftFirstToll,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -3430,6 +3490,7 @@
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
     state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
+    state.unlockedToll = !!data.unlockedToll || (Number(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (Number(data.tollLeft) || 0) > 0;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
     state.throneToastShown = !!data.throneToastShown;
@@ -3467,6 +3528,8 @@
     if (state.hymnLeft < 0) state.hymnLeft = 0;
     state.veilLeft = Number(data.veilLeft) || 0;
     if (state.veilLeft < 0) state.veilLeft = 0;
+    state.tollLeft = Number(data.tollLeft) || 0;
+    if (state.tollLeft < 0) state.tollLeft = 0;
     state.wakeLeft = Number(data.wakeLeft) || 0;
     if (state.wakeLeft < 0) state.wakeLeft = 0;
     state.processionLeft = Number(data.processionLeft) || 0;
@@ -3487,6 +3550,7 @@
     state.autobindUrns = !!data.autobindUrns;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
+    if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
     if (
       state.unlockedPyres ||
       N.cmp(state.pyres, 1) >= 0 ||
@@ -3686,6 +3750,14 @@
         (Number(data.processionLeft) || 0) > 0;
     } else {
       state.giftFirstProcession = !!data.giftFirstProcession;
+    }
+    if (data.giftFirstToll == null) {
+      state.giftFirstToll =
+        hasChronicle("toll") ||
+        hasChronicle("giftFirstToll") ||
+        (Number(data.tollLeft) || 0) > 0;
+    } else {
+      state.giftFirstToll = !!data.giftFirstToll;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -3975,6 +4047,7 @@
     var keptGiftThreeVows = !!state.giftThreeVows;
     var keptGiftAllVows = !!state.giftAllVows;
     var keptGiftFirstProcession = !!state.giftFirstProcession;
+    var keptGiftFirstToll = !!state.giftFirstToll;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
@@ -4057,6 +4130,7 @@
     state.giftThreeVows = keptGiftThreeVows;
     state.giftAllVows = keptGiftAllVows;
     state.giftFirstProcession = keptGiftFirstProcession;
+    state.giftFirstToll = keptGiftFirstToll;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
@@ -4081,6 +4155,7 @@
     state.nightLeft = 0;
     state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict);
     state.veilLeft = 0;
+    state.tollLeft = 0;
     state.wakeLeft = wakeLeftAfterTribute(keptWakeEdict);
     if (state.wakeLeft > 0) {
       state.unlockedWake = true;
@@ -4392,6 +4467,7 @@
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.urnRiteRow) els.urnRiteRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
+    if (els.tollRow) els.tollRow.classList.add("is-hidden");
     if (els.wakeRow) els.wakeRow.classList.add("is-hidden");
   }
 
@@ -4857,7 +4933,7 @@
       if (els.chaliceCard) els.chaliceCard.classList.toggle("can-buy", cupPlan.can);
     }
 
-    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedWake || !!state.unlockedPyres || !!state.unlockedUrns;
+    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedToll || !!state.unlockedWake || !!state.unlockedPyres || !!state.unlockedUrns;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
@@ -5025,6 +5101,31 @@
           } else {
             els.veilBuy.disabled = N.cmp(state.ash, VEIL_MIN) < 0;
             els.veilBuy.textContent = "Thin the Veil";
+          }
+        }
+      }
+
+      var tollOpen = !!state.unlockedToll;
+      if (els.tollRow) {
+        els.tollRow.classList.toggle("is-hidden", !tollOpen);
+        els.tollRow.classList.toggle("is-burning", tollOpen && tollActive());
+      }
+      if (tollOpen) {
+        var oLeft = Number(state.tollLeft) || 0;
+        var oCost = N.fromNumber(TOLL_COST);
+        if (els.tollEffect) {
+          els.tollEffect.textContent = tollActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 25s";
+        }
+        if (els.tollCost) {
+          els.tollCost.textContent = F.formatNumber(oCost) + " Souls";
+        }
+        if (els.tollBuy) {
+          if (tollActive()) {
+            els.tollBuy.disabled = true;
+            els.tollBuy.textContent = "The toll sounds \u2014 " + Math.ceil(oLeft) + "s";
+          } else {
+            els.tollBuy.disabled = N.cmp(state.souls, oCost) < 0;
+            els.tollBuy.textContent = "Sound the Toll";
           }
         }
       }
@@ -5958,6 +6059,10 @@
     els.veilEffect = document.getElementById("veil-effect");
     els.veilCost = document.getElementById("veil-cost");
     els.veilBuy = document.getElementById("veil-buy");
+    els.tollRow = document.getElementById("toll-row");
+    els.tollEffect = document.getElementById("toll-effect");
+    els.tollCost = document.getElementById("toll-cost");
+    els.tollBuy = document.getElementById("toll-buy");
     els.crownPanel = document.getElementById("crown-panel");
     els.crownFavor = document.getElementById("crown-favor");
     els.crownWeightEffect = document.getElementById("crown-weight-effect");
@@ -6085,6 +6190,7 @@
     if (els.autobindUrnsBuy) els.autobindUrnsBuy.addEventListener("click", toggleAutobindUrns);
     if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
+    if (els.tollBuy) els.tollBuy.addEventListener("click", soundToll);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
     if (els.crownCourtBuy) els.crownCourtBuy.addEventListener("click", buyQuietCourt);
@@ -6226,6 +6332,13 @@
         if (state.unlockedVeil && !veilActive() && N.cmp(state.ash, VEIL_MIN) >= 0) {
           ev.preventDefault();
           thinVeil();
+        }
+        return;
+      }
+      if ((ev.key === "g" || ev.key === "G") && !otherButton) {
+        if (state.unlockedToll && !tollActive() && N.cmp(state.souls, N.fromNumber(TOLL_COST)) >= 0) {
+          ev.preventDefault();
+          soundToll();
         }
         return;
       }
@@ -6412,6 +6525,9 @@
     nightMult: nightMult,
     veilCost: veilCost,
     veilMult: veilMult,
+    tollMult: tollMult,
+    TOLL_COST: TOLL_COST,
+    TOLL_SECS: TOLL_SECS,
     wakeMult: wakeMult,
     WAKE_COST: WAKE_COST,
     WAKE_SECS: WAKE_SECS,

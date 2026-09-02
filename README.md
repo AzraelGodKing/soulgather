@@ -7,13 +7,25 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 Live: https://azraelgodking.github.io/soulgather/
 Open `index.html` in a browser (`file://` is fine). Or `python3 -m http.server` in this folder. Vanilla HTML/CSS/JS, no build, no npm. Pushes to main redeploy Pages.
 
-Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, C Cut the Cinders, U Cut the Urn, B Lay the Bone, W Keep the Wake, P Begin the Procession (not while typing in Memory; do not steal if another button is focused). Ember vow no-ops N and W.
+Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, G Sound the Toll, C Cut the Cinders, U Cut the Urn, B Lay the Bone, W Keep the Wake, P Begin the Procession (not while typing in Memory; do not steal if another button is focused). Ember vow no-ops N and W.
 
 Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everything including Favor.
 
 ## Loop (short)
 
-Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) → Pyres (ash half-step) → Urns (ash half-step after Pyres) / Thrones → Chalices (late ash sink at 5 Thrones). Ash feeds Marks, Night's Tithe, The Wake, Thin the Veil, and Chalices. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Wake after Tribute if Edict of the Wake (`wakeSecs` when level >= 1). Procession after Tribute if Edict of the Procession (`processionSecs` when level >= 1). Rites (Siphon / Levy / Rite of Cinders / Rite of the Urn), Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns / Autobind Fetters / Autobind Censers / Autobind Thrones / Autobind Pyres / Autobind Urns / Autobind Chalices this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned. Ossuary in Remembrance / The Crown (late Remembrance sink). The Procession in Remembrance / The Crown (this-run Remembrance burst, 45s ×1.2). Edict of the Procession in Reliquary. Urns in the loop as ash half-step after Pyres. Edict of Urns in Reliquary. Edict of the Cut in Reliquary.
+Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) → Pyres (ash half-step) → Urns (ash half-step after Pyres) / Thrones → Chalices (late ash sink at 5 Thrones). Ash feeds Marks, Night's Tithe, The Wake, Thin the Veil, and Chalices. The Toll is a this-run click burst (80 well draws; 40 Souls; 25s ×2 on clickPower). Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Wake after Tribute if Edict of the Wake (`wakeSecs` when level >= 1). Procession after Tribute if Edict of the Procession (`processionSecs` when level >= 1). Rites (Siphon / Levy / Rite of Cinders / Rite of the Urn), Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns / Autobind Fetters / Autobind Censers / Autobind Thrones / Autobind Pyres / Autobind Urns / Autobind Chalices this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned. Ossuary in Remembrance / The Crown (late Remembrance sink). The Procession in Remembrance / The Crown (this-run Remembrance burst, 45s ×1.2). Edict of the Procession in Reliquary. Urns in the loop as ash half-step after Pyres. Edict of Urns in Reliquary. Edict of the Cut in Reliquary.
+
+## Design notes (v4.1)
+
+Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
+
+**v4.1 extras.**
+
+**The Toll (this-run click burst).** Unlock at 80 well draws this emptying (`UNLOCK_TOLL_CLICKS = 80`, `clicksThisRun`). Hidden until then. Compact rite-style row near The Veil Thins / Tithe. Cost: 40 Souls (`TOLL_COST = 40`, Num). ×1. Cannot pay while already active (`tollLeft > 0`). Vow of Stillness: follow Veil (paying the rite is still allowed; draws themselves stay blocked). Duration: `TOLL_SECS = 25`. `tollMult(on) = on ? 2 : 1`. Folded into `clickPower` only (with veilMult). Does **not** bless idle rates / ash. Flavor: *The well answers twice.* Button: **Sound the Toll**. Remaining time on the button while ringing. Persist `tollLeft` this-run; wipe Tribute and Reset. Chronicle first: "The toll was sounded." Offline catchup ticks the timer.
+
+**Hotkey G.** G pays Sound the Toll if unlocked, not already ringing, and Souls >= 40. Same T/N/V/C/B/W/P/U rules: ignore Memory textarea; do not steal a focused non-gather button.
+
+**Gift: first Toll.** Once when first paid: +10 souls (`Num.add`). Flag `giftFirstToll` persist Tribute, wipe Reset. Toast: "Ten souls for the first toll." Chronicle: "The first toll. The well returned ten souls." If Chronicle already has toll or remaining `tollLeft` > 0 on old save, seed flag without grant (like first veil).
 
 ## Design notes (v4.0)
 
