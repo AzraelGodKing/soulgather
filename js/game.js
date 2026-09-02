@@ -88,6 +88,7 @@
   var DEEPER_TOLL_MAX = 5;
   var LONGER_WAKE_MAX = 5;
   var LONGER_TITHE_MAX = 5;
+  var LONGER_VEIL_MAX = 5;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -592,6 +593,18 @@
     return TITHE_SECS + 10 * n;
   }
 
+  function longerVeilCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= LONGER_VEIL_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
+  function paidVeilSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > LONGER_VEIL_MAX) n = LONGER_VEIL_MAX;
+    return VEIL_SECS + 10 * n;
+  }
+
   function ashenTideCost(level) {
     var n = Math.max(0, Math.floor(level));
     if (n >= ASHEN_TIDE_MAX) return Infinity;
@@ -853,6 +866,7 @@
     "giftFirstDeeperToll",
     "giftFirstLongerWake",
     "giftFirstLongerTithe",
+    "giftFirstLongerVeil",
     "giftFirstToll",
     "choir",
     "veil",
@@ -863,6 +877,7 @@
     "deeperToll",
     "longerWake",
     "longerTithe",
+    "longerVeil",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -966,6 +981,7 @@
     giftFirstDeeperToll: "The first longer toll. The well returned five souls.",
     giftFirstLongerWake: "The first longer wake. The well returned five souls.",
     giftFirstLongerTithe: "The first longer tithe. The well returned five souls.",
+    giftFirstLongerVeil: "The first longer veil. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
@@ -976,6 +992,7 @@
     deeperToll: "The toll was lengthened.",
     longerWake: "The wake was lengthened.",
     longerTithe: "The tithe was lengthened.",
+    longerVeil: "The veil was lengthened.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -1310,6 +1327,9 @@
     if ((Number(state.longerTitheLevel) || 0) >= 1) {
       if (markChronicle("longerTithe")) added = true;
     }
+    if ((Number(state.longerVeilLevel) || 0) >= 1) {
+      if (markChronicle("longerVeil")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1483,6 +1503,7 @@
       giftFirstDeeperToll: false,
       giftFirstLongerWake: false,
       giftFirstLongerTithe: false,
+      giftFirstLongerVeil: false,
       giftFirstToll: false,
       choirLevel: 0,
       unlockedChoir: false,
@@ -1512,6 +1533,7 @@
       deeperTollLevel: 0,
       longerWakeLevel: 0,
       longerTitheLevel: 0,
+      longerVeilLevel: 0,
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
@@ -2643,7 +2665,7 @@
     var cost = veilCost(state.ash);
     if (N.cmp(state.ash, cost) < 0) return;
     state.ash = N.sub(state.ash, cost);
-    state.veilLeft = VEIL_SECS;
+    state.veilLeft = paidVeilSecs(state.longerVeilLevel);
     markChronicle("veil");
     if (!state.giftFirstVeil) {
       state.giftFirstVeil = true;
@@ -2887,6 +2909,14 @@
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerTithe");
       showToast("Five souls for the longer tithe.");
+      granted = true;
+    }
+
+    if (!state.giftFirstLongerVeil && (Number(state.longerVeilLevel) || 0) >= 1) {
+      state.giftFirstLongerVeil = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstLongerVeil");
+      showToast("Five souls for the longer veil.");
       granted = true;
     }
 
@@ -3218,6 +3248,20 @@
     render();
   }
 
+  function buyLongerVeil() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.longerVeilLevel) || 0));
+    if (level >= LONGER_VEIL_MAX) return;
+    var cost = longerVeilCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.longerVeilLevel = level + 1;
+    markChronicle("longerVeil");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyAshenTide() {
     if (!remembranceUnlocked()) return;
     var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
@@ -3461,6 +3505,7 @@
     "giftFirstDeeperToll",
     "giftFirstLongerWake",
     "giftFirstLongerTithe",
+    "giftFirstLongerVeil",
     "giftFirstToll",
     "choirLevel",
     "unlockedChoir",
@@ -3490,6 +3535,7 @@
     "deeperTollLevel",
     "longerWakeLevel",
     "longerTitheLevel",
+    "longerVeilLevel",
     "vow",
     "vowHungerPaid",
     "vowsKnown",
@@ -3641,6 +3687,7 @@
       giftFirstDeeperToll: !!state.giftFirstDeeperToll,
       giftFirstLongerWake: !!state.giftFirstLongerWake,
       giftFirstLongerTithe: !!state.giftFirstLongerTithe,
+      giftFirstLongerVeil: !!state.giftFirstLongerVeil,
       giftFirstToll: !!state.giftFirstToll,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
@@ -3670,6 +3717,7 @@
       deeperTollLevel: Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0))),
       longerWakeLevel: Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0))),
       longerTitheLevel: Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0))),
+      longerVeilLevel: Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
@@ -4030,6 +4078,14 @@
     } else {
       state.giftFirstLongerTithe = !!data.giftFirstLongerTithe;
     }
+    if (data.giftFirstLongerVeil == null) {
+      state.giftFirstLongerVeil =
+        hasChronicle("giftFirstLongerVeil") ||
+        hasChronicle("longerVeil") ||
+        (Number(data.longerVeilLevel) || 0) >= 1;
+    } else {
+      state.giftFirstLongerVeil = !!data.giftFirstLongerVeil;
+    }
     if (data.giftFirstToll == null) {
       state.giftFirstToll =
         hasChronicle("toll") ||
@@ -4064,6 +4120,7 @@
     state.deeperTollLevel = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(data.deeperTollLevel) || 0)));
     state.longerWakeLevel = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(data.longerWakeLevel) || 0)));
     state.longerTitheLevel = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(data.longerTitheLevel) || 0)));
+    state.longerVeilLevel = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(data.longerVeilLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
@@ -4336,6 +4393,7 @@
     var keptGiftFirstDeeperToll = !!state.giftFirstDeeperToll;
     var keptGiftFirstLongerWake = !!state.giftFirstLongerWake;
     var keptGiftFirstLongerTithe = !!state.giftFirstLongerTithe;
+    var keptGiftFirstLongerVeil = !!state.giftFirstLongerVeil;
     var keptGiftFirstToll = !!state.giftFirstToll;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
@@ -4361,6 +4419,7 @@
     var keptDeeperToll = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0)));
     var keptLongerWake = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0)));
     var keptLongerTithe = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0)));
+    var keptLongerVeil = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -4429,6 +4488,7 @@
     state.giftFirstDeeperToll = keptGiftFirstDeeperToll;
     state.giftFirstLongerWake = keptGiftFirstLongerWake;
     state.giftFirstLongerTithe = keptGiftFirstLongerTithe;
+    state.giftFirstLongerVeil = keptGiftFirstLongerVeil;
     state.giftFirstToll = keptGiftFirstToll;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
@@ -4454,6 +4514,7 @@
     state.deeperTollLevel = keptDeeperToll;
     state.longerWakeLevel = keptLongerWake;
     state.longerTitheLevel = keptLongerTithe;
+    state.longerVeilLevel = keptLongerVeil;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -5396,7 +5457,7 @@
         var vLeft = Number(state.veilLeft) || 0;
         var vCost = veilCost(state.ash);
         if (els.veilEffect) {
-          els.veilEffect.textContent = veilActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 20s";
+          els.veilEffect.textContent = veilActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidVeilSecs(state.longerVeilLevel) + "s";
         }
         if (els.veilCost) {
           els.veilCost.textContent = F.formatNumber(vCost) + " Ash";
@@ -6062,6 +6123,7 @@
       if (els.deeperTollRow) els.deeperTollRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerWakeRow) els.longerWakeRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerTitheRow) els.longerTitheRow.classList.toggle("is-hidden", !remOpen);
+      if (els.longerVeilRow) els.longerVeilRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -6219,6 +6281,26 @@
           if (els.longerTitheBuy) {
             els.longerTitheBuy.disabled = !isFinite(ltCost) || (Number(state.remembrance) || 0) < ltCost;
             els.longerTitheBuy.textContent = "Lengthen the Tithe";
+          }
+        }
+
+        var lvLevel = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0)));
+        var lvCost = longerVeilCost(lvLevel);
+        var lvSecs = paidVeilSecs(lvLevel);
+        if (els.longerVeilEffect) {
+          els.longerVeilEffect.textContent = "Veil " + lvSecs + "s";
+        }
+        if (lvLevel >= LONGER_VEIL_MAX) {
+          if (els.longerVeilCost) els.longerVeilCost.textContent = "\u2014";
+          if (els.longerVeilBuy) {
+            els.longerVeilBuy.disabled = true;
+            els.longerVeilBuy.textContent = "The mouth stays nearest.";
+          }
+        } else {
+          if (els.longerVeilCost) els.longerVeilCost.textContent = F.formatNumber(lvCost) + " Remembrance";
+          if (els.longerVeilBuy) {
+            els.longerVeilBuy.disabled = !isFinite(lvCost) || (Number(state.remembrance) || 0) < lvCost;
+            els.longerVeilBuy.textContent = "Lengthen the Veil";
           }
         }
       }
@@ -6518,6 +6600,10 @@
     els.longerTitheEffect = document.getElementById("longer-tithe-effect");
     els.longerTitheCost = document.getElementById("longer-tithe-cost");
     els.longerTitheBuy = document.getElementById("longer-tithe-buy");
+    els.longerVeilRow = document.getElementById("longer-veil-row");
+    els.longerVeilEffect = document.getElementById("longer-veil-effect");
+    els.longerVeilCost = document.getElementById("longer-veil-cost");
+    els.longerVeilBuy = document.getElementById("longer-veil-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -6626,6 +6712,7 @@
     if (els.deeperTollBuy) els.deeperTollBuy.addEventListener("click", buyDeeperToll);
     if (els.longerWakeBuy) els.longerWakeBuy.addEventListener("click", buyLongerWake);
     if (els.longerTitheBuy) els.longerTitheBuy.addEventListener("click", buyLongerTithe);
+    if (els.longerVeilBuy) els.longerVeilBuy.addEventListener("click", buyLongerVeil);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -6919,6 +7006,9 @@
     longerTitheCost: longerTitheCost,
     paidTitheSecs: paidTitheSecs,
     LONGER_TITHE_MAX: LONGER_TITHE_MAX,
+    longerVeilCost: longerVeilCost,
+    paidVeilSecs: paidVeilSecs,
+    LONGER_VEIL_MAX: LONGER_VEIL_MAX,
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,

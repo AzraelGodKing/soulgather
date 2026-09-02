@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v4.6 economy smoke test.
+ * Soulgather v4.7 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -210,6 +210,16 @@ function longerTitheCost(level) {
 function paidTitheSecs(level) {
   const n = Math.max(0, Math.floor(Number(level) || 0));
   return 60 + 10 * n;
+}
+
+function longerVeilCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 1 * Math.pow(2, n);
+}
+
+function paidVeilSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 20 + 10 * n;
 }
 
 function ashenTideCost(level) {
@@ -1069,6 +1079,10 @@ assertEqual("longerTitheCost(0)", longerTitheCost(0), 1);
 assertEqual("longerTitheCost(1)", longerTitheCost(1), 2);
 assertEqual("paidTitheSecs(0)", paidTitheSecs(0), 60);
 assertEqual("paidTitheSecs(2)", paidTitheSecs(2), 80);
+assertEqual("longerVeilCost(0)", longerVeilCost(0), 1);
+assertEqual("longerVeilCost(1)", longerVeilCost(1), 2);
+assertEqual("paidVeilSecs(0)", paidVeilSecs(0), 20);
+assertEqual("paidVeilSecs(2)", paidVeilSecs(2), 40);
 assertEqual("ashenTideCost(0)", ashenTideCost(0), 1);
 assertEqual("ashenTideCost(1)", ashenTideCost(1), 2);
 assertEqual("namesCompleteMult true", namesCompleteMult(true), 1.05);
