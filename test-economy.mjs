@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.5 economy smoke test.
+ * Soulgather v5.6 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -551,6 +551,24 @@ function knellMult(on) {
 const KNELL_COST = 1;
 const KNELL_SECS = 20;
 
+function knellEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 8 * Math.pow(2, n);
+}
+
+function knellSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return KNELL_SECS + 10 * n;
+}
+
+function knellEdictStartsKnell(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function knellLeftAfterTribute(level) {
+  return knellEdictStartsKnell(level) ? knellSecs(level) : 0;
+}
+
 function processionSecs(level) {
   const n = Math.max(0, Math.floor(Number(level) || 0));
   return 45 + 15 * n;
@@ -772,6 +790,9 @@ function giftTwentyFourTributesReady(n) {
 function giftTwentyEightTributesReady(n) {
   return (Number(n) || 0) >= 28;
 }
+function giftThirtyTwoTributesReady(n) {
+  return (Number(n) || 0) >= 32;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
@@ -786,6 +807,8 @@ assertTrue("giftTwentyFourTributesReady(23) is false", !giftTwentyFourTributesRe
 assertTrue("giftTwentyFourTributesReady(24) is true", giftTwentyFourTributesReady(24));
 assertTrue("giftTwentyEightTributesReady(27) is false", !giftTwentyEightTributesReady(27));
 assertTrue("giftTwentyEightTributesReady(28) is true", giftTwentyEightTributesReady(28));
+assertTrue("giftThirtyTwoTributesReady(31) is false", !giftThirtyTwoTributesReady(31));
+assertTrue("giftThirtyTwoTributesReady(32) is true", giftThirtyTwoTributesReady(32));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
@@ -1234,6 +1257,15 @@ assertEqual("knellMult(true)", knellMult(true), 2);
 assertEqual("knellMult(false)", knellMult(false), 1);
 assertEqual("KNELL_COST", KNELL_COST, 1);
 assertEqual("KNELL_SECS", KNELL_SECS, 20);
+assertEqual("knellEdictCost(0)", knellEdictCost(0), 8);
+assertEqual("knellEdictCost(1)", knellEdictCost(1), 16);
+assertEqual("knellSecs(0)", knellSecs(0), 20);
+assertEqual("knellSecs(1)", knellSecs(1), 30);
+assertEqual("knellSecs(2)", knellSecs(2), 40);
+assertTrue("knellEdictStartsKnell(0) is false", !knellEdictStartsKnell(0));
+assertTrue("knellEdictStartsKnell(1) is true", knellEdictStartsKnell(1));
+assertEqual("knellLeftAfterTribute(0)", knellLeftAfterTribute(0), 0);
+assertEqual("knellLeftAfterTribute(1)", knellLeftAfterTribute(1), 30);
 // knellMult folds into clickPower with veilMult/tollMult; not into rateMult / idle ash / shade rates.
 assertEqual("tollEdictCost(0)", tollEdictCost(0), 6);
 assertEqual("tollSecs(0)", tollSecs(0), 25);
