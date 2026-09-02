@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.9 economy smoke test.
+ * Soulgather v2.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -228,6 +228,15 @@ function quietCourtStartsLanternAutobind(level) {
 }
 
 function quietCourtStartsFetterAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function smokeEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 6 * Math.pow(2, n);
+}
+
+function smokeStartsCenserAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -791,6 +800,10 @@ assertTrue("quietCourtStartsLanternAutobind(2) is true", quietCourtStartsLantern
 
 assertTrue("quietCourtStartsFetterAutobind(0) is false", !quietCourtStartsFetterAutobind(0));
 assertTrue("quietCourtStartsFetterAutobind(1) is true", quietCourtStartsFetterAutobind(1));
+
+assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
+assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));
+assertTrue("smokeStartsCenserAutobind(1) is true", smokeStartsCenserAutobind(1));
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

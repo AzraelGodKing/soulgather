@@ -312,6 +312,17 @@
         </div>
         <button type="button" class="card-buy" id="autobind-censers-buy" aria-pressed="false">Autobind Censers</button>
       </div>
+
+      <div class="rite-row is-hidden" id="autobind-thrones-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">Autobind Thrones</h3>
+          <p class="rite-flavor">The seat claims itself.</p>
+          <p class="rite-stats">
+            <span id="autobind-thrones-effect">Idle bind</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="autobind-thrones-buy" aria-pressed="false">Autobind Thrones</button>
+      </div>
     </section>
 
 
@@ -557,6 +568,18 @@
         </div>
         <button type="button" class="card-buy" id="hymn-edict-buy" disabled>Speak the Hymn</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Smoke</h3>
+          <p class="edict-flavor">The brazier remembers.</p>
+          <p class="edict-stats">
+            Effect: <span id="smoke-effect">Autobind Censers at tribute</span>
+            · Cost: <span id="smoke-cost">6 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="smoke-buy" disabled>Speak the Smoke</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -658,7 +681,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v1.9 · prototype</span>
+      <span>Soulgather v2.0 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
