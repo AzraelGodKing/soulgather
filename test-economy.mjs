@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.1 economy smoke test.
+ * Soulgather v3.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -305,13 +305,13 @@ function draughtStartsChaliceAutobind(level) {
 }
 
 function normalizeVow(raw) {
-  if (raw === "stillness" || raw === "poverty" || raw === "hunger") return raw;
+  if (raw === "stillness" || raw === "poverty" || raw === "hunger" || raw === "ember") return raw;
   return "";
 }
 
 function vowExtraFavor(vow, hungerPaid) {
   const v = normalizeVow(vow);
-  if (v === "stillness" || v === "poverty") return 1;
+  if (v === "stillness" || v === "poverty" || v === "ember") return 1;
   if (v === "hunger") return hungerPaid ? 1 : 0;
   return 0;
 }
@@ -815,6 +815,7 @@ assertEqual("quietCourtCost(0)", quietCourtCost(0), 8);
 assertEqual("quietCourtCost(1)", quietCourtCost(1), 16);
 assertEqual("vowExtraFavor stillness", vowExtraFavor("stillness"), 1);
 assertEqual("vowExtraFavor none", vowExtraFavor(""), 0);
+assertEqual("vowExtraFavor ember", vowExtraFavor("ember"), 1);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 
 assertEqual("crownCost(0)", crownCost(0), 6);

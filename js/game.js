@@ -574,23 +574,25 @@
     return "";
   }
 
-  var VOW_IDS = { stillness: "stillness", poverty: "poverty", hunger: "hunger" };
+  var VOW_IDS = { stillness: "stillness", poverty: "poverty", hunger: "hunger", ember: "ember" };
   var VOW_NAMES = {
     stillness: "Stillness",
     poverty: "Poverty",
-    hunger: "Hunger"
+    hunger: "Hunger",
+    ember: "Ember"
   };
 
   function normalizeVow(raw) {
     if (raw === "stillness") return "stillness";
     if (raw === "poverty") return "poverty";
     if (raw === "hunger") return "hunger";
+    if (raw === "ember") return "ember";
     return "";
   }
 
   function vowExtraFavor(vow, hungerPaid) {
     var v = normalizeVow(vow);
-    if (v === "stillness" || v === "poverty") return 1;
+    if (v === "stillness" || v === "poverty" || v === "ember") return 1;
     if (v === "hunger") return hungerPaid ? 1 : 0;
     return 0;
   }
@@ -651,6 +653,7 @@
     "giftFirstOssuary",
     "giftFullOssuary",
     "giftHundredDraws",
+    "giftFirstEmberVow",
     "choir",
     "veil",
     "wake",
@@ -666,6 +669,7 @@
     "ossuary",
     "hymn",
     "vow",
+    "vowEmber",
     "quietCourt",
     "name1",
     "name2",
@@ -733,6 +737,7 @@
     giftFirstOssuary: "The first bone. The well returned ten souls.",
     giftFullOssuary: "Eight bones. The well returned twenty souls.",
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
+    giftFirstEmberVow: "The ember vow. The well returned eight ash.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     wake: "The wake was kept.",
@@ -748,6 +753,7 @@
     ossuary: "A bone was laid.",
     hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
+    vowEmber: "An ember vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
     name1: "The First Siphon.",
     name2: "The Quiet Chain.",
@@ -980,6 +986,9 @@
     if (normalizeVow(state.vow)) {
       if (markChronicle("vow")) added = true;
     }
+    if (normalizeVow(state.vow) === "ember") {
+      if (markChronicle("vowEmber")) added = true;
+    }
     if ((Number(state.quietCourtLevel) || 0) >= 1) {
       if (markChronicle("quietCourt")) added = true;
     }
@@ -1160,6 +1169,7 @@
       giftFirstOssuary: false,
       giftFullOssuary: false,
       giftHundredDraws: false,
+      giftFirstEmberVow: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1963,6 +1973,7 @@
   }
 
   function payNightTithe() {
+    if (normalizeVow(state.vow) === "ember") return;
     if (!state.unlockedNightTithe) return;
     if (nightActive()) return;
     if (N.cmp(state.ash, NIGHT_TITHE_MIN) < 0) return;
@@ -1976,6 +1987,7 @@
   }
 
   function keepWake() {
+    if (normalizeVow(state.vow) === "ember") return;
     if (!state.unlockedWake) return;
     if (wakeActive()) return;
     var cost = N.fromNumber(WAKE_COST);
@@ -2346,6 +2358,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstEmberVow && normalizeVow(state.vow) === "ember") {
+      state.giftFirstEmberVow = true;
+      state.ash = N.add(state.ash, 8);
+      markChronicle("giftFirstEmberVow");
+      showToast("Eight ash for the ember vow.");
+      granted = true;
+    }
+
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
       state.bonusFirstFetter = true;
       state.shades = N.add(state.shades, 2);
@@ -2609,6 +2629,10 @@
     state.vow = v;
     state.vowHungerPaid = false;
     markChronicle("vow");
+    if (v === "ember") {
+      markChronicle("vowEmber");
+    }
+    checkUnlock();
     save();
     render();
   }
@@ -2736,6 +2760,7 @@
     "giftFirstOssuary",
     "giftFullOssuary",
     "giftHundredDraws",
+    "giftFirstEmberVow",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2883,6 +2908,7 @@
       giftFirstOssuary: !!state.giftFirstOssuary,
       giftFullOssuary: !!state.giftFullOssuary,
       giftHundredDraws: !!state.giftHundredDraws,
+      giftFirstEmberVow: !!state.giftFirstEmberVow,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -3159,6 +3185,11 @@
     } else {
       state.giftHundredDraws = !!data.giftHundredDraws;
     }
+    if (data.giftFirstEmberVow == null) {
+      state.giftFirstEmberVow = hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow");
+    } else {
+      state.giftFirstEmberVow = !!data.giftFirstEmberVow;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
@@ -3431,6 +3462,7 @@
     var keptGiftFirstOssuary = !!state.giftFirstOssuary;
     var keptGiftFullOssuary = !!state.giftFullOssuary;
     var keptGiftHundredDraws = !!state.giftHundredDraws;
+    var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -3499,6 +3531,7 @@
     state.giftFirstOssuary = keptGiftFirstOssuary;
     state.giftFullOssuary = keptGiftFullOssuary;
     state.giftHundredDraws = keptGiftHundredDraws;
+    state.giftFirstEmberVow = keptGiftFirstEmberVow;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -4326,7 +4359,8 @@
             els.nightTitheBuy.disabled = true;
             els.nightTitheBuy.textContent = "Night burns \u2014 " + Math.ceil(nLeft) + "s";
           } else {
-            els.nightTitheBuy.disabled = N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
+            els.nightTitheBuy.disabled =
+              normalizeVow(state.vow) === "ember" || N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
             els.nightTitheBuy.textContent = "Pay the Night's Tithe";
           }
         }
@@ -4351,7 +4385,8 @@
             els.wakeBuy.disabled = true;
             els.wakeBuy.textContent = "The wake burns \u2014 " + Math.ceil(wLeft) + "s";
           } else {
-            els.wakeBuy.disabled = N.cmp(state.ash, wCost) < 0;
+            els.wakeBuy.disabled =
+              normalizeVow(state.vow) === "ember" || N.cmp(state.ash, wCost) < 0;
             els.wakeBuy.textContent = "Keep the Wake";
           }
         }
@@ -4647,7 +4682,8 @@
       var vowRows = [
         { id: "stillness", el: els.vowStillnessRow, btn: els.vowStillnessBuy },
         { id: "poverty", el: els.vowPovertyRow, btn: els.vowPovertyBuy },
-        { id: "hunger", el: els.vowHungerRow, btn: els.vowHungerBuy }
+        { id: "hunger", el: els.vowHungerRow, btn: els.vowHungerBuy },
+        { id: "ember", el: els.vowEmberRow, btn: els.vowEmberBuy }
       ];
       var vi;
       for (vi = 0; vi < vowRows.length; vi++) {
@@ -5279,6 +5315,8 @@
     els.vowPovertyBuy = document.getElementById("vow-poverty-buy");
     els.vowHungerRow = document.getElementById("vow-hunger-row");
     els.vowHungerBuy = document.getElementById("vow-hunger-buy");
+    els.vowEmberRow = document.getElementById("vow-ember-row");
+    els.vowEmberBuy = document.getElementById("vow-ember-buy");
     els.toast = document.getElementById("toast");
     els.resetBtn = document.getElementById("reset-btn");
     els.nextGoal = document.getElementById("next-goal");
@@ -5386,6 +5424,11 @@
         swearVow("hunger");
       });
     }
+    if (els.vowEmberBuy) {
+      els.vowEmberBuy.addEventListener("click", function () {
+        swearVow("ember");
+      });
+    }
     els.resetBtn.addEventListener("click", resetGame);
     els.memoryPanel = document.getElementById("memory-panel");
     els.memoryText = document.getElementById("memory-text");
@@ -5450,6 +5493,7 @@
         return;
       }
       if ((ev.key === "n" || ev.key === "N") && !otherButton) {
+        if (normalizeVow(state.vow) === "ember") return;
         if (state.unlockedNightTithe && !nightActive() && N.cmp(state.ash, NIGHT_TITHE_MIN) >= 0) {
           ev.preventDefault();
           payNightTithe();
@@ -5457,6 +5501,7 @@
         return;
       }
       if ((ev.key === "w" || ev.key === "W") && !otherButton) {
+        if (normalizeVow(state.vow) === "ember") return;
         if (state.unlockedWake && !wakeActive() && N.cmp(state.ash, N.fromNumber(WAKE_COST)) >= 0) {
           ev.preventDefault();
           keepWake();
