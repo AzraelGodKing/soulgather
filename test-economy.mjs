@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v4.7 economy smoke test.
+ * Soulgather v4.8 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -520,6 +520,24 @@ function tollEdictCost(level) {
   return 6 * Math.pow(2, n);
 }
 
+function veilSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 20 + 10 * n;
+}
+
+function veilEdictStartsVeil(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function veilLeftAfterTribute(level) {
+  return veilEdictStartsVeil(level) ? veilSecs(level) : 0;
+}
+
+function veilEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 7 * Math.pow(2, n);
+}
+
 const WAKE_COST = 30;
 const WAKE_SECS = 40;
 
@@ -673,6 +691,9 @@ function giftSixteenTributesReady(n) {
 function giftTwentyTributesReady(n) {
   return (Number(n) || 0) >= 20;
 }
+function giftTwentyFourTributesReady(n) {
+  return (Number(n) || 0) >= 24;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
@@ -683,6 +704,8 @@ assertTrue("giftSixteenTributesReady(15) is false", !giftSixteenTributesReady(15
 assertTrue("giftSixteenTributesReady(16) is true", giftSixteenTributesReady(16));
 assertTrue("giftTwentyTributesReady(19) is false", !giftTwentyTributesReady(19));
 assertTrue("giftTwentyTributesReady(20) is true", giftTwentyTributesReady(20));
+assertTrue("giftTwentyFourTributesReady(23) is false", !giftTwentyFourTributesReady(23));
+assertTrue("giftTwentyFourTributesReady(24) is true", giftTwentyFourTributesReady(24));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
@@ -1123,6 +1146,15 @@ assertTrue("tollEdictStartsToll(0) is false", !tollEdictStartsToll(0));
 assertTrue("tollEdictStartsToll(1) is true", tollEdictStartsToll(1));
 assertEqual("tollLeftAfterTribute(0)", tollLeftAfterTribute(0), 0);
 assertEqual("tollLeftAfterTribute(1)", tollLeftAfterTribute(1), 35);
+assertEqual("veilEdictCost(0)", veilEdictCost(0), 7);
+assertEqual("veilEdictCost(1)", veilEdictCost(1), 14);
+assertEqual("veilSecs(0)", veilSecs(0), 20);
+assertEqual("veilSecs(1)", veilSecs(1), 30);
+assertEqual("veilSecs(2)", veilSecs(2), 40);
+assertTrue("veilEdictStartsVeil(0) is false", !veilEdictStartsVeil(0));
+assertTrue("veilEdictStartsVeil(1) is true", veilEdictStartsVeil(1));
+assertEqual("veilLeftAfterTribute(0)", veilLeftAfterTribute(0), 0);
+assertEqual("veilLeftAfterTribute(1)", veilLeftAfterTribute(1), 30);
 assertEqual("wakeMult(false)", wakeMult(false), 1);
 assertEqual("wakeMult(true)", wakeMult(true), 2);
 assertEqual("processionMult(false)", processionMult(false), 1);
