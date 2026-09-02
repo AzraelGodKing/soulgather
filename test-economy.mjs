@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.8 economy smoke test.
+ * Soulgather v2.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -929,6 +929,8 @@ assertTrue("draughtStartsChaliceAutobind(1) is true", draughtStartsChaliceAutobi
 assertEqual("ossuaryMult(0)", ossuaryMult(0), 1);
 assertEqual("ossuaryMult(1)", ossuaryMult(1), 1.05);
 assertEqual("ossuaryMult(8)", ossuaryMult(8), 1.40);
+assertEqual("prodMult ossuary 8 fold", prodMult(0, 0, 0, 0.1, 0, false, 0, 8), 1.40);
+// Full ossuary gift is 8 bones; hundred-draws gift is 100 clicks this emptying. No extra formula.
 
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));

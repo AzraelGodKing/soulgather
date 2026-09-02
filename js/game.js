@@ -621,6 +621,8 @@
     "giftTwelveTributes",
     "giftFullCup",
     "giftFirstOssuary",
+    "giftFullOssuary",
+    "giftHundredDraws",
     "choir",
     "veil",
     "choirEdict",
@@ -697,6 +699,8 @@
     giftFullCup: "The cup was full. The well returned twenty-five souls.",
     giftThreeChalices: "Three chalices. The well returned ten ash.",
     giftFirstOssuary: "The first bone. The well returned ten souls.",
+    giftFullOssuary: "Eight bones. The well returned twenty souls.",
+    giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -1110,6 +1114,8 @@
       giftFullCup: false,
       giftThreeChalices: false,
       giftFirstOssuary: false,
+      giftFullOssuary: false,
+      giftHundredDraws: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -2227,6 +2233,22 @@
       granted = true;
     }
 
+    if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
+      state.giftFullOssuary = true;
+      state.souls = N.add(state.souls, 20);
+      markChronicle("giftFullOssuary");
+      showToast("Twenty souls for eight bones.");
+      granted = true;
+    }
+
+    if (!state.giftHundredDraws && (Number(state.clicksThisRun) || 0) >= 100) {
+      state.giftHundredDraws = true;
+      state.souls = N.add(state.souls, 15);
+      markChronicle("giftHundredDraws");
+      showToast("Fifteen souls for a hundred draws.");
+      granted = true;
+    }
+
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
       state.bonusFirstFetter = true;
       state.shades = N.add(state.shades, 2);
@@ -2600,6 +2622,8 @@
     "giftTwelveTributes",
     "giftFullCup",
     "giftFirstOssuary",
+    "giftFullOssuary",
+    "giftHundredDraws",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2740,6 +2764,8 @@
       giftFullCup: !!state.giftFullCup,
       giftThreeChalices: !!state.giftThreeChalices,
       giftFirstOssuary: !!state.giftFirstOssuary,
+      giftFullOssuary: !!state.giftFullOssuary,
+      giftHundredDraws: !!state.giftHundredDraws,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2980,6 +3006,16 @@
         (Number(data.ossuaryLevel) || 0) >= 1;
     } else {
       state.giftFirstOssuary = !!data.giftFirstOssuary;
+    }
+    if (data.giftFullOssuary == null) {
+      state.giftFullOssuary = hasChronicle("giftFullOssuary");
+    } else {
+      state.giftFullOssuary = !!data.giftFullOssuary;
+    }
+    if (data.giftHundredDraws == null) {
+      state.giftHundredDraws = hasChronicle("giftHundredDraws");
+    } else {
+      state.giftHundredDraws = !!data.giftHundredDraws;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -3248,6 +3284,8 @@
     var keptGiftFullCup = !!state.giftFullCup;
     var keptGiftThreeChalices = !!state.giftThreeChalices;
     var keptGiftFirstOssuary = !!state.giftFirstOssuary;
+    var keptGiftFullOssuary = !!state.giftFullOssuary;
+    var keptGiftHundredDraws = !!state.giftHundredDraws;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -3311,6 +3349,8 @@
     state.giftFullCup = keptGiftFullCup;
     state.giftThreeChalices = keptGiftThreeChalices;
     state.giftFirstOssuary = keptGiftFirstOssuary;
+    state.giftFullOssuary = keptGiftFullOssuary;
+    state.giftHundredDraws = keptGiftHundredDraws;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -5211,6 +5251,17 @@
         if (state.unlockedPyres && N.cmp(state.ash, cinderCost) >= 0) {
           ev.preventDefault();
           buyCinders();
+        }
+        return;
+      }
+      if ((ev.key === "b" || ev.key === "B") && !otherButton) {
+        if (
+          remembranceUnlocked() &&
+          (Number(state.ossuaryLevel) || 0) < OSSUARY_MAX &&
+          (Number(state.remembrance) || 0) >= 1
+        ) {
+          ev.preventDefault();
+          buyOssuary();
         }
         return;
       }

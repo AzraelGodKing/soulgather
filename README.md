@@ -7,13 +7,25 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 Live: https://azraelgodking.github.io/soulgather/
 Open `index.html` in a browser (`file://` is fine). Or `python3 -m http.server` in this folder. Vanilla HTML/CSS/JS, no build, no npm. Pushes to main redeploy Pages.
 
-Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, C Cut the Cinders (not while typing in Memory; do not steal if another button is focused).
+Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the Veil, C Cut the Cinders, B Lay the Bone (not while typing in Memory; do not steal if another button is focused).
 
 Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everything including Favor.
 
 ## Loop (short)
 
 Click the well → Shades → Lanterns (half-step) → Bound Spirits → Fetters (half-step) → Vessels → Censers (side) → Pyres (ash half-step) / Thrones → Chalices (late ash sink at 5 Thrones). Ash feeds Marks, Night's Tithe, Thin the Veil, and Chalices. Choir of Ash this-run (lantern spend; Edict of the Choir starts it). Hymn after Tribute (`45 + 15 * hymnEdictLevel` seconds, ×1.25). Rites (Siphon / Levy / Rite of Cinders), Tithe, Autobind Shades / Autobind Spirits / Autobind Vessels / Autobind Lanterns / Autobind Fetters / Autobind Censers / Autobind Thrones / Autobind Pyres / Autobind Chalices this-run. Tribute for Favor. Reliquary + Aspects + Vows after first Tribute. The Crown after 2 tributes or 3 Favor earned. Names of the Bound from peak Shades. Remembrance after 3 tributes or 5 Favor earned. Ossuary in Remembrance / The Crown (late Remembrance sink).
+
+## Design notes (v2.9)
+
+Visual direction is locked: GodKing / void — near-black oxblood, gold, crimson, bone/cream serif. Do not restyle the well sigil or masthead.
+
+**v2.9 extras.**
+
+**Hotkey B.** B pays Lay the Bone if Remembrance panel unlocked, `ossuaryLevel < 8`, and remembrance >= 1. Same T/N/V/C rules: ignore Memory textarea; do not steal a focused non-gather button.
+
+**Gift: full ossuary (8 bones).** Once when `ossuaryLevel >= 8`: +20 souls (`Num.add`). Flag `giftFullOssuary` persist Tribute, wipe Reset. Toast: "Twenty souls for eight bones." Chronicle: "Eight bones. The well returned twenty souls." If Chronicle already has the gift, seed flag without grant. If missing flag and `ossuaryLevel` already >= 8, grant once then save.
+
+**Gift: 100 well draws this emptying.** Once when `clicksThisRun >= 100`: +15 souls (`Num.add`). Flag `giftHundredDraws` persist Tribute, wipe Reset. Toast: "Fifteen souls for a hundred draws." Chronicle: "A hundred draws. The well returned fifteen souls." Vow of Stillness blocks draws so this gift is a mid-run click goal. `clicksThisRun` already exists (veil unlock). Old saves: if `clicksThisRun` already >= 100 and flag missing, grant once then save unless Chronicle has the gift. Wipes on Tribute with `clicksThisRun` (this-run counter), so the gift flag persist means it only pays once ever — first emptying that hits 100 clicks.
 
 ## Design notes (v2.8)
 
