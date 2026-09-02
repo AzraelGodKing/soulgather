@@ -375,6 +375,25 @@
     return 9 * Math.pow(2, n);
   }
 
+  function tollSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return TOLL_SECS + 10 * n;
+  }
+
+  function tollEdictStartsToll(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
+  function tollLeftAfterTribute(level) {
+    if (!tollEdictStartsToll(level)) return 0;
+    return tollSecs(level);
+  }
+
+  function tollEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 6 * Math.pow(2, n);
+  }
+
   function choirEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 5 * Math.pow(2, n);
@@ -772,6 +791,7 @@
     "giftFirstOssuary",
     "giftFullOssuary",
     "giftHundredDraws",
+    "giftTwoHundredDraws",
     "giftFirstEmberVow",
     "giftTwoVows",
     "giftThreeVows",
@@ -794,6 +814,7 @@
     "draughtEdict",
     "wakeEdict",
     "processionEdict",
+    "tollEdict",
     "chalice",
     "ossuary",
     "hymn",
@@ -875,6 +896,7 @@
     giftFirstOssuary: "The first bone. The well returned ten souls.",
     giftFullOssuary: "Eight bones. The well returned twenty souls.",
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
+    giftTwoHundredDraws: "Two hundred draws. The well returned twenty souls.",
     giftFirstEmberVow: "The ember vow. The well returned eight ash.",
     giftTwoVows: "Two vows remembered. The well returned ten souls.",
     giftThreeVows: "Three vows remembered. The well returned fifteen souls.",
@@ -897,6 +919,7 @@
     draughtEdict: "The draught was spoken.",
     wakeEdict: "The wake was spoken.",
     processionEdict: "The procession was spoken.",
+    tollEdict: "The toll was spoken.",
     chalice: "A chalice was raised.",
     ossuary: "A bone was laid.",
     hymn: "A hymn followed the emptying.",
@@ -1198,6 +1221,9 @@
     if ((Number(state.processionEdictLevel) || 0) >= 1) {
       if (markChronicle("processionEdict")) added = true;
     }
+    if ((Number(state.tollEdictLevel) || 0) >= 1) {
+      if (markChronicle("tollEdict")) added = true;
+    }
     if ((Number(state.chalices) || 0) >= 1) {
       if (markChronicle("chalice")) added = true;
     }
@@ -1367,6 +1393,7 @@
       giftFirstOssuary: false,
       giftFullOssuary: false,
       giftHundredDraws: false,
+      giftTwoHundredDraws: false,
       giftFirstEmberVow: false,
       giftTwoVows: false,
       giftThreeVows: false,
@@ -1386,6 +1413,7 @@
       draughtEdictLevel: 0,
       wakeEdictLevel: 0,
       processionEdictLevel: 0,
+      tollEdictLevel: 0,
       hymnLeft: 0,
       crownWeight: 0,
       longMemoryLevel: 0,
@@ -2206,6 +2234,16 @@
     render();
   }
 
+  function buyTollEdict() {
+    var cost = tollEdictCost(state.tollEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.tollEdictLevel += 1;
+    markChronicle("tollEdict");
+    save();
+    render();
+  }
+
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
     if (N.cmp(state.souls, cost) < 0) return;
@@ -2748,6 +2786,14 @@
       granted = true;
     }
 
+    if (!state.giftTwoHundredDraws && (Number(state.clicksThisRun) || 0) >= 200) {
+      state.giftTwoHundredDraws = true;
+      state.souls = N.add(state.souls, 20);
+      markChronicle("giftTwoHundredDraws");
+      showToast("Twenty souls for two hundred draws.");
+      granted = true;
+    }
+
     if (!state.giftFirstEmberVow && normalizeVow(state.vow) === "ember") {
       state.giftFirstEmberVow = true;
       state.ash = N.add(state.ash, 8);
@@ -3229,6 +3275,7 @@
     "giftFirstOssuary",
     "giftFullOssuary",
     "giftHundredDraws",
+    "giftTwoHundredDraws",
     "giftFirstEmberVow",
     "giftTwoVows",
     "giftThreeVows",
@@ -3248,6 +3295,7 @@
     "draughtEdictLevel",
     "wakeEdictLevel",
     "processionEdictLevel",
+    "tollEdictLevel",
     "hymnLeft",
     "crownWeight",
     "longMemoryLevel",
@@ -3399,6 +3447,7 @@
       giftFirstOssuary: !!state.giftFirstOssuary,
       giftFullOssuary: !!state.giftFullOssuary,
       giftHundredDraws: !!state.giftHundredDraws,
+      giftTwoHundredDraws: !!state.giftTwoHundredDraws,
       giftFirstEmberVow: !!state.giftFirstEmberVow,
       giftTwoVows: !!state.giftTwoVows,
       giftThreeVows: !!state.giftThreeVows,
@@ -3418,6 +3467,7 @@
       draughtEdictLevel: Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0)),
       wakeEdictLevel: Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0)),
       processionEdictLevel: Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0)),
+      tollEdictLevel: Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0)),
       hymnLeft: Number(state.hymnLeft) || 0,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
@@ -3723,6 +3773,11 @@
     } else {
       state.giftHundredDraws = !!data.giftHundredDraws;
     }
+    if (data.giftTwoHundredDraws == null) {
+      state.giftTwoHundredDraws = hasChronicle("giftTwoHundredDraws");
+    } else {
+      state.giftTwoHundredDraws = !!data.giftTwoHundredDraws;
+    }
     if (data.giftFirstEmberVow == null) {
       state.giftFirstEmberVow = hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow");
     } else {
@@ -3772,6 +3827,7 @@
     state.draughtEdictLevel = Math.max(0, Math.floor(Number(data.draughtEdictLevel) || 0));
     state.wakeEdictLevel = Math.max(0, Math.floor(Number(data.wakeEdictLevel) || 0));
     state.processionEdictLevel = Math.max(0, Math.floor(Number(data.processionEdictLevel) || 0));
+    state.tollEdictLevel = Math.max(0, Math.floor(Number(data.tollEdictLevel) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -4042,6 +4098,7 @@
     var keptGiftFirstOssuary = !!state.giftFirstOssuary;
     var keptGiftFullOssuary = !!state.giftFullOssuary;
     var keptGiftHundredDraws = !!state.giftHundredDraws;
+    var keptGiftTwoHundredDraws = !!state.giftTwoHundredDraws;
     var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
     var keptGiftTwoVows = !!state.giftTwoVows;
     var keptGiftThreeVows = !!state.giftThreeVows;
@@ -4060,6 +4117,7 @@
     var keptDraughtEdict = Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0));
     var keptWakeEdict = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
     var keptProcessionEdict = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
+    var keptTollEdict = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -4125,6 +4183,7 @@
     state.giftFirstOssuary = keptGiftFirstOssuary;
     state.giftFullOssuary = keptGiftFullOssuary;
     state.giftHundredDraws = keptGiftHundredDraws;
+    state.giftTwoHundredDraws = keptGiftTwoHundredDraws;
     state.giftFirstEmberVow = keptGiftFirstEmberVow;
     state.giftTwoVows = keptGiftTwoVows;
     state.giftThreeVows = keptGiftThreeVows;
@@ -4143,6 +4202,7 @@
     state.draughtEdictLevel = keptDraughtEdict;
     state.wakeEdictLevel = keptWakeEdict;
     state.processionEdictLevel = keptProcessionEdict;
+    state.tollEdictLevel = keptTollEdict;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -4155,7 +4215,10 @@
     state.nightLeft = 0;
     state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict);
     state.veilLeft = 0;
-    state.tollLeft = 0;
+    state.tollLeft = tollLeftAfterTribute(keptTollEdict);
+    if (state.tollLeft > 0) {
+      state.unlockedToll = true;
+    }
     state.wakeLeft = wakeLeftAfterTribute(keptWakeEdict);
     if (state.wakeLeft > 0) {
       state.unlockedWake = true;
@@ -5681,6 +5744,17 @@
       if (els.processionEdictBuy) {
         els.processionEdictBuy.disabled = !isFinite(peCost) || state.favor < peCost;
       }
+
+      var teCost = tollEdictCost(state.tollEdictLevel);
+      var tollEdictN = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
+      var tollDur = tollEdictStartsToll(tollEdictN) ? tollSecs(tollEdictN) : 0;
+      if (els.tollEdictEffect) {
+        els.tollEdictEffect.textContent = "Toll " + tollDur + "s at tribute";
+      }
+      if (els.tollEdictCost) els.tollEdictCost.textContent = F.formatNumber(teCost) + " Favor";
+      if (els.tollEdictBuy) {
+        els.tollEdictBuy.disabled = !isFinite(teCost) || state.favor < teCost;
+      }
     }
 
     var crownOpen = crownUnlocked();
@@ -5989,6 +6063,9 @@
     els.processionEdictEffect = document.getElementById("procession-edict-effect");
     els.processionEdictCost = document.getElementById("procession-edict-cost");
     els.processionEdictBuy = document.getElementById("procession-edict-buy");
+    els.tollEdictEffect = document.getElementById("toll-edict-effect");
+    els.tollEdictCost = document.getElementById("toll-edict-cost");
+    els.tollEdictBuy = document.getElementById("toll-edict-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -6170,6 +6247,7 @@
     if (els.draughtEdictBuy) els.draughtEdictBuy.addEventListener("click", buyDraughtEdict);
     if (els.wakeEdictBuy) els.wakeEdictBuy.addEventListener("click", buyWakeEdict);
     if (els.processionEdictBuy) els.processionEdictBuy.addEventListener("click", buyProcessionEdict);
+    if (els.tollEdictBuy) els.tollEdictBuy.addEventListener("click", buyTollEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
@@ -6496,6 +6574,10 @@
     processionSecs: processionSecs,
     processionEdictStartsProcession: processionEdictStartsProcession,
     processionLeftAfterTribute: processionLeftAfterTribute,
+    tollEdictCost: tollEdictCost,
+    tollSecs: tollSecs,
+    tollEdictStartsToll: tollEdictStartsToll,
+    tollLeftAfterTribute: tollLeftAfterTribute,
     formatBlessing: formatBlessing,
     nightTitheSecs: nightTitheSecs,
     nightSecs: nightSecs,

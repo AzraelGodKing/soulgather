@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v4.1 economy smoke test.
+ * Soulgather v4.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -450,6 +450,24 @@ function processionLeftAfterTribute(level) {
 function processionEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 9 * Math.pow(2, n);
+}
+
+function tollSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 25 + 10 * n;
+}
+
+function tollEdictStartsToll(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function tollLeftAfterTribute(level) {
+  return tollEdictStartsToll(level) ? tollSecs(level) : 0;
+}
+
+function tollEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 6 * Math.pow(2, n);
 }
 
 const WAKE_COST = 30;
@@ -1027,6 +1045,14 @@ assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
 assertEqual("tollMult(false)", tollMult(false), 1);
 assertEqual("tollMult(true)", tollMult(true), 2);
+assertEqual("tollEdictCost(0)", tollEdictCost(0), 6);
+assertEqual("tollSecs(0)", tollSecs(0), 25);
+assertEqual("tollSecs(1)", tollSecs(1), 35);
+assertEqual("tollSecs(2)", tollSecs(2), 45);
+assertTrue("tollEdictStartsToll(0) is false", !tollEdictStartsToll(0));
+assertTrue("tollEdictStartsToll(1) is true", tollEdictStartsToll(1));
+assertEqual("tollLeftAfterTribute(0)", tollLeftAfterTribute(0), 0);
+assertEqual("tollLeftAfterTribute(1)", tollLeftAfterTribute(1), 35);
 assertEqual("wakeMult(false)", wakeMult(false), 1);
 assertEqual("wakeMult(true)", wakeMult(true), 2);
 assertEqual("processionMult(false)", processionMult(false), 1);
