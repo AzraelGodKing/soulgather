@@ -168,6 +168,17 @@
         <button type="button" class="card-buy" id="urn-buy" disabled>Raise an Urn</button>
       </article>
 
+      <article class="card is-hidden" id="hearth-card">
+        <h2 class="card-name">Hearths</h2>
+        <div class="card-owned" id="hearth-owned">0</div>
+        <p class="card-flavor">The last heat.</p>
+        <div class="card-stats">
+          <div>Kindle: <span id="hearth-prod">0 ash / sec</span></div>
+          <div>Kindle cost: <span id="hearth-cost">4 Urns</span></div>
+        </div>
+        <button type="button" class="card-buy" id="hearth-buy" disabled>Kindle a Hearth</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -732,6 +743,19 @@
 
       <div class="edict-row">
         <div class="edict-copy">
+          <h3 class="edict-name">Edict of Hearths</h3>
+          <p class="edict-flavor">The last heat is remembered.</p>
+          <p class="edict-stats">
+            Effect: <span id="hearth-edict-effect">+0 Hearth at tribute</span>
+            · Cost: <span id="hearth-edict-cost">9 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="hearth-edict-buy" disabled>Speak the Hearth</button>
+      </div>
+
+
+      <div class="edict-row">
+        <div class="edict-copy">
           <h3 class="edict-name">Edict of Cinders</h3>
           <p class="edict-flavor">The doubling is remembered.</p>
           <p class="edict-stats">
@@ -1023,7 +1047,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v4.9 · prototype</span>
+      <span>Soulgather v5.0 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

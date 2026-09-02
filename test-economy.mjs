@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v4.9 economy smoke test.
+ * Soulgather v5.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -69,6 +69,10 @@ function pyreCost(owned) {
 
 function urnCost(owned) {
   return N.cost(3, 1.2, owned);
+}
+
+function hearthCost(owned) {
+  return N.cost(4, 1.2, owned);
 }
 
 function chaliceCost(owned) {
@@ -368,6 +372,15 @@ function urnEdictCost(level) {
 }
 
 function urnEdictStartsUrns(level) {
+  return Math.max(0, Math.floor(Number(level) || 0));
+}
+
+function hearthEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 9 * Math.pow(2, n);
+}
+
+function hearthEdictStartsHearths(level) {
   return Math.max(0, Math.floor(Number(level) || 0));
 }
 
@@ -745,6 +758,7 @@ function nextGoal(view, format) {
   const censers = Number(view.censers) || 0;
   const pyres = Number(view.pyres) || 0;
   const urns = Number(view.urns) || 0;
+  const hearths = Number(view.hearths) || 0;
   const fetters = Number(view.fetters) || 0;
   const chalices = Number(view.chalices) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
@@ -802,6 +816,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedUrns && urns < 1) {
     return "Raise an Urn. What the fire would not finish.";
+  }
+  if (view.unlockedHearths && hearths < 1) {
+    return "Kindle a Hearth. The last heat.";
   }
   if (view.unlockedChalices && chalices < 1) {
     return "Raise a Chalice. He drinks from the emptied well.";
@@ -1275,6 +1292,11 @@ assertEqual("urnCost(0)", urnCost(0), 3);
 assertEqual("urnEdictCost(0)", urnEdictCost(0), 8);
 assertEqual("urnEdictStartsUrns(0)", urnEdictStartsUrns(0), 0);
 assertEqual("urnEdictStartsUrns(2)", urnEdictStartsUrns(2), 2);
+assertEqual("hearthCost(0)", hearthCost(0), 4);
+assertEqual("hearthEdictCost(0)", hearthEdictCost(0), 9);
+assertEqual("hearthEdictCost(1)", hearthEdictCost(1), 18);
+assertEqual("hearthEdictStartsHearths(0)", hearthEdictStartsHearths(0), 0);
+assertEqual("hearthEdictStartsHearths(2)", hearthEdictStartsHearths(2), 2);
 
 assertEqual(
   "nextGoal pyre half-step",
@@ -1349,6 +1371,45 @@ assertEqual(
     unlockedThrones: true,
     unlockedUrns: true,
     urns: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual(
+  "nextGoal hearth half-step",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedUrns: true,
+    urns: 5,
+    unlockedHearths: true,
+    hearths: 0,
+    lifetimeSouls: 412,
+  }),
+  "Kindle a Hearth. The last heat."
+);
+assertEqual(
+  "nextGoal hearth does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedHearths: true,
+    hearths: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal hearth does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedHearths: true,
+    hearths: 0,
     favorEarned: 1,
   }),
   "Swear an Aspect. The GodKing waits."
