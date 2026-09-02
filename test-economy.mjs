@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.2 economy smoke test.
+ * Soulgather v5.3 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -406,6 +406,15 @@ function cutEdictStartsUrnAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
+function tendingEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 12 * Math.pow(2, n);
+}
+
+function tendingEdictStartsHearthAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function draughtEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 10 * Math.pow(2, n);
@@ -712,6 +721,10 @@ assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAuto
 assertEqual("cutEdictCost(0)", cutEdictCost(0), 11);
 assertTrue("cutEdictStartsUrnAutobind(0) is false", !cutEdictStartsUrnAutobind(0));
 assertTrue("cutEdictStartsUrnAutobind(1) is true", cutEdictStartsUrnAutobind(1));
+assertEqual("tendingEdictCost(0)", tendingEdictCost(0), 12);
+assertEqual("tendingEdictCost(1)", tendingEdictCost(1), 24);
+assertTrue("tendingEdictStartsHearthAutobind(0) is false", !tendingEdictStartsHearthAutobind(0));
+assertTrue("tendingEdictStartsHearthAutobind(1) is true", tendingEdictStartsHearthAutobind(1));
 assertEqual("chaliceMult(0)", chaliceMult(0), 1);
 assertEqual("chaliceMult(1)", chaliceMult(1), 1.08);
 assertEqual("chaliceCost(0)", chaliceCost(0), 20);
@@ -739,6 +752,9 @@ function giftTwentyTributesReady(n) {
 function giftTwentyFourTributesReady(n) {
   return (Number(n) || 0) >= 24;
 }
+function giftTwentyEightTributesReady(n) {
+  return (Number(n) || 0) >= 28;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
@@ -751,6 +767,8 @@ assertTrue("giftTwentyTributesReady(19) is false", !giftTwentyTributesReady(19))
 assertTrue("giftTwentyTributesReady(20) is true", giftTwentyTributesReady(20));
 assertTrue("giftTwentyFourTributesReady(23) is false", !giftTwentyFourTributesReady(23));
 assertTrue("giftTwentyFourTributesReady(24) is true", giftTwentyFourTributesReady(24));
+assertTrue("giftTwentyEightTributesReady(27) is false", !giftTwentyEightTributesReady(27));
+assertTrue("giftTwentyEightTributesReady(28) is true", giftTwentyEightTributesReady(28));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
