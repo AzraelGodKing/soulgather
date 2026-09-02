@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v4.8 economy smoke test.
+ * Soulgather v4.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -253,6 +253,24 @@ function nightTitheSecs(level) {
 
 function nightSecs(level) {
   return nightTitheSecs(level);
+}
+
+function nightEdictSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 30 + 15 * n;
+}
+
+function nightEdictStartsNight(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function nightLeftAfterTribute(level) {
+  return nightEdictStartsNight(level) ? nightEdictSecs(level) : 0;
+}
+
+function nightEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 5 * Math.pow(2, n);
 }
 
 function crownCost(level) {
@@ -1155,6 +1173,15 @@ assertTrue("veilEdictStartsVeil(0) is false", !veilEdictStartsVeil(0));
 assertTrue("veilEdictStartsVeil(1) is true", veilEdictStartsVeil(1));
 assertEqual("veilLeftAfterTribute(0)", veilLeftAfterTribute(0), 0);
 assertEqual("veilLeftAfterTribute(1)", veilLeftAfterTribute(1), 30);
+assertEqual("nightEdictCost(0)", nightEdictCost(0), 5);
+assertEqual("nightEdictCost(1)", nightEdictCost(1), 10);
+assertEqual("nightEdictSecs(0)", nightEdictSecs(0), 30);
+assertEqual("nightEdictSecs(1)", nightEdictSecs(1), 45);
+assertEqual("nightEdictSecs(2)", nightEdictSecs(2), 60);
+assertTrue("nightEdictStartsNight(0) is false", !nightEdictStartsNight(0));
+assertTrue("nightEdictStartsNight(1) is true", nightEdictStartsNight(1));
+assertEqual("nightLeftAfterTribute(0)", nightLeftAfterTribute(0), 0);
+assertEqual("nightLeftAfterTribute(1)", nightLeftAfterTribute(1), 45);
 assertEqual("wakeMult(false)", wakeMult(false), 1);
 assertEqual("wakeMult(true)", wakeMult(true), 2);
 assertEqual("processionMult(false)", processionMult(false), 1);
@@ -1216,6 +1243,9 @@ function giftFullOssuaryReady(n) {
 function giftHundredDrawsReady(n) {
   return (Number(n) || 0) >= 100;
 }
+function giftThreeHundredDrawsReady(n) {
+  return (Number(n) || 0) >= 300;
+}
 function ossuaryHotkeyReady(unlocked, ossuaryLevel, remembrance) {
   return !!unlocked && Math.max(0, Math.floor(Number(ossuaryLevel) || 0)) < 8 && (Number(remembrance) || 0) >= 1;
 }
@@ -1226,6 +1256,8 @@ assertTrue("giftFullOssuaryReady(7) is false", !giftFullOssuaryReady(7));
 assertTrue("giftFullOssuaryReady(8) is true", giftFullOssuaryReady(8));
 assertTrue("giftHundredDrawsReady(99) is false", !giftHundredDrawsReady(99));
 assertTrue("giftHundredDrawsReady(100) is true", giftHundredDrawsReady(100));
+assertTrue("giftThreeHundredDrawsReady(299) is false", !giftThreeHundredDrawsReady(299));
+assertTrue("giftThreeHundredDrawsReady(300) is true", giftThreeHundredDrawsReady(300));
 assertTrue("ossuaryHotkeyReady unlocked under cap", ossuaryHotkeyReady(true, 7, 1));
 assertTrue("ossuaryHotkeyReady blocked at cap", !ossuaryHotkeyReady(true, 8, 99));
 assertTrue("ossuaryHotkeyReady blocked without remembrance", !ossuaryHotkeyReady(true, 0, 0));
