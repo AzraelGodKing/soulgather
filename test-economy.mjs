@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v1.7 economy smoke test.
+ * Soulgather v1.8 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -221,6 +221,10 @@ function depthCost(level) {
 function quietCourtCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 8 * Math.pow(2, n);
+}
+
+function quietCourtStartsLanternAutobind(level) {
+  return (Number(level) || 0) >= 1;
 }
 
 function normalizeVow(raw) {
@@ -776,6 +780,10 @@ assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
 assertEqual("veilCost(20)", veilCost(20), 20);
 assertEqual("veilCost(200)", veilCost(200), 30);
+
+assertTrue("quietCourtStartsLanternAutobind(0) is false", !quietCourtStartsLanternAutobind(0));
+assertTrue("quietCourtStartsLanternAutobind(1) is true", quietCourtStartsLanternAutobind(1));
+assertTrue("quietCourtStartsLanternAutobind(2) is true", quietCourtStartsLanternAutobind(2));
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");

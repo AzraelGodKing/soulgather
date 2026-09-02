@@ -44,6 +44,7 @@
   var UNLOCK_AUTOBIND_SPIRITS = 10;
   var UNLOCK_AUTOBIND_VESSELS = 3;
   var UNLOCK_AUTOBIND_LANTERNS = 8;
+  var UNLOCK_AUTOBIND_FETTERS = 6;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
   var VEIL_MIN = 20;
@@ -315,6 +316,10 @@
     return 8 * Math.pow(2, n);
   }
 
+  function quietCourtStartsLanternAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function remembranceCostFavor() {
     return REMEMBRANCE_FAVOR_COST;
   }
@@ -495,6 +500,7 @@
     "giftFiveTributes",
     "giftNamesComplete",
     "giftFirstVeil",
+    "giftPeakLanterns",
     "choir",
     "veil",
     "choirEdict",
@@ -550,6 +556,7 @@
     giftFiveTributes: "Five tributes. The GodKing returned two Favor.",
     giftNamesComplete: "The names complete. The GodKing returned Favor.",
     giftFirstVeil: "The first veil. The well returned ten ash.",
+    giftPeakLanterns: "Ten lanterns. The well returned twenty souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -841,6 +848,7 @@
       unlockedAutobindSpirits: false,
       unlockedAutobindVessels: false,
       unlockedAutobindLanterns: false,
+      unlockedAutobindFetters: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       toastShown: false,
@@ -872,9 +880,11 @@
       autobindSpirits: false,
       autobindVessels: false,
       autobindLanterns: false,
+      autobindFetters: false,
       clicksThisRun: 0,
       veilLeft: 0,
       peakShades: N.fromNumber(0),
+      peakLanterns: N.fromNumber(0),
       bonusLifetimeSouls: false,
       bonusPeakShades: false,
       bonusFirstVessel: false,
@@ -890,6 +900,7 @@
       giftFiveTributes: false,
       giftNamesComplete: false,
       giftFirstVeil: false,
+      giftPeakLanterns: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1095,6 +1106,7 @@
     tryAutobindSpirits();
     if (live) tryAutobindVessels();
     if (live) tryAutobindLanterns();
+    if (live) tryAutobindFetters();
     checkUnlock();
   }
 
@@ -1178,6 +1190,10 @@
 
     if (!state.unlockedAutobindLanterns && N.cmp(state.lanterns, UNLOCK_AUTOBIND_LANTERNS) >= 0) {
       state.unlockedAutobindLanterns = true;
+    }
+
+    if (!state.unlockedAutobindFetters && N.cmp(state.fetters, UNLOCK_AUTOBIND_FETTERS) >= 0) {
+      state.unlockedAutobindFetters = true;
     }
 
     if (!state.unlockedVeil && (Number(state.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS) {
@@ -1574,6 +1590,22 @@
     state.lanterns = N.add(state.lanterns, 1);
   }
 
+  function toggleAutobindFetters() {
+    if (!state.unlockedAutobindFetters) return;
+    state.autobindFetters = !state.autobindFetters;
+    save();
+    render();
+  }
+
+  function tryAutobindFetters() {
+    if (!state.autobindFetters) return;
+    if (!state.unlockedFetters) return;
+    var cost = fetterCost(state.fetters);
+    if (N.cmp(state.shades, cost) < 0) return;
+    state.shades = N.sub(state.shades, cost);
+    state.fetters = N.add(state.fetters, 1);
+  }
+
   function thinVeil() {
     if (!state.unlockedVeil) return;
     if (veilActive()) return;
@@ -1598,9 +1630,14 @@
     state.peakShades = N.max(num(state.peakShades), num(state.shades));
   }
 
+  function bumpPeakLanterns() {
+    state.peakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
+  }
+
   function tryMilestoneGifts() {
     var granted = false;
     bumpPeakShades();
+    bumpPeakLanterns();
 
     if (
       !state.bonusLifetimeSouls &&
@@ -1648,6 +1685,15 @@
       state.souls = N.add(state.souls, 10);
       markChronicle("giftLantern");
       showToast("Ten souls for the first lantern.");
+      granted = true;
+    }
+
+    bumpPeakLanterns();
+    if (!state.giftPeakLanterns && N.cmp(state.peakLanterns, 10) >= 0) {
+      state.giftPeakLanterns = true;
+      state.souls = N.add(state.souls, 20);
+      markChronicle("giftPeakLanterns");
+      showToast("Twenty souls for ten lanterns.");
       granted = true;
     }
 
@@ -1905,6 +1951,7 @@
     "unlockedAutobindSpirits",
     "unlockedAutobindVessels",
     "unlockedAutobindLanterns",
+    "unlockedAutobindFetters",
     "unlockedNightTithe",
     "unlockedVeil",
     "toastShown",
@@ -1936,9 +1983,11 @@
     "autobindSpirits",
     "autobindVessels",
     "autobindLanterns",
+    "autobindFetters",
     "clicksThisRun",
     "veilLeft",
     "peakShades",
+    "peakLanterns",
     "bonusLifetimeSouls",
     "bonusPeakShades",
     "bonusFirstVessel",
@@ -1954,6 +2003,7 @@
     "giftFiveTributes",
     "giftNamesComplete",
     "giftFirstVeil",
+    "giftPeakLanterns",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2008,6 +2058,7 @@
       unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
       unlockedAutobindVessels: !!state.unlockedAutobindVessels,
       unlockedAutobindLanterns: !!state.unlockedAutobindLanterns,
+      unlockedAutobindFetters: !!state.unlockedAutobindFetters,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       toastShown: state.toastShown,
@@ -2039,9 +2090,11 @@
       autobindSpirits: !!state.autobindSpirits,
       autobindVessels: !!state.autobindVessels,
       autobindLanterns: !!state.autobindLanterns,
+      autobindFetters: !!state.autobindFetters,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       peakShades: dumpNum(state.peakShades),
+      peakLanterns: dumpNum(state.peakLanterns),
       bonusLifetimeSouls: !!state.bonusLifetimeSouls,
       bonusPeakShades: !!state.bonusPeakShades,
       bonusFirstVessel: !!state.bonusFirstVessel,
@@ -2057,6 +2110,7 @@
       giftFiveTributes: !!state.giftFiveTributes,
       giftNamesComplete: !!state.giftNamesComplete,
       giftFirstVeil: !!state.giftFirstVeil,
+      giftPeakLanterns: !!state.giftPeakLanterns,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2116,6 +2170,7 @@
     state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
     state.unlockedAutobindVessels = !!data.unlockedAutobindVessels;
     state.unlockedAutobindLanterns = !!data.unlockedAutobindLanterns;
+    state.unlockedAutobindFetters = !!data.unlockedAutobindFetters;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
     state.toastShown = !!data.toastShown;
@@ -2158,9 +2213,11 @@
     state.autobindSpirits = !!data.autobindSpirits;
     state.autobindVessels = !!data.autobindVessels;
     state.autobindLanterns = !!data.autobindLanterns;
+    state.autobindFetters = !!data.autobindFetters;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
     state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
+    state.peakLanterns = N.max(N.load(data.peakLanterns), N.load(data.lanterns));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
     state.bonusFirstVessel = !!data.bonusFirstVessel;
@@ -2200,6 +2257,11 @@
       state.giftFirstVeil = hasChronicle("veil") || (Number(data.veilLeft) || 0) > 0;
     } else {
       state.giftFirstVeil = !!data.giftFirstVeil;
+    }
+    if (data.giftPeakLanterns == null) {
+      state.giftPeakLanterns = false;
+    } else {
+      state.giftPeakLanterns = !!data.giftPeakLanterns;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -2427,6 +2489,7 @@
     var keptChronicle = (state.chronicle || []).slice();
     var keptAllTime = N.clone(state.allTimeSouls);
     var keptPeakShades = N.max(num(state.peakShades), num(state.shades));
+    var keptPeakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
     var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
     var keptBonusPeakShades = !!state.bonusPeakShades;
     var keptBonusFirstVessel = !!state.bonusFirstVessel;
@@ -2442,6 +2505,7 @@
     var keptGiftFiveTributes = !!state.giftFiveTributes;
     var keptGiftNamesComplete = !!state.giftNamesComplete;
     var keptGiftFirstVeil = !!state.giftFirstVeil;
+    var keptGiftPeakLanterns = !!state.giftPeakLanterns;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
@@ -2468,6 +2532,7 @@
     state.aspect = "";
     state.allTimeSouls = keptAllTime;
     state.peakShades = keptPeakShades;
+    state.peakLanterns = keptPeakLanterns;
     state.bonusLifetimeSouls = keptBonusLifetimeSouls;
     state.bonusPeakShades = keptBonusPeakShades;
     state.bonusFirstVessel = keptBonusFirstVessel;
@@ -2483,6 +2548,7 @@
     state.giftFiveTributes = keptGiftFiveTributes;
     state.giftNamesComplete = keptGiftNamesComplete;
     state.giftFirstVeil = keptGiftFirstVeil;
+    state.giftPeakLanterns = keptGiftPeakLanterns;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.quietCourtLevel = keptQuietCourt;
@@ -2501,6 +2567,7 @@
     state.autobindSpirits = false;
     state.autobindVessels = false;
     state.autobindLanterns = false;
+    state.autobindFetters = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -2536,6 +2603,12 @@
     if (keptQuietCourt >= 1) {
       state.autobind = true;
       state.unlockedAutobind = true;
+    }
+    if (quietCourtStartsLanternAutobind(keptQuietCourt)) {
+      state.autobindLanterns = true;
+      if (N.cmp(state.lanterns, UNLOCK_AUTOBIND_LANTERNS) >= 0) {
+        state.unlockedAutobindLanterns = true;
+      }
     }
     state.choirLevel = Math.min(CHOIR_MAX, keptChoirEdict);
     if (state.choirLevel >= 1) {
@@ -2697,6 +2770,7 @@
     if (els.autobindSpiritsRow) els.autobindSpiritsRow.classList.add("is-hidden");
     if (els.autobindVesselsRow) els.autobindVesselsRow.classList.add("is-hidden");
     if (els.autobindLanternsRow) els.autobindLanternsRow.classList.add("is-hidden");
+    if (els.autobindFettersRow) els.autobindFettersRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
   }
 
@@ -3241,6 +3315,22 @@
         }
       }
 
+      var autoFetterOpen = !!state.unlockedAutobindFetters;
+      if (els.autobindFettersRow) {
+        els.autobindFettersRow.classList.toggle("is-hidden", !autoFetterOpen);
+        els.autobindFettersRow.classList.toggle("is-on", autoFetterOpen && !!state.autobindFetters);
+      }
+      if (autoFetterOpen) {
+        if (els.autobindFettersEffect) {
+          els.autobindFettersEffect.textContent = state.autobindFetters ? "The chain learns" : "Idle bind";
+        }
+        if (els.autobindFettersBuy) {
+          els.autobindFettersBuy.disabled = false;
+          els.autobindFettersBuy.textContent = "Autobind Fetters";
+          els.autobindFettersBuy.setAttribute("aria-pressed", state.autobindFetters ? "true" : "false");
+        }
+      }
+
       var choirOpen = !!state.unlockedChoir;
       if (els.choirRow) {
         els.choirRow.classList.toggle("is-hidden", !choirOpen);
@@ -3568,7 +3658,9 @@
       var qcN = Number(state.quietCourtLevel) || 0;
       if (els.crownCourtEffect) {
         els.crownCourtEffect.textContent =
-          qcN >= 1 ? "Autobind Shades at tribute" : "Autobind Shades at tribute";
+          quietCourtStartsLanternAutobind(qcN)
+            ? "Autobind Shades and Lanterns at tribute"
+            : "Autobind Shades and Lanterns at tribute";
       }
       if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
       if (els.crownCourtBuy) {
@@ -3792,6 +3884,9 @@
     els.autobindLanternsRow = document.getElementById("autobind-lanterns-row");
     els.autobindLanternsEffect = document.getElementById("autobind-lanterns-effect");
     els.autobindLanternsBuy = document.getElementById("autobind-lanterns-buy");
+    els.autobindFettersRow = document.getElementById("autobind-fetters-row");
+    els.autobindFettersEffect = document.getElementById("autobind-fetters-effect");
+    els.autobindFettersBuy = document.getElementById("autobind-fetters-buy");
     els.veilRow = document.getElementById("veil-row");
     els.veilEffect = document.getElementById("veil-effect");
     els.veilCost = document.getElementById("veil-cost");
@@ -3890,6 +3985,7 @@
     if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
     if (els.autobindVesselsBuy) els.autobindVesselsBuy.addEventListener("click", toggleAutobindVessels);
     if (els.autobindLanternsBuy) els.autobindLanternsBuy.addEventListener("click", toggleAutobindLanterns);
+    if (els.autobindFettersBuy) els.autobindFettersBuy.addEventListener("click", toggleAutobindFetters);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
@@ -4088,6 +4184,7 @@
     crownCost: crownCost,
     longMemCost: longMemCost,
     quietCourtCost: quietCourtCost,
+    quietCourtStartsLanternAutobind: quietCourtStartsLanternAutobind,
     namesCompleteMult: namesCompleteMult,
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,
