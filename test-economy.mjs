@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.3 economy smoke test.
+ * Soulgather v5.4 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -224,6 +224,15 @@ function longerVeilCost(level) {
 function paidVeilSecs(level) {
   const n = Math.max(0, Math.floor(Number(level) || 0));
   return 20 + 10 * n;
+}
+
+function longerHymnCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 1 * Math.pow(2, n);
+}
+
+function hymnBonusSecs(level) {
+  return 10 * Math.max(0, Math.floor(Number(level) || 0));
 }
 
 function ashenTideCost(level) {
@@ -491,8 +500,9 @@ function hymnSecs(level) {
   return 45 + 15 * n;
 }
 
-function hymnLeftAfterTribute(level) {
-  return hymnSecs(level);
+function hymnLeftAfterTribute(edictLevel, longerHymnLevel) {
+  if (longerHymnLevel == null) longerHymnLevel = 0;
+  return hymnSecs(edictLevel) + hymnBonusSecs(longerHymnLevel);
 }
 
 function hymnEdictCost(level) {
@@ -1200,6 +1210,14 @@ assertEqual("hymnSecs(0)", hymnSecs(0), 45);
 assertEqual("hymnSecs(2)", hymnSecs(2), 75);
 assertEqual("hymnEdictCost(0)", hymnEdictCost(0), 4);
 assertEqual("hymnEdictCost(1)", hymnEdictCost(1), 8);
+assertEqual("longerHymnCost(0)", longerHymnCost(0), 1);
+assertEqual("longerHymnCost(1)", longerHymnCost(1), 2);
+assertEqual("hymnBonusSecs(0)", hymnBonusSecs(0), 0);
+assertEqual("hymnBonusSecs(2)", hymnBonusSecs(2), 20);
+assertEqual("hymnLeftAfterTribute(0, 0)", hymnLeftAfterTribute(0, 0), 45);
+assertEqual("hymnLeftAfterTribute(0, 2)", hymnLeftAfterTribute(0, 2), 65);
+assertEqual("hymnLeftAfterTribute(2, 0)", hymnLeftAfterTribute(2, 0), 75);
+assertEqual("hymnLeftAfterTribute(1, 2)", hymnLeftAfterTribute(1, 2), 80);
 
 assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);

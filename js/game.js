@@ -95,6 +95,7 @@
   var LONGER_WAKE_MAX = 5;
   var LONGER_TITHE_MAX = 5;
   var LONGER_VEIL_MAX = 5;
+  var LONGER_HYMN_MAX = 5;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -343,8 +344,13 @@
     return HYMN_SECS + 15 * n;
   }
 
-  function hymnLeftAfterTribute(level) {
-    return hymnSecs(level);
+  function hymnBonusSecs(level) {
+    return 10 * Math.max(0, Math.floor(Number(level) || 0));
+  }
+
+  function hymnLeftAfterTribute(edictLevel, longerHymnLevel) {
+    if (longerHymnLevel == null) longerHymnLevel = 0;
+    return hymnSecs(edictLevel) + hymnBonusSecs(longerHymnLevel);
   }
 
   function hymnEdictCost(level) {
@@ -676,6 +682,12 @@
     return VEIL_SECS + 10 * n;
   }
 
+  function longerHymnCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= LONGER_HYMN_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
   function ashenTideCost(level) {
     var n = Math.max(0, Math.floor(level));
     if (n >= ASHEN_TIDE_MAX) return Infinity;
@@ -950,6 +962,7 @@
     "giftFirstLongerWake",
     "giftFirstLongerTithe",
     "giftFirstLongerVeil",
+    "giftFirstLongerHymn",
     "giftFirstToll",
     "choir",
     "veil",
@@ -961,6 +974,7 @@
     "longerWake",
     "longerTithe",
     "longerVeil",
+    "longerHymn",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -1077,6 +1091,7 @@
     giftFirstLongerWake: "The first longer wake. The well returned five souls.",
     giftFirstLongerTithe: "The first longer tithe. The well returned five souls.",
     giftFirstLongerVeil: "The first longer veil. The well returned five souls.",
+    giftFirstLongerHymn: "The first longer hymn. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
@@ -1088,6 +1103,7 @@
     longerWake: "The wake was lengthened.",
     longerTithe: "The tithe was lengthened.",
     longerVeil: "The veil was lengthened.",
+    longerHymn: "The hymn was lengthened.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -1451,6 +1467,9 @@
     if ((Number(state.longerVeilLevel) || 0) >= 1) {
       if (markChronicle("longerVeil")) added = true;
     }
+    if ((Number(state.longerHymnLevel) || 0) >= 1) {
+      if (markChronicle("longerHymn")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1637,6 +1656,7 @@
       giftFirstLongerWake: false,
       giftFirstLongerTithe: false,
       giftFirstLongerVeil: false,
+      giftFirstLongerHymn: false,
       giftFirstToll: false,
       choirLevel: 0,
       unlockedChoir: false,
@@ -1671,6 +1691,7 @@
       longerWakeLevel: 0,
       longerTitheLevel: 0,
       longerVeilLevel: 0,
+      longerHymnLevel: 0,
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
@@ -3200,6 +3221,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstLongerHymn && (Number(state.longerHymnLevel) || 0) >= 1) {
+      state.giftFirstLongerHymn = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstLongerHymn");
+      showToast("Five souls for the longer hymn.");
+      granted = true;
+    }
+
     if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
       state.giftFullOssuary = true;
       state.souls = N.add(state.souls, 20);
@@ -3572,6 +3601,20 @@
     render();
   }
 
+  function buyLongerHymn() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.longerHymnLevel) || 0));
+    if (level >= LONGER_HYMN_MAX) return;
+    var cost = longerHymnCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.longerHymnLevel = level + 1;
+    markChronicle("longerHymn");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyAshenTide() {
     if (!remembranceUnlocked()) return;
     var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
@@ -3828,6 +3871,7 @@
     "giftFirstLongerWake",
     "giftFirstLongerTithe",
     "giftFirstLongerVeil",
+    "giftFirstLongerHymn",
     "giftFirstToll",
     "choirLevel",
     "unlockedChoir",
@@ -3862,6 +3906,7 @@
     "longerWakeLevel",
     "longerTitheLevel",
     "longerVeilLevel",
+    "longerHymnLevel",
     "vow",
     "vowHungerPaid",
     "vowsKnown",
@@ -4026,6 +4071,7 @@
       giftFirstLongerWake: !!state.giftFirstLongerWake,
       giftFirstLongerTithe: !!state.giftFirstLongerTithe,
       giftFirstLongerVeil: !!state.giftFirstLongerVeil,
+      giftFirstLongerHymn: !!state.giftFirstLongerHymn,
       giftFirstToll: !!state.giftFirstToll,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
@@ -4060,6 +4106,7 @@
       longerWakeLevel: Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0))),
       longerTitheLevel: Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0))),
       longerVeilLevel: Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0))),
+      longerHymnLevel: Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
@@ -4474,6 +4521,14 @@
     } else {
       state.giftFirstLongerVeil = !!data.giftFirstLongerVeil;
     }
+    if (data.giftFirstLongerHymn == null) {
+      state.giftFirstLongerHymn =
+        hasChronicle("giftFirstLongerHymn") ||
+        hasChronicle("longerHymn") ||
+        (Number(data.longerHymnLevel) || 0) >= 1;
+    } else {
+      state.giftFirstLongerHymn = !!data.giftFirstLongerHymn;
+    }
     if (data.giftFirstToll == null) {
       state.giftFirstToll =
         hasChronicle("toll") ||
@@ -4517,6 +4572,7 @@
     state.longerWakeLevel = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(data.longerWakeLevel) || 0)));
     state.longerTitheLevel = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(data.longerTitheLevel) || 0)));
     state.longerVeilLevel = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(data.longerVeilLevel) || 0)));
+    state.longerHymnLevel = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(data.longerHymnLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
@@ -4799,6 +4855,7 @@
     var keptGiftFirstLongerWake = !!state.giftFirstLongerWake;
     var keptGiftFirstLongerTithe = !!state.giftFirstLongerTithe;
     var keptGiftFirstLongerVeil = !!state.giftFirstLongerVeil;
+    var keptGiftFirstLongerHymn = !!state.giftFirstLongerHymn;
     var keptGiftFirstToll = !!state.giftFirstToll;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
@@ -4829,6 +4886,7 @@
     var keptLongerWake = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0)));
     var keptLongerTithe = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0)));
     var keptLongerVeil = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0)));
+    var keptLongerHymn = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -4905,6 +4963,7 @@
     state.giftFirstLongerWake = keptGiftFirstLongerWake;
     state.giftFirstLongerTithe = keptGiftFirstLongerTithe;
     state.giftFirstLongerVeil = keptGiftFirstLongerVeil;
+    state.giftFirstLongerHymn = keptGiftFirstLongerHymn;
     state.giftFirstToll = keptGiftFirstToll;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
@@ -4935,13 +4994,14 @@
     state.longerWakeLevel = keptLongerWake;
     state.longerTitheLevel = keptLongerTithe;
     state.longerVeilLevel = keptLongerVeil;
+    state.longerHymnLevel = keptLongerHymn;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = nightLeftAfterTribute(keptNightEdict);
     if (state.nightLeft > 0) {
       state.unlockedNightTithe = true;
     }
-    state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict);
+    state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict, keptLongerHymn);
     state.veilLeft = veilLeftAfterTribute(keptVeilEdict);
     if (state.veilLeft > 0) {
       state.unlockedVeil = true;
@@ -6683,6 +6743,7 @@
       if (els.longerWakeRow) els.longerWakeRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerTitheRow) els.longerTitheRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerVeilRow) els.longerVeilRow.classList.toggle("is-hidden", !remOpen);
+      if (els.longerHymnRow) els.longerHymnRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -6860,6 +6921,26 @@
           if (els.longerVeilBuy) {
             els.longerVeilBuy.disabled = !isFinite(lvCost) || (Number(state.remembrance) || 0) < lvCost;
             els.longerVeilBuy.textContent = "Lengthen the Veil";
+          }
+        }
+
+        var lhLevel = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0)));
+        var lhCost = longerHymnCost(lhLevel);
+        var lhBonus = hymnBonusSecs(lhLevel);
+        if (els.longerHymnEffect) {
+          els.longerHymnEffect.textContent = "Hymn +" + lhBonus + "s";
+        }
+        if (lhLevel >= LONGER_HYMN_MAX) {
+          if (els.longerHymnCost) els.longerHymnCost.textContent = "\u2014";
+          if (els.longerHymnBuy) {
+            els.longerHymnBuy.disabled = true;
+            els.longerHymnBuy.textContent = "The song lingers longest.";
+          }
+        } else {
+          if (els.longerHymnCost) els.longerHymnCost.textContent = F.formatNumber(lhCost) + " Remembrance";
+          if (els.longerHymnBuy) {
+            els.longerHymnBuy.disabled = !isFinite(lhCost) || (Number(state.remembrance) || 0) < lhCost;
+            els.longerHymnBuy.textContent = "Lengthen the Hymn";
           }
         }
       }
@@ -7187,6 +7268,10 @@
     els.longerVeilEffect = document.getElementById("longer-veil-effect");
     els.longerVeilCost = document.getElementById("longer-veil-cost");
     els.longerVeilBuy = document.getElementById("longer-veil-buy");
+    els.longerHymnRow = document.getElementById("longer-hymn-row");
+    els.longerHymnEffect = document.getElementById("longer-hymn-effect");
+    els.longerHymnCost = document.getElementById("longer-hymn-cost");
+    els.longerHymnBuy = document.getElementById("longer-hymn-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -7303,6 +7388,7 @@
     if (els.longerWakeBuy) els.longerWakeBuy.addEventListener("click", buyLongerWake);
     if (els.longerTitheBuy) els.longerTitheBuy.addEventListener("click", buyLongerTithe);
     if (els.longerVeilBuy) els.longerVeilBuy.addEventListener("click", buyLongerVeil);
+    if (els.longerHymnBuy) els.longerHymnBuy.addEventListener("click", buyLongerHymn);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -7614,6 +7700,9 @@
     longerVeilCost: longerVeilCost,
     paidVeilSecs: paidVeilSecs,
     LONGER_VEIL_MAX: LONGER_VEIL_MAX,
+    longerHymnCost: longerHymnCost,
+    hymnBonusSecs: hymnBonusSecs,
+    LONGER_HYMN_MAX: LONGER_HYMN_MAX,
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,
