@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.5 economy smoke test.
+ * Soulgather v2.6 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -472,6 +472,32 @@ assertEqual("cupEdictCost(0)", cupEdictCost(0), 9);
 assertEqual("cupStartsChalices(0)", cupStartsChalices(0), 0);
 assertEqual("cupStartsChalices(2)", cupStartsChalices(2), 2);
 assertEqual("cupStartsChalices(20)", cupStartsChalices(20), 12);
+
+// v2.6 Autobind Chalices: unlock at 3 this run; always ×1; cost via existing chaliceCost; cap 12.
+function unlockAutobindChalices(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
+}
+function giftFullCupReady(n) {
+  return Math.max(0, Math.min(12, Math.floor(Number(n) || 0))) >= 12;
+}
+function giftTwelveTributesReady(n) {
+  return (Number(n) || 0) >= 12;
+}
+assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
+assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
+assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
+assertTrue("giftFullCupReady(12) is true", giftFullCupReady(12));
+assertTrue("giftTwelveTributesReady(11) is false", !giftTwelveTributesReady(11));
+assertTrue("giftTwelveTributesReady(12) is true", giftTwelveTributesReady(12));
+assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
+function autobindChalicesCanBuy(owned, ash) {
+  const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
+  if (n >= 12) return false;
+  return N.cmp(N.from(ash), chaliceCost(n)) >= 0;
+}
+assertTrue("autobind chalices blocked at cap 12", !autobindChalicesCanBuy(12, 1e12));
+assertTrue("autobind chalices x1 uses chaliceCost", autobindChalicesCanBuy(3, chaliceCost(3)));
+assertTrue("autobind chalices cannot buy if ash short", !autobindChalicesCanBuy(3, 0));
 
 function nextGoal(view, format) {
   view = view || {};

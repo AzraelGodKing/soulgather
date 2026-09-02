@@ -56,6 +56,7 @@
   var UNLOCK_AUTOBIND_CENSERS = 4;
   var UNLOCK_AUTOBIND_THRONES = 4;
   var UNLOCK_AUTOBIND_PYRES = 4;
+  var UNLOCK_AUTOBIND_CHALICES = 3;
   var CINDER_COST = 15;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
@@ -588,6 +589,8 @@
     "giftPeakPyres",
     "giftFirstCinders",
     "giftFirstChalice",
+    "giftTwelveTributes",
+    "giftFullCup",
     "choir",
     "veil",
     "choirEdict",
@@ -658,6 +661,8 @@
     giftPeakPyres: "Five pyres. The well returned ten ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstChalice: "The first chalice. The well returned fifteen souls.",
+    giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
+    giftFullCup: "The cup was full. The well returned twenty-five souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
@@ -991,6 +996,7 @@
       unlockedAutobindCensers: false,
       unlockedAutobindThrones: false,
       unlockedAutobindPyres: false,
+      unlockedAutobindChalices: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       toastShown: false,
@@ -1027,6 +1033,7 @@
       autobindCensers: false,
       autobindThrones: false,
       autobindPyres: false,
+      autobindChalices: false,
       clicksThisRun: 0,
       veilLeft: 0,
       peakShades: N.fromNumber(0),
@@ -1057,6 +1064,8 @@
       giftPeakPyres: false,
       giftFirstCinders: false,
       giftFirstChalice: false,
+      giftTwelveTributes: false,
+      giftFullCup: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1281,6 +1290,7 @@
     if (live) tryAutobindCensers();
     if (live) tryAutobindThrones();
     if (live) tryAutobindPyres();
+    if (live) tryAutobindChalices();
     checkUnlock();
   }
 
@@ -1394,6 +1404,10 @@
 
     if (!state.unlockedAutobindPyres && N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
       state.unlockedAutobindPyres = true;
+    }
+
+    if (!state.unlockedAutobindChalices && (Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
+      state.unlockedAutobindChalices = true;
     }
 
     if (!state.unlockedVeil && (Number(state.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS) {
@@ -1951,6 +1965,25 @@
     state.pyres = N.add(state.pyres, 1);
   }
 
+  function toggleAutobindChalices() {
+    if (!state.unlockedAutobindChalices) return;
+    state.autobindChalices = !state.autobindChalices;
+    save();
+    render();
+  }
+
+  function tryAutobindChalices() {
+    if (!state.autobindChalices) return;
+    if (!state.unlockedChalices) return;
+    var owned = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0)));
+    if (owned >= CHALICE_MAX) return;
+    var cost = chaliceCost(owned);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state.chalices = owned + 1;
+    if (state.chalices > CHALICE_MAX) state.chalices = CHALICE_MAX;
+  }
+
   function thinVeil() {
     if (!state.unlockedVeil) return;
     if (veilActive()) return;
@@ -2113,6 +2146,14 @@
       granted = true;
     }
 
+    if (!state.giftFullCup && (Number(state.chalices) || 0) >= CHALICE_MAX) {
+      state.giftFullCup = true;
+      state.souls = N.add(state.souls, 25);
+      markChronicle("giftFullCup");
+      showToast("Twenty-five souls for a full cup.");
+      granted = true;
+    }
+
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
       state.bonusFirstFetter = true;
       state.shades = N.add(state.shades, 2);
@@ -2175,6 +2216,17 @@
       state.souls = N.add(state.souls, 25);
       markChronicle("giftEightTributes");
       showToast("Twenty-five souls for eight emptyings.");
+      granted = true;
+    }
+
+    if (
+      !state.giftTwelveTributes &&
+      (Number(state.tributesLaid) || 0) >= 12
+    ) {
+      state.giftTwelveTributes = true;
+      state.souls = N.add(state.souls, 40);
+      markChronicle("giftTwelveTributes");
+      showToast("Forty souls for twelve emptyings.");
       granted = true;
     }
 
@@ -2389,6 +2441,7 @@
     "unlockedAutobindCensers",
     "unlockedAutobindThrones",
     "unlockedAutobindPyres",
+    "unlockedAutobindChalices",
     "unlockedNightTithe",
     "unlockedVeil",
     "toastShown",
@@ -2425,6 +2478,7 @@
     "autobindCensers",
     "autobindThrones",
     "autobindPyres",
+    "autobindChalices",
     "clicksThisRun",
     "veilLeft",
     "peakShades",
@@ -2455,6 +2509,8 @@
     "giftPeakPyres",
     "giftFirstCinders",
     "giftFirstChalice",
+    "giftTwelveTributes",
+    "giftFullCup",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -2521,6 +2577,7 @@
       unlockedAutobindCensers: !!state.unlockedAutobindCensers,
       unlockedAutobindThrones: !!state.unlockedAutobindThrones,
       unlockedAutobindPyres: !!state.unlockedAutobindPyres,
+      unlockedAutobindChalices: !!state.unlockedAutobindChalices,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       toastShown: state.toastShown,
@@ -2557,6 +2614,7 @@
       autobindCensers: !!state.autobindCensers,
       autobindThrones: !!state.autobindThrones,
       autobindPyres: !!state.autobindPyres,
+      autobindChalices: !!state.autobindChalices,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       peakShades: dumpNum(state.peakShades),
@@ -2587,6 +2645,8 @@
       giftPeakPyres: !!state.giftPeakPyres,
       giftFirstCinders: !!state.giftFirstCinders,
       giftFirstChalice: !!state.giftFirstChalice,
+      giftTwelveTributes: !!state.giftTwelveTributes,
+      giftFullCup: !!state.giftFullCup,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -2658,6 +2718,7 @@
     state.unlockedAutobindCensers = !!data.unlockedAutobindCensers;
     state.unlockedAutobindThrones = !!data.unlockedAutobindThrones;
     state.unlockedAutobindPyres = !!data.unlockedAutobindPyres;
+    state.unlockedAutobindChalices = !!data.unlockedAutobindChalices;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
     state.toastShown = !!data.toastShown;
@@ -2705,6 +2766,7 @@
     state.autobindCensers = !!data.autobindCensers;
     state.autobindThrones = !!data.autobindThrones;
     state.autobindPyres = !!data.autobindPyres;
+    state.autobindChalices = !!data.autobindChalices;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
     state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
@@ -2746,6 +2808,11 @@
       state.giftEightTributes = (Number(data.tributesLaid) || 0) >= 8;
     } else {
       state.giftEightTributes = !!data.giftEightTributes;
+    }
+    if (data.giftTwelveTributes == null) {
+      state.giftTwelveTributes = (Number(data.tributesLaid) || 0) >= 12;
+    } else {
+      state.giftTwelveTributes = !!data.giftTwelveTributes;
     }
     if (data.giftNamesComplete == null) {
       state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 12;
@@ -2800,6 +2867,11 @@
         (cupStartsChalices(data.cupEdictLevel) > 0 && (Number(state.chalices) || 0) >= 1);
     } else {
       state.giftFirstChalice = !!data.giftFirstChalice;
+    }
+    if (data.giftFullCup == null) {
+      state.giftFullCup = hasChronicle("giftFullCup");
+    } else {
+      state.giftFullCup = !!data.giftFullCup;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -3062,6 +3134,8 @@
     var keptGiftPeakPyres = !!state.giftPeakPyres;
     var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptGiftFirstChalice = !!state.giftFirstChalice;
+    var keptGiftTwelveTributes = !!state.giftTwelveTributes;
+    var keptGiftFullCup = !!state.giftFullCup;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
@@ -3119,6 +3193,8 @@
     state.giftPeakPyres = keptGiftPeakPyres;
     state.giftFirstCinders = keptGiftFirstCinders;
     state.giftFirstChalice = keptGiftFirstChalice;
+    state.giftTwelveTributes = keptGiftTwelveTributes;
+    state.giftFullCup = keptGiftFullCup;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
@@ -3145,6 +3221,7 @@
     state.autobindCensers = false;
     state.autobindThrones = false;
     state.autobindPyres = false;
+    state.autobindChalices = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -3395,6 +3472,7 @@
     if (els.autobindCensersRow) els.autobindCensersRow.classList.add("is-hidden");
     if (els.autobindThronesRow) els.autobindThronesRow.classList.add("is-hidden");
     if (els.autobindPyresRow) els.autobindPyresRow.classList.add("is-hidden");
+    if (els.autobindChalicesRow) els.autobindChalicesRow.classList.add("is-hidden");
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
   }
@@ -4066,6 +4144,22 @@
         }
       }
 
+      var autoChaliceOpen = !!state.unlockedAutobindChalices;
+      if (els.autobindChalicesRow) {
+        els.autobindChalicesRow.classList.toggle("is-hidden", !autoChaliceOpen);
+        els.autobindChalicesRow.classList.toggle("is-on", autoChaliceOpen && !!state.autobindChalices);
+      }
+      if (autoChaliceOpen) {
+        if (els.autobindChalicesEffect) {
+          els.autobindChalicesEffect.textContent = state.autobindChalices ? "The cup fills" : "Idle bind";
+        }
+        if (els.autobindChalicesBuy) {
+          els.autobindChalicesBuy.disabled = false;
+          els.autobindChalicesBuy.textContent = "Autobind Chalices";
+          els.autobindChalicesBuy.setAttribute("aria-pressed", state.autobindChalices ? "true" : "false");
+        }
+      }
+
       var choirOpen = !!state.unlockedChoir;
       if (els.choirRow) {
         els.choirRow.classList.toggle("is-hidden", !choirOpen);
@@ -4701,6 +4795,9 @@
     els.autobindPyresRow = document.getElementById("autobind-pyres-row");
     els.autobindPyresEffect = document.getElementById("autobind-pyres-effect");
     els.autobindPyresBuy = document.getElementById("autobind-pyres-buy");
+    els.autobindChalicesRow = document.getElementById("autobind-chalices-row");
+    els.autobindChalicesEffect = document.getElementById("autobind-chalices-effect");
+    els.autobindChalicesBuy = document.getElementById("autobind-chalices-buy");
     els.veilRow = document.getElementById("veil-row");
     els.veilEffect = document.getElementById("veil-effect");
     els.veilCost = document.getElementById("veil-cost");
@@ -4810,6 +4907,7 @@
     if (els.autobindCensersBuy) els.autobindCensersBuy.addEventListener("click", toggleAutobindCensers);
     if (els.autobindThronesBuy) els.autobindThronesBuy.addEventListener("click", toggleAutobindThrones);
     if (els.autobindPyresBuy) els.autobindPyresBuy.addEventListener("click", toggleAutobindPyres);
+    if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
     if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);

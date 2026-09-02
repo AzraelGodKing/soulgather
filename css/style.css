@@ -1,4 +1,4 @@
-/* Soulgather v2.5 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v2.6 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -1233,6 +1233,17 @@ body::before {
 }
 
 .rite-row#autobind-pyres-row.is-on .card-buy {
+  background: linear-gradient(180deg, #5a3014 0%, #3a1c10 100%);
+  color: #fff6d8;
+  border-color: var(--gold-bright);
+  opacity: 1;
+}
+
+.rite-row#autobind-chalices-row.is-on .rite-name {
+  color: var(--gold-bright);
+}
+
+.rite-row#autobind-chalices-row.is-on .card-buy {
   background: linear-gradient(180deg, #5a3014 0%, #3a1c10 100%);
   color: #fff6d8;
   border-color: var(--gold-bright);
