@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.1 economy smoke test.
+ * Soulgather v5.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -457,6 +457,12 @@ function urnRiteMult(level) {
   return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
 }
 
+function hearthRiteMult(level) {
+  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
+const HEARTH_RITE_COST = 14;
+
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
   const tenth = N.floor(N.mul(n, 0.1));
@@ -696,6 +702,10 @@ assertEqual("cinderMult(2)", cinderMult(2), 4);
 assertEqual("urnRiteMult(0)", urnRiteMult(0), 1);
 assertEqual("urnRiteMult(1)", urnRiteMult(1), 2);
 assertEqual("urnRiteMult(2)", urnRiteMult(2), 4);
+assertEqual("hearthRiteMult(0)", hearthRiteMult(0), 1);
+assertEqual("hearthRiteMult(1)", hearthRiteMult(1), 2);
+assertEqual("hearthRiteMult(2)", hearthRiteMult(2), 4);
+assertEqual("HEARTH_RITE_COST", HEARTH_RITE_COST, 14);
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
