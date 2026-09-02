@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.9 economy smoke test.
+ * Soulgather v4.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -312,6 +312,15 @@ function cinderEdictStartsPyreAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
+function cutEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 11 * Math.pow(2, n);
+}
+
+function cutEdictStartsUrnAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function draughtEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 10 * Math.pow(2, n);
@@ -565,6 +574,9 @@ assertEqual("urnRiteMult(2)", urnRiteMult(2), 4);
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
+assertEqual("cutEdictCost(0)", cutEdictCost(0), 11);
+assertTrue("cutEdictStartsUrnAutobind(0) is false", !cutEdictStartsUrnAutobind(0));
+assertTrue("cutEdictStartsUrnAutobind(1) is true", cutEdictStartsUrnAutobind(1));
 assertEqual("chaliceMult(0)", chaliceMult(0), 1);
 assertEqual("chaliceMult(1)", chaliceMult(1), 1.08);
 assertEqual("chaliceCost(0)", chaliceCost(0), 20);
@@ -886,6 +898,7 @@ assertEqual("vowExtraFavor none still 0", vowExtraFavor(""), 0);
 assertEqual("vowsKnownCount empty", vowsKnownCount({}), 0);
 assertEqual("vowsKnownCount all-false", vowsKnownCount({ stillness: false, poverty: false, hunger: false, ember: false }), 0);
 assertEqual("vowsKnownCount two true", vowsKnownCount({ stillness: true, poverty: true, hunger: false, ember: false }), 2);
+assertEqual("vowsKnownCount three true", vowsKnownCount({ stillness: true, poverty: true, hunger: true, ember: false }), 3);
 assertEqual("vowsKnownCount all four", vowsKnownCount({ stillness: true, poverty: true, hunger: true, ember: true }), 4);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 

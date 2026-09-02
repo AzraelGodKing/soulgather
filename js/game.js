@@ -472,6 +472,15 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function cutEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 11 * Math.pow(2, n);
+  }
+
+  function cutEdictStartsUrnAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function cupEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 9 * Math.pow(2, n);
@@ -758,6 +767,7 @@
     "giftHundredDraws",
     "giftFirstEmberVow",
     "giftTwoVows",
+    "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
     "choir",
@@ -770,6 +780,7 @@
     "embersEdict",
     "urnEdict",
     "cinderEdict",
+    "cutEdict",
     "cupEdict",
     "draughtEdict",
     "wakeEdict",
@@ -857,6 +868,7 @@
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
     giftFirstEmberVow: "The ember vow. The well returned eight ash.",
     giftTwoVows: "Two vows remembered. The well returned ten souls.",
+    giftThreeVows: "Three vows remembered. The well returned fifteen souls.",
     giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
     giftFirstProcession: "The first procession. The well returned five souls.",
     choir: "The choir of ash was raised.",
@@ -869,6 +881,7 @@
     embersEdict: "The embers were spoken.",
     urnEdict: "The urn was spoken.",
     cinderEdict: "The cinders were spoken.",
+    cutEdict: "The cut was spoken.",
     cupEdict: "The cup was spoken.",
     draughtEdict: "The draught was spoken.",
     wakeEdict: "The wake was spoken.",
@@ -1159,6 +1172,9 @@
     if ((Number(state.cinderEdictLevel) || 0) >= 1) {
       if (markChronicle("cinderEdict")) added = true;
     }
+    if ((Number(state.cutEdictLevel) || 0) >= 1) {
+      if (markChronicle("cutEdict")) added = true;
+    }
     if ((Number(state.cupEdictLevel) || 0) >= 1) {
       if (markChronicle("cupEdict")) added = true;
     }
@@ -1337,6 +1353,7 @@
       giftHundredDraws: false,
       giftFirstEmberVow: false,
       giftTwoVows: false,
+      giftThreeVows: false,
       giftAllVows: false,
       giftFirstProcession: false,
       choirLevel: 0,
@@ -1347,6 +1364,7 @@
       embersEdictLevel: 0,
       urnEdictLevel: 0,
       cinderEdictLevel: 0,
+      cutEdictLevel: 0,
       cupEdictLevel: 0,
       draughtEdictLevel: 0,
       wakeEdictLevel: 0,
@@ -2103,6 +2121,16 @@
     render();
   }
 
+  function buyCutEdict() {
+    var cost = cutEdictCost(state.cutEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.cutEdictLevel += 1;
+    markChronicle("cutEdict");
+    save();
+    render();
+  }
+
   function buyCupEdict() {
     var cost = cupEdictCost(state.cupEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
@@ -2684,6 +2712,14 @@
       granted = true;
     }
 
+    if (!state.giftThreeVows && vowsKnownCount(state.vowsKnown) >= 3) {
+      state.giftThreeVows = true;
+      state.souls = N.add(state.souls, 15);
+      markChronicle("giftThreeVows");
+      showToast("Fifteen souls for three vows.");
+      granted = true;
+    }
+
     if (!state.giftAllVows && vowsKnownCount(state.vowsKnown) >= 4) {
       state.giftAllVows = true;
       state.souls = N.add(state.souls, 25);
@@ -3139,6 +3175,7 @@
     "giftHundredDraws",
     "giftFirstEmberVow",
     "giftTwoVows",
+    "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
     "choirLevel",
@@ -3149,6 +3186,7 @@
     "embersEdictLevel",
     "urnEdictLevel",
     "cinderEdictLevel",
+    "cutEdictLevel",
     "cupEdictLevel",
     "draughtEdictLevel",
     "wakeEdictLevel",
@@ -3304,6 +3342,7 @@
       giftHundredDraws: !!state.giftHundredDraws,
       giftFirstEmberVow: !!state.giftFirstEmberVow,
       giftTwoVows: !!state.giftTwoVows,
+      giftThreeVows: !!state.giftThreeVows,
       giftAllVows: !!state.giftAllVows,
       giftFirstProcession: !!state.giftFirstProcession,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
@@ -3314,6 +3353,7 @@
       embersEdictLevel: Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0)),
       urnEdictLevel: Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0)),
       cinderEdictLevel: Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0)),
+      cutEdictLevel: Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0)),
       cupEdictLevel: Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0)),
       draughtEdictLevel: Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0)),
       wakeEdictLevel: Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0)),
@@ -3629,6 +3669,11 @@
     } else {
       state.giftTwoVows = !!data.giftTwoVows;
     }
+    if (data.giftThreeVows == null) {
+      state.giftThreeVows = hasChronicle("giftThreeVows");
+    } else {
+      state.giftThreeVows = !!data.giftThreeVows;
+    }
     if (data.giftAllVows == null) {
       state.giftAllVows = hasChronicle("giftAllVows");
     } else {
@@ -3650,6 +3695,7 @@
     state.embersEdictLevel = Math.max(0, Math.floor(Number(data.embersEdictLevel) || 0));
     state.urnEdictLevel = Math.max(0, Math.floor(Number(data.urnEdictLevel) || 0));
     state.cinderEdictLevel = Math.max(0, Math.floor(Number(data.cinderEdictLevel) || 0));
+    state.cutEdictLevel = Math.max(0, Math.floor(Number(data.cutEdictLevel) || 0));
     state.cupEdictLevel = Math.max(0, Math.floor(Number(data.cupEdictLevel) || 0));
     state.draughtEdictLevel = Math.max(0, Math.floor(Number(data.draughtEdictLevel) || 0));
     state.wakeEdictLevel = Math.max(0, Math.floor(Number(data.wakeEdictLevel) || 0));
@@ -3926,6 +3972,7 @@
     var keptGiftHundredDraws = !!state.giftHundredDraws;
     var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
     var keptGiftTwoVows = !!state.giftTwoVows;
+    var keptGiftThreeVows = !!state.giftThreeVows;
     var keptGiftAllVows = !!state.giftAllVows;
     var keptGiftFirstProcession = !!state.giftFirstProcession;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
@@ -3935,6 +3982,7 @@
     var keptEmbersEdict = Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0));
     var keptUrnEdict = Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0));
     var keptCinderEdict = Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0));
+    var keptCutEdict = Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0));
     var keptCupEdict = Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0));
     var keptDraughtEdict = Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0));
     var keptWakeEdict = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
@@ -4006,6 +4054,7 @@
     state.giftHundredDraws = keptGiftHundredDraws;
     state.giftFirstEmberVow = keptGiftFirstEmberVow;
     state.giftTwoVows = keptGiftTwoVows;
+    state.giftThreeVows = keptGiftThreeVows;
     state.giftAllVows = keptGiftAllVows;
     state.giftFirstProcession = keptGiftFirstProcession;
     state.vowsKnown = keptVowsKnown;
@@ -4015,6 +4064,7 @@
     state.embersEdictLevel = keptEmbersEdict;
     state.urnEdictLevel = keptUrnEdict;
     state.cinderEdictLevel = keptCinderEdict;
+    state.cutEdictLevel = keptCutEdict;
     state.cupEdictLevel = keptCupEdict;
     state.draughtEdictLevel = keptDraughtEdict;
     state.wakeEdictLevel = keptWakeEdict;
@@ -4139,6 +4189,12 @@
       state.autobindPyres = true;
       if (N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
         state.unlockedAutobindPyres = true;
+      }
+    }
+    if (cutEdictStartsUrnAutobind(keptCutEdict)) {
+      state.autobindUrns = true;
+      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
+        state.unlockedAutobindUrns = true;
       }
     }
     var startChalices = cupStartsChalices(keptCupEdict);
@@ -5472,6 +5528,15 @@
         els.cinderEdictBuy.disabled = !isFinite(cinECost) || state.favor < cinECost;
       }
 
+      var cutECost = cutEdictCost(state.cutEdictLevel);
+      if (els.cutEdictEffect) {
+        els.cutEdictEffect.textContent = "Autobind Urns at tribute";
+      }
+      if (els.cutEdictCost) els.cutEdictCost.textContent = F.formatNumber(cutECost) + " Favor";
+      if (els.cutEdictBuy) {
+        els.cutEdictBuy.disabled = !isFinite(cutECost) || state.favor < cutECost;
+      }
+
       var cupECost = cupEdictCost(state.cupEdictLevel);
       var cupN = cupStartsChalices(state.cupEdictLevel);
       if (els.cupEffect) {
@@ -5808,6 +5873,9 @@
     els.cinderEdictEffect = document.getElementById("cinder-edict-effect");
     els.cinderEdictCost = document.getElementById("cinder-edict-cost");
     els.cinderEdictBuy = document.getElementById("cinder-edict-buy");
+    els.cutEdictEffect = document.getElementById("cut-edict-effect");
+    els.cutEdictCost = document.getElementById("cut-edict-cost");
+    els.cutEdictBuy = document.getElementById("cut-edict-buy");
     els.cupEffect = document.getElementById("cup-effect");
     els.cupCost = document.getElementById("cup-cost");
     els.cupBuy = document.getElementById("cup-buy");
@@ -5992,6 +6060,7 @@
     if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
     if (els.urnEdictBuy) els.urnEdictBuy.addEventListener("click", buyUrnEdict);
     if (els.cinderEdictBuy) els.cinderEdictBuy.addEventListener("click", buyCinderEdict);
+    if (els.cutEdictBuy) els.cutEdictBuy.addEventListener("click", buyCutEdict);
     if (els.cupBuy) els.cupBuy.addEventListener("click", buyCupEdict);
     if (els.draughtEdictBuy) els.draughtEdictBuy.addEventListener("click", buyDraughtEdict);
     if (els.wakeEdictBuy) els.wakeEdictBuy.addEventListener("click", buyWakeEdict);
@@ -6288,6 +6357,8 @@
     urnEdictStartsUrns: urnEdictStartsUrns,
     cinderEdictCost: cinderEdictCost,
     cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
+    cutEdictCost: cutEdictCost,
+    cutEdictStartsUrnAutobind: cutEdictStartsUrnAutobind,
     cupEdictCost: cupEdictCost,
     cupStartsChalices: cupStartsChalices,
     draughtEdictCost: draughtEdictCost,
