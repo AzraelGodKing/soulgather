@@ -84,6 +84,7 @@
   var OSSUARY_MAX = 8;
   var PROCESSION_COST = 1;
   var PROCESSION_SECS = 45;
+  var LONGER_PROCESSION_MAX = 5;
   var CHOIR_MAX = 10;
   var CHOIR_LANTERN_COST = 5;
   var UNLOCK_CHOIR_LANTERNS = 5;
@@ -540,6 +541,18 @@
     return 1 * Math.pow(2, n);
   }
 
+  function longerProcessionCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    if (n >= LONGER_PROCESSION_MAX) return Infinity;
+    return 1 * Math.pow(2, n);
+  }
+
+  function paidProcessionSecs(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > LONGER_PROCESSION_MAX) n = LONGER_PROCESSION_MAX;
+    return PROCESSION_SECS + 10 * n;
+  }
+
   function ashenTideCost(level) {
     var n = Math.max(0, Math.floor(level));
     if (n >= ASHEN_TIDE_MAX) return Infinity;
@@ -797,12 +810,14 @@
     "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
+    "giftFirstLongerProcession",
     "giftFirstToll",
     "choir",
     "veil",
     "toll",
     "wake",
     "procession",
+    "longerProcession",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -902,12 +917,14 @@
     giftThreeVows: "Three vows remembered. The well returned fifteen souls.",
     giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
     giftFirstProcession: "The first procession. The well returned five souls.",
+    giftFirstLongerProcession: "The first longer walk. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     toll: "The toll was sounded.",
     wake: "The wake was kept.",
     procession: "The procession began.",
+    longerProcession: "The walk was lengthened.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -1230,6 +1247,9 @@
     if ((Number(state.ossuaryLevel) || 0) >= 1) {
       if (markChronicle("ossuary")) added = true;
     }
+    if ((Number(state.longerProcessionLevel) || 0) >= 1) {
+      if (markChronicle("longerProcession")) added = true;
+    }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
     }
@@ -1399,6 +1419,7 @@
       giftThreeVows: false,
       giftAllVows: false,
       giftFirstProcession: false,
+      giftFirstLongerProcession: false,
       giftFirstToll: false,
       choirLevel: 0,
       unlockedChoir: false,
@@ -1424,6 +1445,7 @@
       deeperNightLevel: 0,
       ashenTideLevel: 0,
       ossuaryLevel: 0,
+      longerProcessionLevel: 0,
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
@@ -2770,6 +2792,14 @@
       granted = true;
     }
 
+    if (!state.giftFirstLongerProcession && (Number(state.longerProcessionLevel) || 0) >= 1) {
+      state.giftFirstLongerProcession = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstLongerProcession");
+      showToast("Five souls for the longer walk.");
+      granted = true;
+    }
+
     if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
       state.giftFullOssuary = true;
       state.souls = N.add(state.souls, 20);
@@ -3042,6 +3072,20 @@
     render();
   }
 
+  function buyLongerProcession() {
+    if (!remembranceUnlocked()) return;
+    var level = Math.max(0, Math.floor(Number(state.longerProcessionLevel) || 0));
+    if (level >= LONGER_PROCESSION_MAX) return;
+    var cost = longerProcessionCost(level);
+    if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.longerProcessionLevel = level + 1;
+    markChronicle("longerProcession");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyAshenTide() {
     if (!remembranceUnlocked()) return;
     var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
@@ -3074,7 +3118,7 @@
     var cost = PROCESSION_COST;
     if ((Number(state.remembrance) || 0) < cost) return;
     state.remembrance -= cost;
-    state.processionLeft = PROCESSION_SECS;
+    state.processionLeft = paidProcessionSecs(state.longerProcessionLevel);
     markChronicle("procession");
     if (!state.giftFirstProcession) {
       state.giftFirstProcession = true;
@@ -3281,6 +3325,7 @@
     "giftThreeVows",
     "giftAllVows",
     "giftFirstProcession",
+    "giftFirstLongerProcession",
     "giftFirstToll",
     "choirLevel",
     "unlockedChoir",
@@ -3306,6 +3351,7 @@
     "deeperNightLevel",
     "ashenTideLevel",
     "ossuaryLevel",
+    "longerProcessionLevel",
     "vow",
     "vowHungerPaid",
     "vowsKnown",
@@ -3453,6 +3499,7 @@
       giftThreeVows: !!state.giftThreeVows,
       giftAllVows: !!state.giftAllVows,
       giftFirstProcession: !!state.giftFirstProcession,
+      giftFirstLongerProcession: !!state.giftFirstLongerProcession,
       giftFirstToll: !!state.giftFirstToll,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
@@ -3478,6 +3525,7 @@
       deeperNightLevel: Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0)),
       ashenTideLevel: Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0))),
       ossuaryLevel: Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0))),
+      longerProcessionLevel: Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0))),
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
@@ -3806,6 +3854,14 @@
     } else {
       state.giftFirstProcession = !!data.giftFirstProcession;
     }
+    if (data.giftFirstLongerProcession == null) {
+      state.giftFirstLongerProcession =
+        hasChronicle("giftFirstLongerProcession") ||
+        hasChronicle("longerProcession") ||
+        (Number(data.longerProcessionLevel) || 0) >= 1;
+    } else {
+      state.giftFirstLongerProcession = !!data.giftFirstLongerProcession;
+    }
     if (data.giftFirstToll == null) {
       state.giftFirstToll =
         hasChronicle("toll") ||
@@ -3836,6 +3892,7 @@
     state.deeperNightLevel = Math.max(0, Math.floor(Number(data.deeperNightLevel) || 0));
     state.ashenTideLevel = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(data.ashenTideLevel) || 0)));
     state.ossuaryLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(data.ossuaryLevel) || 0)));
+    state.longerProcessionLevel = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(data.longerProcessionLevel) || 0)));
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
@@ -4104,6 +4161,7 @@
     var keptGiftThreeVows = !!state.giftThreeVows;
     var keptGiftAllVows = !!state.giftAllVows;
     var keptGiftFirstProcession = !!state.giftFirstProcession;
+    var keptGiftFirstLongerProcession = !!state.giftFirstLongerProcession;
     var keptGiftFirstToll = !!state.giftFirstToll;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
@@ -4125,6 +4183,7 @@
     var keptDeeperNight = Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0));
     var keptAshenTide = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0)));
     var keptOssuary = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0)));
+    var keptLongerProcession = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0)));
     var keptTributes = (Number(state.tributesLaid) || 0) + 1;
     state = freshState();
     state.favor = keptFavor;
@@ -4189,6 +4248,7 @@
     state.giftThreeVows = keptGiftThreeVows;
     state.giftAllVows = keptGiftAllVows;
     state.giftFirstProcession = keptGiftFirstProcession;
+    state.giftFirstLongerProcession = keptGiftFirstLongerProcession;
     state.giftFirstToll = keptGiftFirstToll;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
@@ -4210,6 +4270,7 @@
     state.deeperNightLevel = keptDeeperNight;
     state.ashenTideLevel = keptAshenTide;
     state.ossuaryLevel = keptOssuary;
+    state.longerProcessionLevel = keptLongerProcession;
     state.tributesLaid = keptTributes;
     state.titheLeft = 0;
     state.nightLeft = 0;
@@ -5814,6 +5875,7 @@
       if (els.ashenTideRow) els.ashenTideRow.classList.toggle("is-hidden", !remOpen);
       if (els.ossuaryRow) els.ossuaryRow.classList.toggle("is-hidden", !remOpen);
       if (els.processionRow) els.processionRow.classList.toggle("is-hidden", !remOpen);
+      if (els.longerProcessionRow) els.longerProcessionRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
         if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
@@ -5876,9 +5938,10 @@
 
         var pLeft = Number(state.processionLeft) || 0;
         var pOn = processionActive();
+        var paidSecs = paidProcessionSecs(state.longerProcessionLevel);
         if (els.processionRow) els.processionRow.classList.toggle("is-burning", pOn);
         if (els.processionEffect) {
-          els.processionEffect.textContent = pOn ? "\u00d71.2 production" : "\u00d71.2 production \u00b7 45s";
+          els.processionEffect.textContent = pOn ? "\u00d71.2 production" : "\u00d71.2 production \u00b7 " + paidSecs + "s";
         }
         if (els.processionCost) {
           els.processionCost.textContent = F.formatNumber(PROCESSION_COST) + " Remembrance";
@@ -5890,6 +5953,26 @@
           } else {
             els.processionBuy.disabled = (Number(state.remembrance) || 0) < PROCESSION_COST;
             els.processionBuy.textContent = "Begin the Procession";
+          }
+        }
+
+        var lpLevel = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0)));
+        var lpCost = longerProcessionCost(lpLevel);
+        var lpSecs = paidProcessionSecs(lpLevel);
+        if (els.longerProcessionEffect) {
+          els.longerProcessionEffect.textContent = "Procession " + lpSecs + "s";
+        }
+        if (lpLevel >= LONGER_PROCESSION_MAX) {
+          if (els.longerProcessionCost) els.longerProcessionCost.textContent = "\u2014";
+          if (els.longerProcessionBuy) {
+            els.longerProcessionBuy.disabled = true;
+            els.longerProcessionBuy.textContent = "The hall is longest.";
+          }
+        } else {
+          if (els.longerProcessionCost) els.longerProcessionCost.textContent = F.formatNumber(lpCost) + " Remembrance";
+          if (els.longerProcessionBuy) {
+            els.longerProcessionBuy.disabled = !isFinite(lpCost) || (Number(state.remembrance) || 0) < lpCost;
+            els.longerProcessionBuy.textContent = "Lengthen the Walk";
           }
         }
       }
@@ -6173,6 +6256,10 @@
     els.processionEffect = document.getElementById("procession-effect");
     els.processionCost = document.getElementById("procession-cost");
     els.processionBuy = document.getElementById("procession-buy");
+    els.longerProcessionRow = document.getElementById("longer-procession-row");
+    els.longerProcessionEffect = document.getElementById("longer-procession-effect");
+    els.longerProcessionCost = document.getElementById("longer-procession-cost");
+    els.longerProcessionBuy = document.getElementById("longer-procession-buy");
     els.namesPanel = document.getElementById("names-bound");
     els.namesList = document.getElementById("names-bound-list");
     els.marksPanel = document.getElementById("marks-panel");
@@ -6277,6 +6364,7 @@
     if (els.ashenTideBuy) els.ashenTideBuy.addEventListener("click", buyAshenTide);
     if (els.ossuaryBuy) els.ossuaryBuy.addEventListener("click", buyOssuary);
     if (els.processionBuy) els.processionBuy.addEventListener("click", beginProcession);
+    if (els.longerProcessionBuy) els.longerProcessionBuy.addEventListener("click", buyLongerProcession);
     if (els.markEmberBuy) {
       els.markEmberBuy.addEventListener("click", function () {
         buyMark("ember");
@@ -6558,6 +6646,9 @@
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,
     deeperNightCost: deeperNightCost,
+    longerProcessionCost: longerProcessionCost,
+    paidProcessionSecs: paidProcessionSecs,
+    LONGER_PROCESSION_MAX: LONGER_PROCESSION_MAX,
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     choirAshRate: choirAshRate,
