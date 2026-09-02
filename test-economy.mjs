@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.0 economy smoke test.
+ * Soulgather v3.1 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -360,6 +360,24 @@ function hymnEdictCost(level) {
   return 4 * Math.pow(2, n);
 }
 
+function wakeSecs(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0));
+  return 40 + 15 * n;
+}
+
+function wakeEdictStartsWake(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function wakeLeftAfterTribute(level) {
+  return wakeEdictStartsWake(level) ? wakeSecs(level) : 0;
+}
+
+function wakeEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 8 * Math.pow(2, n);
+}
+
 function veilMult(on) {
   return on ? 2 : 1;
 }
@@ -509,12 +527,17 @@ function giftFullCupReady(n) {
 function giftTwelveTributesReady(n) {
   return (Number(n) || 0) >= 12;
 }
+function giftSixteenTributesReady(n) {
+  return (Number(n) || 0) >= 16;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
 assertTrue("giftFullCupReady(12) is true", giftFullCupReady(12));
 assertTrue("giftTwelveTributesReady(11) is false", !giftTwelveTributesReady(11));
 assertTrue("giftTwelveTributesReady(12) is true", giftTwelveTributesReady(12));
+assertTrue("giftSixteenTributesReady(15) is false", !giftSixteenTributesReady(15));
+assertTrue("giftSixteenTributesReady(16) is true", giftSixteenTributesReady(16));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
@@ -917,6 +940,14 @@ assertEqual("wakeMult(false)", wakeMult(false), 1);
 assertEqual("wakeMult(true)", wakeMult(true), 2);
 assertEqual("WAKE_COST", WAKE_COST, 30);
 assertEqual("WAKE_SECS", WAKE_SECS, 40);
+assertEqual("wakeEdictCost(0)", wakeEdictCost(0), 8);
+assertEqual("wakeSecs(0)", wakeSecs(0), 40);
+assertEqual("wakeSecs(1)", wakeSecs(1), 55);
+assertEqual("wakeSecs(2)", wakeSecs(2), 70);
+assertTrue("wakeEdictStartsWake(0) is false", !wakeEdictStartsWake(0));
+assertTrue("wakeEdictStartsWake(1) is true", wakeEdictStartsWake(1));
+assertEqual("wakeLeftAfterTribute(0)", wakeLeftAfterTribute(0), 0);
+assertEqual("wakeLeftAfterTribute(1)", wakeLeftAfterTribute(1), 55);
 assertEqual("veilCost(20)", veilCost(20), 20);
 assertEqual("veilCost(200)", veilCost(200), 30);
 

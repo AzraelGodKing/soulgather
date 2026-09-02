@@ -1,4 +1,4 @@
-/* Soulgather v3.0 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v3.1 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -1161,6 +1161,10 @@ body::before {
 }
 
 .rite-row#veil-row.is-burning .rite-name {
+  color: var(--crimson-hot);
+}
+
+.rite-row#wake-row.is-burning .rite-name {
   color: var(--crimson-hot);
 }
 
