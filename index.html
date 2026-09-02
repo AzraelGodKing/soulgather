@@ -145,6 +145,17 @@
         <button type="button" class="card-buy" id="censer-buy" disabled>Raise a Censer</button>
       </article>
 
+      <article class="card is-hidden" id="pyre-card">
+        <h2 class="card-name">Pyres</h2>
+        <div class="card-owned" id="pyre-owned">0</div>
+        <p class="card-flavor">A pyre for what remains.</p>
+        <div class="card-stats">
+          <div>Burn: <span id="pyre-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="pyre-cost">2 Censers</span></div>
+        </div>
+        <button type="button" class="card-buy" id="pyre-buy" disabled>Raise a Pyre</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -580,6 +591,18 @@
         </div>
         <button type="button" class="card-buy" id="smoke-buy" disabled>Speak the Smoke</button>
       </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
+          <h3 class="edict-name">Edict of Embers</h3>
+          <p class="edict-flavor">The coals wait.</p>
+          <p class="edict-stats">
+            Effect: <span id="embers-effect">+0 Pyre at tribute</span>
+            · Cost: <span id="embers-cost">7 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="embers-buy" disabled>Speak the Embers</button>
+      </div>
     </section>
 
     <section class="crown is-hidden" id="crown-panel">
@@ -681,7 +704,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v2.0 · prototype</span>
+      <span>Soulgather v2.1 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

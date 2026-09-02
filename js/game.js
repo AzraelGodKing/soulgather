@@ -16,6 +16,10 @@
   var SPIRIT_SHADES_PER_SEC = 0.1;
   var VESSEL_SPIRITS_PER_SEC = 0.1;
   var CENSER_ASH_PER_SEC = 0.2;
+  var PYRE_ASH_PER_SEC = 0.15;
+  var PYRE_COST_BASE = 2;
+  var PYRE_COST_MULT = 1.2;
+  var UNLOCK_PYRES = 3;
   var ASH_FROM_SHADE_FRAC = 0.01;
   var UNLOCK_SHADES = 10;
   var UNLOCK_LIFETIME = 100;
@@ -130,6 +134,10 @@
 
   function censerCost(owned) {
     return producerCost(owned);
+  }
+
+  function pyreCost(owned) {
+    return N.cost(PYRE_COST_BASE, PYRE_COST_MULT, owned);
   }
 
   function markCost(level) {
@@ -335,6 +343,16 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function embersEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 7 * Math.pow(2, n);
+  }
+
+  function embersStartsPyres(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return n;
+  }
+
   function remembranceCostFavor() {
     return REMEMBRANCE_FAVOR_COST;
   }
@@ -499,6 +517,7 @@
     "ash",
     "mark",
     "censer",
+    "pyre",
     "fetter",
     "giftSouls",
     "giftShades",
@@ -518,11 +537,13 @@
     "giftPeakLanterns",
     "giftPeakFetters",
     "giftPeakCensers",
+    "giftFirstPyre",
     "choir",
     "veil",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
+    "embersEdict",
     "hymn",
     "vow",
     "quietCourt",
@@ -558,6 +579,7 @@
     ash: "Ash gathered at the well's lip.",
     mark: "A mark was pressed.",
     censer: "A censer was raised.",
+    pyre: "A pyre was raised.",
     fetter: "A fetter was bound.",
     giftSouls: "A hundred souls. The well returned a gift.",
     giftShades: "Ten shades. One more was given.",
@@ -577,11 +599,13 @@
     giftPeakLanterns: "Ten lanterns. The well returned twenty souls.",
     giftPeakFetters: "Eight fetters. The well returned fifteen shades.",
     giftPeakCensers: "Five censers. The well returned eight ash.",
+    giftFirstPyre: "The first pyre. The well returned five ash.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
+    embersEdict: "The embers were spoken.",
     hymn: "A hymn followed the emptying.",
     vow: "A vow was sworn.",
     quietCourt: "The Quiet Court was seated.",
@@ -621,6 +645,7 @@
     var lifetimeShades = nVal(view.lifetimeShades);
     var lanterns = nVal(view.lanterns);
     var censers = nVal(view.censers);
+    var pyres = nVal(view.pyres);
     var fetters = nVal(view.fetters);
     var unlockedSpirits = !!view.unlockedSpirits;
     var unlockedVessels = !!view.unlockedVessels;
@@ -673,6 +698,9 @@
     }
     if (view.unlockedCensers && censers < 1) {
       return "Raise a Censer. They burn what the well discards.";
+    }
+    if (view.unlockedPyres && pyres < 1) {
+      return "Raise a Pyre. A pyre for what remains.";
     }
     if (favorEarned >= 1 && sworn && !normalizeVow(view.vow)) {
       return "A vow may be sworn.";
@@ -796,6 +824,9 @@
     if (N.cmp(state.censers, 1) >= 0) {
       if (markChronicle("censer")) added = true;
     }
+    if (N.cmp(state.pyres, 1) >= 0) {
+      if (markChronicle("pyre")) added = true;
+    }
     if (N.cmp(state.fetters, 1) >= 0) {
       if (markChronicle("fetter")) added = true;
     }
@@ -816,6 +847,9 @@
     }
     if ((Number(state.smokeEdictLevel) || 0) >= 1) {
       if (markChronicle("smokeEdict")) added = true;
+    }
+    if ((Number(state.embersEdictLevel) || 0) >= 1) {
+      if (markChronicle("embersEdict")) added = true;
     }
     if ((Number(state.hymnLeft) || 0) > 0) {
       if (markChronicle("hymn")) added = true;
@@ -856,6 +890,7 @@
       lanterns: N.fromNumber(0),
       ash: N.fromNumber(0),
       censers: N.fromNumber(0),
+      pyres: N.fromNumber(0),
       fetters: N.fromNumber(0),
       emberLevel: 0,
       chainLevel: 0,
@@ -867,6 +902,7 @@
       unlockedLanterns: false,
       unlockedMarks: false,
       unlockedCensers: false,
+      unlockedPyres: false,
       unlockedFetters: false,
       unlockedAutobind: false,
       unlockedAutobindSpirits: false,
@@ -915,6 +951,7 @@
       peakLanterns: N.fromNumber(0),
       peakFetters: N.fromNumber(0),
       peakCensers: N.fromNumber(0),
+      peakPyres: N.fromNumber(0),
       bonusLifetimeSouls: false,
       bonusPeakShades: false,
       bonusFirstVessel: false,
@@ -933,11 +970,13 @@
       giftPeakLanterns: false,
       giftPeakFetters: false,
       giftPeakCensers: false,
+      giftFirstPyre: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
       hymnEdictLevel: 0,
       smokeEdictLevel: 0,
+      embersEdictLevel: 0,
       hymnLeft: 0,
       crownWeight: 0,
       longMemoryLevel: 0,
@@ -1068,7 +1107,14 @@
       ),
       hymnMult(hymnActive())
     );
-    return N.add(fromShades, fromCensers);
+    var fromPyres = N.mul(
+      N.mul(
+        N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+        nightMult(nightActive())
+      ),
+      hymnMult(hymnActive())
+    );
+    return N.add(N.add(fromShades, fromCensers), fromPyres);
   }
 
   function applyRates(dt) {
@@ -1192,6 +1238,13 @@
       ) {
         state.unlockedCensers = true;
         revealCensers(true);
+      }
+    }
+
+    if (!state.unlockedPyres) {
+      if (N.cmp(state.censers, UNLOCK_PYRES) >= 0 || N.cmp(state.pyres, 1) >= 0) {
+        state.unlockedPyres = true;
+        revealPyres(true);
       }
     }
 
@@ -1391,6 +1444,18 @@
     render();
   }
 
+  function buyPyre() {
+    if (!state.unlockedPyres) return;
+    var plan = purchasePlan(state.pyres, state.censers, PYRE_COST_BASE, PYRE_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.censers = N.sub(state.censers, plan.cost);
+    state.pyres = N.add(state.pyres, plan.k);
+    markChronicle("pyre");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function buyMark(kind) {
     if (!state.unlockedMarks) return;
     var levelKey;
@@ -1503,6 +1568,16 @@
     state.favor -= cost;
     state.smokeEdictLevel += 1;
     markChronicle("smokeEdict");
+    save();
+    render();
+  }
+
+  function buyEmbersEdict() {
+    var cost = embersEdictCost(state.embersEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.embersEdictLevel += 1;
+    markChronicle("embersEdict");
     save();
     render();
   }
@@ -1667,6 +1742,7 @@
   }
 
   function tryAutobindCensers() {
+    /* No extra hold-back: autobind censers/thrones do not reserve Censers for a Pyre. */
     if (!state.autobindCensers) return;
     if (!state.unlockedCensers) return;
     var cost = censerCost(state.censers);
@@ -1728,12 +1804,17 @@
     state.peakCensers = N.max(num(state.peakCensers), num(state.censers));
   }
 
+  function bumpPeakPyres() {
+    state.peakPyres = N.max(num(state.peakPyres), num(state.pyres));
+  }
+
   function tryMilestoneGifts() {
     var granted = false;
     bumpPeakShades();
     bumpPeakLanterns();
     bumpPeakFetters();
     bumpPeakCensers();
+    bumpPeakPyres();
 
     if (
       !state.bonusLifetimeSouls &&
@@ -1808,6 +1889,20 @@
       markChronicle("giftPeakCensers");
       showToast("Eight ash for five censers.");
       granted = true;
+    }
+
+    bumpPeakPyres();
+    if (!state.giftFirstPyre) {
+      var hasPyreNow = N.cmp(state.pyres, 1) >= 0;
+      var hasPyrePeak = N.cmp(state.peakPyres, 1) >= 0;
+      var hasPyreChron = hasChronicle("pyre") || hasChronicle("giftFirstPyre");
+      if (hasPyreNow || (hasPyrePeak && !hasPyreChron)) {
+        state.giftFirstPyre = true;
+        state.ash = N.add(state.ash, 5);
+        markChronicle("giftFirstPyre");
+        showToast("Five ash for the first pyre.");
+        granted = true;
+      }
     }
 
     if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
@@ -2051,6 +2146,7 @@
     "lanterns",
     "ash",
     "censers",
+    "pyres",
     "fetters",
     "emberLevel",
     "chainLevel",
@@ -2062,6 +2158,7 @@
     "unlockedLanterns",
     "unlockedMarks",
     "unlockedCensers",
+    "unlockedPyres",
     "unlockedFetters",
     "unlockedAutobind",
     "unlockedAutobindSpirits",
@@ -2110,6 +2207,7 @@
     "peakLanterns",
     "peakFetters",
     "peakCensers",
+    "peakPyres",
     "bonusLifetimeSouls",
     "bonusPeakShades",
     "bonusFirstVessel",
@@ -2128,11 +2226,13 @@
     "giftPeakLanterns",
     "giftPeakFetters",
     "giftPeakCensers",
+    "giftFirstPyre",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
     "hymnEdictLevel",
     "smokeEdictLevel",
+    "embersEdictLevel",
     "hymnLeft",
     "crownWeight",
     "longMemoryLevel",
@@ -2167,6 +2267,7 @@
       lanterns: dumpNum(state.lanterns),
       ash: dumpNum(state.ash),
       censers: dumpNum(state.censers),
+      pyres: dumpNum(state.pyres),
       fetters: dumpNum(state.fetters),
       emberLevel: state.emberLevel,
       chainLevel: state.chainLevel,
@@ -2178,6 +2279,7 @@
       unlockedLanterns: state.unlockedLanterns,
       unlockedMarks: state.unlockedMarks,
       unlockedCensers: state.unlockedCensers,
+      unlockedPyres: !!state.unlockedPyres,
       unlockedFetters: !!state.unlockedFetters,
       unlockedAutobind: !!state.unlockedAutobind,
       unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
@@ -2226,6 +2328,7 @@
       peakLanterns: dumpNum(state.peakLanterns),
       peakFetters: dumpNum(state.peakFetters),
       peakCensers: dumpNum(state.peakCensers),
+      peakPyres: dumpNum(state.peakPyres),
       bonusLifetimeSouls: !!state.bonusLifetimeSouls,
       bonusPeakShades: !!state.bonusPeakShades,
       bonusFirstVessel: !!state.bonusFirstVessel,
@@ -2244,11 +2347,13 @@
       giftPeakLanterns: !!state.giftPeakLanterns,
       giftPeakFetters: !!state.giftPeakFetters,
       giftPeakCensers: !!state.giftPeakCensers,
+      giftFirstPyre: !!state.giftFirstPyre,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
       hymnEdictLevel: Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0)),
       smokeEdictLevel: Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0)),
+      embersEdictLevel: Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0)),
       hymnLeft: Number(state.hymnLeft) || 0,
       crownWeight: Number(state.crownWeight) || 0,
       longMemoryLevel: Number(state.longMemoryLevel) || 0,
@@ -2288,6 +2393,7 @@
     state.lanterns = N.load(data.lanterns);
     state.ash = N.load(data.ash);
     state.censers = N.load(data.censers);
+    state.pyres = N.load(data.pyres);
     state.fetters = N.load(data.fetters);
     state.emberLevel = Number(data.emberLevel) || 0;
     state.chainLevel = Number(data.chainLevel) || 0;
@@ -2299,6 +2405,7 @@
     state.unlockedLanterns = !!data.unlockedLanterns;
     state.unlockedMarks = !!data.unlockedMarks;
     state.unlockedCensers = !!data.unlockedCensers;
+    state.unlockedPyres = !!data.unlockedPyres;
     state.unlockedFetters = !!data.unlockedFetters;
     state.unlockedAutobind = !!data.unlockedAutobind;
     state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
@@ -2358,6 +2465,7 @@
     state.peakLanterns = N.max(N.load(data.peakLanterns), N.load(data.lanterns));
     state.peakFetters = N.max(N.load(data.peakFetters), N.load(data.fetters));
     state.peakCensers = N.max(N.load(data.peakCensers), N.load(data.censers));
+    state.peakPyres = N.max(N.load(data.peakPyres), N.load(data.pyres));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
     state.bonusFirstVessel = !!data.bonusFirstVessel;
@@ -2413,11 +2521,20 @@
     } else {
       state.giftPeakCensers = !!data.giftPeakCensers;
     }
+    if (data.giftFirstPyre == null) {
+      state.giftFirstPyre =
+        hasChronicle("pyre") ||
+        hasChronicle("giftFirstPyre") ||
+        (embersStartsPyres(data.embersEdictLevel) > 0 && N.cmp(state.pyres, 1) >= 0);
+    } else {
+      state.giftFirstPyre = !!data.giftFirstPyre;
+    }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
     state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
     state.hymnEdictLevel = Math.max(0, Math.floor(Number(data.hymnEdictLevel) || 0));
     state.smokeEdictLevel = Math.max(0, Math.floor(Number(data.smokeEdictLevel) || 0));
+    state.embersEdictLevel = Math.max(0, Math.floor(Number(data.embersEdictLevel) || 0));
     state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
     state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
     state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
@@ -2450,6 +2567,7 @@
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
+    if (state.unlockedPyres) revealPyres(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
     }
@@ -2582,6 +2700,7 @@
     hideCard(els.throneCard);
     hideCard(els.lanternCard);
     hideCard(els.censerCard);
+    hideCard(els.pyreCard);
     hideCard(els.fetterCard);
     hideTribute();
     hideRites();
@@ -2643,6 +2762,7 @@
     var keptPeakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
     var keptPeakFetters = N.max(num(state.peakFetters), num(state.fetters));
     var keptPeakCensers = N.max(num(state.peakCensers), num(state.censers));
+    var keptPeakPyres = N.max(num(state.peakPyres), num(state.pyres));
     var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
     var keptBonusPeakShades = !!state.bonusPeakShades;
     var keptBonusFirstVessel = !!state.bonusFirstVessel;
@@ -2661,9 +2781,11 @@
     var keptGiftPeakLanterns = !!state.giftPeakLanterns;
     var keptGiftPeakFetters = !!state.giftPeakFetters;
     var keptGiftPeakCensers = !!state.giftPeakCensers;
+    var keptGiftFirstPyre = !!state.giftFirstPyre;
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
     var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
+    var keptEmbersEdict = Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0));
     var keptQuietCourt = Number(state.quietCourtLevel) || 0;
     var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
@@ -2691,6 +2813,7 @@
     state.peakLanterns = keptPeakLanterns;
     state.peakFetters = keptPeakFetters;
     state.peakCensers = keptPeakCensers;
+    state.peakPyres = keptPeakPyres;
     state.bonusLifetimeSouls = keptBonusLifetimeSouls;
     state.bonusPeakShades = keptBonusPeakShades;
     state.bonusFirstVessel = keptBonusFirstVessel;
@@ -2709,9 +2832,11 @@
     state.giftPeakLanterns = keptGiftPeakLanterns;
     state.giftPeakFetters = keptGiftPeakFetters;
     state.giftPeakCensers = keptGiftPeakCensers;
+    state.giftFirstPyre = keptGiftFirstPyre;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
     state.smokeEdictLevel = keptSmokeEdict;
+    state.embersEdictLevel = keptEmbersEdict;
     state.quietCourtLevel = keptQuietCourt;
     state.namesBound = keptNamesBound;
     state.namesComplete = keptNamesComplete;
@@ -2785,6 +2910,11 @@
         state.unlockedAutobindCensers = true;
       }
     }
+    var startPyres = embersStartsPyres(keptEmbersEdict);
+    if (startPyres > 0) {
+      state.pyres = N.fromNumber(startPyres);
+      state.unlockedPyres = true;
+    }
     state.choirLevel = Math.min(CHOIR_MAX, keptChoirEdict);
     if (state.choirLevel >= 1) {
       state.unlockedChoir = true;
@@ -2800,6 +2930,7 @@
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
+    if (state.unlockedPyres) revealPyres(false);
     save();
     render();
     if (firstTributeBonus > 0) {
@@ -2923,6 +3054,10 @@
       showToast("They burn what the well discards.");
       save();
     }
+  }
+
+  function revealPyres(withToast) {
+    revealCard(els.pyreCard);
   }
 
   function revealFetters(withToast) {
@@ -3142,10 +3277,12 @@
       var showAsh =
         state.unlockedMarks ||
         state.unlockedCensers ||
+        state.unlockedPyres ||
         state.unlockedNightTithe ||
         state.unlockedChoir ||
         state.unlockedVeil ||
-        N.cmp(state.ash, 0) > 0;
+        N.cmp(state.ash, 0) > 0 ||
+        N.cmp(state.pyres, 0) > 0;
       if (showAsh) {
         els.soulsAsh.textContent = "Ash " + F.formatNumber(state.ash);
         els.soulsAsh.classList.remove("is-hidden");
@@ -3288,6 +3425,28 @@
       els.censerBuy.disabled = !canCenser;
       els.censerBuy.textContent = "Raise a Censer";
       els.censerCard.classList.toggle("can-buy", canCenser);
+    }
+
+    if (state.unlockedPyres) {
+      if (els.pyreCard && els.pyreCard.classList.contains("is-hidden")) {
+        revealPyres(false);
+      }
+      var pyrePlan = purchasePlan(state.pyres, state.censers, PYRE_COST_BASE, PYRE_COST_MULT);
+      var pyreRate = N.mul(
+        N.mul(
+          N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+          nightMult(nightActive())
+        ),
+        hymnMult(hymnActive())
+      );
+      if (els.pyreOwned) els.pyreOwned.textContent = F.formatNumber(state.pyres);
+      if (els.pyreProd) els.pyreProd.textContent = F.formatNumber(pyreRate) + " ash / sec";
+      if (els.pyreCost) els.pyreCost.textContent = F.formatNumber(pyrePlan.cost) + " Censers";
+      if (els.pyreBuy) {
+        els.pyreBuy.disabled = !pyrePlan.can;
+        els.pyreBuy.textContent = bindLabel("Raise a Pyre", "Raise", pyrePlan.k, "Pyre", "Pyres");
+      }
+      if (els.pyreCard) els.pyreCard.classList.toggle("can-buy", pyrePlan.can);
     }
 
     if (state.unlockedThrones) {
@@ -3842,6 +4001,19 @@
       if (els.smokeBuy) {
         els.smokeBuy.disabled = !isFinite(smCost) || state.favor < smCost;
       }
+
+      var emCost = embersEdictCost(state.embersEdictLevel);
+      var embersN = embersStartsPyres(state.embersEdictLevel);
+      if (els.embersEffect) {
+        els.embersEffect.textContent =
+          "+" +
+          F.formatNumber(embersN) +
+          (embersN === 1 ? " Pyre at tribute" : " Pyres at tribute");
+      }
+      if (els.embersCost) els.embersCost.textContent = F.formatNumber(emCost) + " Favor";
+      if (els.embersBuy) {
+        els.embersBuy.disabled = !isFinite(emCost) || state.favor < emCost;
+      }
     }
 
     var crownOpen = crownUnlocked();
@@ -4025,6 +4197,11 @@
     els.censerProd = document.getElementById("censer-prod");
     els.censerCost = document.getElementById("censer-cost");
     els.censerBuy = document.getElementById("censer-buy");
+    els.pyreCard = document.getElementById("pyre-card");
+    els.pyreOwned = document.getElementById("pyre-owned");
+    els.pyreProd = document.getElementById("pyre-prod");
+    els.pyreCost = document.getElementById("pyre-cost");
+    els.pyreBuy = document.getElementById("pyre-buy");
     els.throneCard = document.getElementById("throne-card");
     els.throneOwned = document.getElementById("throne-owned");
     els.throneProd = document.getElementById("throne-prod");
@@ -4069,6 +4246,9 @@
     els.smokeEffect = document.getElementById("smoke-effect");
     els.smokeCost = document.getElementById("smoke-cost");
     els.smokeBuy = document.getElementById("smoke-buy");
+    els.embersEffect = document.getElementById("embers-effect");
+    els.embersCost = document.getElementById("embers-cost");
+    els.embersBuy = document.getElementById("embers-buy");
     els.ritesPanel = document.getElementById("rites-panel");
     els.siphonEffect = document.getElementById("siphon-effect");
     els.siphonCost = document.getElementById("siphon-cost");
@@ -4190,6 +4370,7 @@
     els.spiritBuy.addEventListener("click", buySpirit);
     els.vesselBuy.addEventListener("click", buyVessel);
     if (els.censerBuy) els.censerBuy.addEventListener("click", buyCenser);
+    if (els.pyreBuy) els.pyreBuy.addEventListener("click", buyPyre);
     els.throneBuy.addEventListener("click", buyThrone);
     els.tributeBtn.addEventListener("click", layTribute);
     els.tributeFootBtn.addEventListener("click", layTribute);
@@ -4203,6 +4384,7 @@
     if (els.choirEdictBuy) els.choirEdictBuy.addEventListener("click", buyChoirEdict);
     if (els.hymnEdictBuy) els.hymnEdictBuy.addEventListener("click", buyHymnEdict);
     if (els.smokeBuy) els.smokeBuy.addEventListener("click", buySmokeEdict);
+    if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
@@ -4370,6 +4552,7 @@
     if (state.unlockedVessels) revealVessels(false);
     if (state.unlockedThrones) revealThrones(false);
     if (state.unlockedCensers) revealCensers(false);
+    if (state.unlockedPyres) revealPyres(false);
     render();
     if (pendingAwayToast) {
       toastQueue.unshift(pendingAwayToast);
@@ -4398,6 +4581,7 @@
     lanternCost: lanternCost,
     fetterCost: fetterCost,
     censerCost: censerCost,
+    pyreCost: pyreCost,
     markCost: markCost,
     favorGain: favorGain,
     prestigeMult: prestigeMult,
@@ -4418,6 +4602,8 @@
     quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
+    embersEdictCost: embersEdictCost,
+    embersStartsPyres: embersStartsPyres,
     namesCompleteMult: namesCompleteMult,
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,

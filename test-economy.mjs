@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.0 economy smoke test.
+ * Soulgather v2.1 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -61,6 +61,10 @@ function lanternCost(owned) {
 
 function fetterCost(owned) {
   return N.cost(20, 1.2, owned);
+}
+
+function pyreCost(owned) {
+  return N.cost(2, 1.2, owned);
 }
 
 function markCost(level) {
@@ -238,6 +242,15 @@ function smokeEdictCost(level) {
 
 function smokeStartsCenserAutobind(level) {
   return (Number(level) || 0) >= 1;
+}
+
+function embersEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 7 * Math.pow(2, n);
+}
+
+function embersStartsPyres(level) {
+  return Math.max(0, Math.floor(Number(level) || 0));
 }
 
 function normalizeVow(raw) {
@@ -420,6 +433,7 @@ function nextGoal(view, format) {
   const lifetimeShades = Number(view.lifetimeShades) || 0;
   const lanterns = Number(view.lanterns) || 0;
   const censers = Number(view.censers) || 0;
+  const pyres = Number(view.pyres) || 0;
   const fetters = Number(view.fetters) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
   const unlockedVessels = !!view.unlockedVessels;
@@ -470,6 +484,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedCensers && censers < 1) {
     return "Raise a Censer. They burn what the well discards.";
+  }
+  if (view.unlockedPyres && pyres < 1) {
+    return "Raise a Pyre. A pyre for what remains.";
   }
   if (favorEarned >= 1 && sworn && view.vow === "") {
     return "A vow may be sworn.";
@@ -804,6 +821,50 @@ assertTrue("quietCourtStartsFetterAutobind(1) is true", quietCourtStartsFetterAu
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));
 assertTrue("smokeStartsCenserAutobind(1) is true", smokeStartsCenserAutobind(1));
+
+assertEqual("pyreCost(0)", pyreCost(0), 2);
+assertEqual("embersEdictCost(0)", embersEdictCost(0), 7);
+assertEqual("embersStartsPyres(0)", embersStartsPyres(0), 0);
+assertEqual("embersStartsPyres(2)", embersStartsPyres(2), 2);
+
+assertEqual(
+  "nextGoal pyre half-step",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedCensers: true,
+    censers: 3,
+    unlockedPyres: true,
+    pyres: 0,
+    lifetimeSouls: 412,
+  }),
+  "Raise a Pyre. A pyre for what remains."
+);
+assertEqual(
+  "nextGoal pyre does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedPyres: true,
+    pyres: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal pyre does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedPyres: true,
+    pyres: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
