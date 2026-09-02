@@ -157,6 +157,17 @@
         <button type="button" class="card-buy" id="pyre-buy" disabled>Raise a Pyre</button>
       </article>
 
+      <article class="card is-hidden" id="urn-card">
+        <h2 class="card-name">Urns</h2>
+        <div class="card-owned" id="urn-owned">0</div>
+        <p class="card-flavor">What the fire would not finish.</p>
+        <div class="card-stats">
+          <div>Hold: <span id="urn-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="urn-cost">3 Pyres</span></div>
+        </div>
+        <button type="button" class="card-buy" id="urn-buy" disabled>Raise an Urn</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -674,6 +685,18 @@
 
       <div class="edict-row">
         <div class="edict-copy">
+          <h3 class="edict-name">Edict of Urns</h3>
+          <p class="edict-flavor">The vessel waits.</p>
+          <p class="edict-stats">
+            Effect: <span id="urn-edict-effect">+0 Urn at tribute</span>
+            · Cost: <span id="urn-edict-cost">8 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="urn-edict-buy" disabled>Speak the Urn</button>
+      </div>
+
+      <div class="edict-row">
+        <div class="edict-copy">
           <h3 class="edict-name">Edict of Cinders</h3>
           <p class="edict-flavor">The doubling is remembered.</p>
           <p class="edict-stats">
@@ -857,7 +880,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v3.6 · prototype</span>
+      <span>Soulgather v3.7 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

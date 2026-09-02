@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.6 economy smoke test.
+ * Soulgather v3.7 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -65,6 +65,10 @@ function fetterCost(owned) {
 
 function pyreCost(owned) {
   return N.cost(2, 1.2, owned);
+}
+
+function urnCost(owned) {
+  return N.cost(3, 1.2, owned);
 }
 
 function chaliceCost(owned) {
@@ -283,6 +287,15 @@ function embersEdictCost(level) {
 }
 
 function embersStartsPyres(level) {
+  return Math.max(0, Math.floor(Number(level) || 0));
+}
+
+function urnEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 8 * Math.pow(2, n);
+}
+
+function urnEdictStartsUrns(level) {
   return Math.max(0, Math.floor(Number(level) || 0));
 }
 
@@ -595,6 +608,7 @@ function nextGoal(view, format) {
   const lanterns = Number(view.lanterns) || 0;
   const censers = Number(view.censers) || 0;
   const pyres = Number(view.pyres) || 0;
+  const urns = Number(view.urns) || 0;
   const fetters = Number(view.fetters) || 0;
   const chalices = Number(view.chalices) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
@@ -649,6 +663,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedPyres && pyres < 1) {
     return "Raise a Pyre. A pyre for what remains.";
+  }
+  if (view.unlockedUrns && urns < 1) {
+    return "Raise an Urn. What the fire would not finish.";
   }
   if (view.unlockedChalices && chalices < 1) {
     return "Raise a Chalice. He drinks from the emptied well.";
@@ -1061,6 +1078,10 @@ assertEqual("pyreCost(0)", pyreCost(0), 2);
 assertEqual("embersEdictCost(0)", embersEdictCost(0), 7);
 assertEqual("embersStartsPyres(0)", embersStartsPyres(0), 0);
 assertEqual("embersStartsPyres(2)", embersStartsPyres(2), 2);
+assertEqual("urnCost(0)", urnCost(0), 3);
+assertEqual("urnEdictCost(0)", urnEdictCost(0), 8);
+assertEqual("urnEdictStartsUrns(0)", urnEdictStartsUrns(0), 0);
+assertEqual("urnEdictStartsUrns(2)", urnEdictStartsUrns(2), 2);
 
 assertEqual(
   "nextGoal pyre half-step",
@@ -1100,6 +1121,46 @@ assertEqual(
   }),
   "Swear an Aspect. The GodKing waits."
 );
+
+assertEqual(
+  "nextGoal urn half-step",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedPyres: true,
+    pyres: 4,
+    unlockedUrns: true,
+    urns: 0,
+    lifetimeSouls: 412,
+  }),
+  "Raise an Urn. What the fire would not finish."
+);
+assertEqual(
+  "nextGoal urn does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedUrns: true,
+    urns: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal urn does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedUrns: true,
+    urns: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+
 
 assertEqual(
   "nextGoal chalice after thrones",

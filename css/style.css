@@ -1,4 +1,4 @@
-/* Soulgather v3.6 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v3.7 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -488,6 +488,7 @@ body::before {
 .card#lantern-card,
 .card#censer-card,
 .card#pyre-card,
+.card#urn-card,
 .card#fetter-card,
 .card#chalice-card {
   transform: translateY(12px);
@@ -502,6 +503,7 @@ body::before {
 .card#lantern-card.is-revealed,
 .card#censer-card.is-revealed,
 .card#pyre-card.is-revealed,
+.card#urn-card.is-revealed,
 .card#fetter-card.is-revealed,
 .card#chalice-card.is-revealed {
   opacity: 1;
@@ -698,6 +700,36 @@ body::before {
 }
 
 .card#pyre-card .card-buy:disabled {
+  border-color: var(--disabled);
+  background: #1a1416;
+  color: #6a5e52;
+}
+
+.card#urn-card::before {
+  background: #5a4038;
+}
+
+.card#urn-card.can-buy::before {
+  background: var(--crimson-hot);
+}
+
+.card#urn-card .card-name {
+  color: #d4c4b0;
+}
+
+.card#urn-card .card-buy {
+  border-color: #a87840;
+  background: linear-gradient(180deg, #2a1c14 0%, #16100c 100%);
+  color: #ead4b0;
+}
+
+.card#urn-card .card-buy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4a2c18 0%, #2a1810 100%);
+  border-color: var(--gold-bright);
+  color: #fff6d8;
+}
+
+.card#urn-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
   color: #6a5e52;
