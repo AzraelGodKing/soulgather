@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.4 economy smoke test.
+ * Soulgather v5.5 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -543,6 +543,13 @@ function wakeMult(on) {
 function processionMult(on) {
   return on ? 1.2 : 1;
 }
+
+function knellMult(on) {
+  return on ? 2 : 1;
+}
+
+const KNELL_COST = 1;
+const KNELL_SECS = 20;
 
 function processionSecs(level) {
   const n = Math.max(0, Math.floor(Number(level) || 0));
@@ -1223,6 +1230,11 @@ assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
 assertEqual("tollMult(false)", tollMult(false), 1);
 assertEqual("tollMult(true)", tollMult(true), 2);
+assertEqual("knellMult(true)", knellMult(true), 2);
+assertEqual("knellMult(false)", knellMult(false), 1);
+assertEqual("KNELL_COST", KNELL_COST, 1);
+assertEqual("KNELL_SECS", KNELL_SECS, 20);
+// knellMult folds into clickPower with veilMult/tollMult; not into rateMult / idle ash / shade rates.
 assertEqual("tollEdictCost(0)", tollEdictCost(0), 6);
 assertEqual("tollSecs(0)", tollSecs(0), 25);
 assertEqual("tollSecs(1)", tollSecs(1), 35);

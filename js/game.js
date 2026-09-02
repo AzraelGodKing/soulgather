@@ -90,6 +90,8 @@
   var OSSUARY_MAX = 8;
   var PROCESSION_COST = 1;
   var PROCESSION_SECS = 45;
+  var KNELL_COST = 1;
+  var KNELL_SECS = 20;
   var LONGER_PROCESSION_MAX = 5;
   var DEEPER_TOLL_MAX = 5;
   var LONGER_WAKE_MAX = 5;
@@ -337,6 +339,10 @@
 
   function processionMult(on) {
     return on ? 1.2 : 1;
+  }
+
+  function knellMult(on) {
+    return on ? 2 : 1;
   }
 
   function hymnSecs(level) {
@@ -964,11 +970,13 @@
     "giftFirstLongerVeil",
     "giftFirstLongerHymn",
     "giftFirstToll",
+    "giftFirstKnell",
     "choir",
     "veil",
     "toll",
     "wake",
     "procession",
+    "knell",
     "longerProcession",
     "deeperToll",
     "longerWake",
@@ -1093,11 +1101,13 @@
     giftFirstLongerVeil: "The first longer veil. The well returned five souls.",
     giftFirstLongerHymn: "The first longer hymn. The well returned five souls.",
     giftFirstToll: "The first toll. The well returned ten souls.",
+    giftFirstKnell: "The first knell. The well returned five souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
     toll: "The toll was sounded.",
     wake: "The wake was kept.",
     procession: "The procession began.",
+    knell: "The knell was sounded.",
     longerProcession: "The walk was lengthened.",
     deeperToll: "The toll was lengthened.",
     longerWake: "The wake was lengthened.",
@@ -1485,6 +1495,9 @@
     if ((Number(state.processionLeft) || 0) > 0) {
       if (markChronicle("procession")) added = true;
     }
+    if ((Number(state.knellLeft) || 0) > 0) {
+      if (markChronicle("knell")) added = true;
+    }
     var namesN = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var ni;
     for (ni = 1; ni <= namesN; ni++) {
@@ -1597,6 +1610,7 @@
       tollLeft: 0,
       wakeLeft: 0,
       processionLeft: 0,
+      knellLeft: 0,
       peakShades: N.fromNumber(0),
       peakLanterns: N.fromNumber(0),
       peakFetters: N.fromNumber(0),
@@ -1658,6 +1672,7 @@
       giftFirstLongerVeil: false,
       giftFirstLongerHymn: false,
       giftFirstToll: false,
+      giftFirstKnell: false,
       choirLevel: 0,
       unlockedChoir: false,
       choirEdictLevel: 0,
@@ -1757,6 +1772,10 @@
     return (Number(state.processionLeft) || 0) > 0;
   }
 
+  function knellActive() {
+    return (Number(state.knellLeft) || 0) > 0;
+  }
+
   function rateMult() {
     return currentMult() * titheMult(titheActive());
   }
@@ -1764,10 +1783,13 @@
   function clickPower() {
     return N.mul(
       N.mul(
-        N.mul(1 + (Number(state.wellDepth) || 0), rateMult()),
-        veilMult(veilActive())
+        N.mul(
+          N.mul(1 + (Number(state.wellDepth) || 0), rateMult()),
+          veilMult(veilActive())
+        ),
+        tollMult(tollActive())
       ),
-      tollMult(tollActive())
+      knellMult(knellActive())
     );
   }
 
@@ -1923,6 +1945,8 @@
       if (wake < 0) wake = 0;
       var procession = Number(state.processionLeft) || 0;
       if (procession < 0) procession = 0;
+      var knell = Number(state.knellLeft) || 0;
+      if (knell < 0) knell = 0;
       var slice = remaining;
       if (tithe > 0 && tithe < slice) slice = tithe;
       if (night > 0 && night < slice) slice = night;
@@ -1931,6 +1955,7 @@
       if (toll > 0 && toll < slice) slice = toll;
       if (wake > 0 && wake < slice) slice = wake;
       if (procession > 0 && procession < slice) slice = procession;
+      if (knell > 0 && knell < slice) slice = knell;
       applyRates(slice);
       if (tithe > 0) {
         state.titheLeft = tithe - slice;
@@ -1959,6 +1984,10 @@
       if (procession > 0) {
         state.processionLeft = procession - slice;
         if (state.processionLeft < 0) state.processionLeft = 0;
+      }
+      if (knell > 0) {
+        state.knellLeft = knell - slice;
+        if (state.knellLeft < 0) state.knellLeft = 0;
       }
       remaining -= slice;
     }
@@ -3660,6 +3689,29 @@
     render();
   }
 
+  function soundKnell() {
+    if (!remembranceUnlocked()) return;
+    if (knellActive()) return;
+    var cost = KNELL_COST;
+    if ((Number(state.remembrance) || 0) < cost) return;
+    state.remembrance -= cost;
+    state.knellLeft = KNELL_SECS;
+    markChronicle("knell");
+    if (!state.giftFirstKnell) {
+      state.giftFirstKnell = true;
+      state.souls = N.add(state.souls, 5);
+      markChronicle("giftFirstKnell");
+      showToast("Five souls for the first knell.");
+    }
+    showToast("The well answers twice.");
+    save();
+    render();
+  }
+
+  function beginKnell() {
+    soundKnell();
+  }
+
   function raiseChoir() {
     if (!state.unlockedChoir) return;
     var level = Math.max(0, Math.floor(Number(state.choirLevel) || 0));
@@ -3812,6 +3864,7 @@
     "tollLeft",
     "wakeLeft",
     "processionLeft",
+    "knellLeft",
     "peakShades",
     "peakLanterns",
     "peakFetters",
@@ -3873,6 +3926,7 @@
     "giftFirstLongerVeil",
     "giftFirstLongerHymn",
     "giftFirstToll",
+    "giftFirstKnell",
     "choirLevel",
     "unlockedChoir",
     "choirEdictLevel",
@@ -4012,6 +4066,7 @@
       tollLeft: Number(state.tollLeft) || 0,
       wakeLeft: Number(state.wakeLeft) || 0,
       processionLeft: Number(state.processionLeft) || 0,
+      knellLeft: Number(state.knellLeft) || 0,
       peakShades: dumpNum(state.peakShades),
       peakLanterns: dumpNum(state.peakLanterns),
       peakFetters: dumpNum(state.peakFetters),
@@ -4073,6 +4128,7 @@
       giftFirstLongerVeil: !!state.giftFirstLongerVeil,
       giftFirstLongerHymn: !!state.giftFirstLongerHymn,
       giftFirstToll: !!state.giftFirstToll,
+      giftFirstKnell: !!state.giftFirstKnell,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
       choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
@@ -4217,6 +4273,8 @@
     if (state.wakeLeft < 0) state.wakeLeft = 0;
     state.processionLeft = Number(data.processionLeft) || 0;
     if (state.processionLeft < 0) state.processionLeft = 0;
+    state.knellLeft = Number(data.knellLeft) || 0;
+    if (state.knellLeft < 0) state.knellLeft = 0;
     if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) {
       state.unlockedWake = true;
     }
@@ -4536,6 +4594,14 @@
         (Number(data.tollLeft) || 0) > 0;
     } else {
       state.giftFirstToll = !!data.giftFirstToll;
+    }
+    if (data.giftFirstKnell == null) {
+      state.giftFirstKnell =
+        hasChronicle("knell") ||
+        hasChronicle("giftFirstKnell") ||
+        (Number(data.knellLeft) || 0) > 0;
+    } else {
+      state.giftFirstKnell = !!data.giftFirstKnell;
     }
     state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
@@ -4857,6 +4923,7 @@
     var keptGiftFirstLongerVeil = !!state.giftFirstLongerVeil;
     var keptGiftFirstLongerHymn = !!state.giftFirstLongerHymn;
     var keptGiftFirstToll = !!state.giftFirstToll;
+    var keptGiftFirstKnell = !!state.giftFirstKnell;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
     var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
@@ -4965,6 +5032,7 @@
     state.giftFirstLongerVeil = keptGiftFirstLongerVeil;
     state.giftFirstLongerHymn = keptGiftFirstLongerHymn;
     state.giftFirstToll = keptGiftFirstToll;
+    state.giftFirstKnell = keptGiftFirstKnell;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
     state.hymnEdictLevel = keptHymnEdict;
@@ -5015,6 +5083,7 @@
       state.unlockedWake = true;
     }
     state.processionLeft = processionLeftAfterTribute(keptProcessionEdict);
+    state.knellLeft = 0;
     state.tithePaid = false;
     state.autobind = false;
     state.autobindSpirits = false;
@@ -5602,6 +5671,16 @@
         els.soulsWake.classList.remove("is-hidden");
       } else {
         els.soulsWake.classList.add("is-hidden");
+      }
+    }
+
+    if (els.soulsKnell) {
+      if (knellActive()) {
+        var kHud = Number(state.knellLeft) || 0;
+        els.soulsKnell.textContent = "Knell ×2 — " + Math.ceil(kHud) + "s";
+        els.soulsKnell.classList.remove("is-hidden");
+      } else {
+        els.soulsKnell.classList.add("is-hidden");
       }
     }
 
@@ -6738,6 +6817,7 @@
       if (els.ashenTideRow) els.ashenTideRow.classList.toggle("is-hidden", !remOpen);
       if (els.ossuaryRow) els.ossuaryRow.classList.toggle("is-hidden", !remOpen);
       if (els.processionRow) els.processionRow.classList.toggle("is-hidden", !remOpen);
+      if (els.knellRow) els.knellRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerProcessionRow) els.longerProcessionRow.classList.toggle("is-hidden", !remOpen);
       if (els.deeperTollRow) els.deeperTollRow.classList.toggle("is-hidden", !remOpen);
       if (els.longerWakeRow) els.longerWakeRow.classList.toggle("is-hidden", !remOpen);
@@ -6821,6 +6901,25 @@
           } else {
             els.processionBuy.disabled = (Number(state.remembrance) || 0) < PROCESSION_COST;
             els.processionBuy.textContent = "Begin the Procession";
+          }
+        }
+
+        var kLeft = Number(state.knellLeft) || 0;
+        var kOn = knellActive();
+        if (els.knellRow) els.knellRow.classList.toggle("is-burning", kOn);
+        if (els.knellEffect) {
+          els.knellEffect.textContent = kOn ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + KNELL_SECS + "s";
+        }
+        if (els.knellCost) {
+          els.knellCost.textContent = F.formatNumber(KNELL_COST) + " Remembrance";
+        }
+        if (els.knellBuy) {
+          if (kOn) {
+            els.knellBuy.disabled = true;
+            els.knellBuy.textContent = "The knell sounds \u2014 " + Math.ceil(kLeft) + "s";
+          } else {
+            els.knellBuy.disabled = (Number(state.remembrance) || 0) < KNELL_COST;
+            els.knellBuy.textContent = "Sound the Knell";
           }
         }
 
@@ -6994,6 +7093,7 @@
     els.soulsFavor = document.getElementById("souls-favor");
     els.soulsHymn = document.getElementById("souls-hymn");
     els.soulsWake = document.getElementById("souls-wake");
+    els.soulsKnell = document.getElementById("souls-knell");
     els.gatherBtn = document.getElementById("gather-btn");
     els.buyMode = document.getElementById("buy-mode");
     els.wellCard = document.getElementById("well-card");
@@ -7248,6 +7348,10 @@
     els.processionEffect = document.getElementById("procession-effect");
     els.processionCost = document.getElementById("procession-cost");
     els.processionBuy = document.getElementById("procession-buy");
+    els.knellRow = document.getElementById("knell-row");
+    els.knellEffect = document.getElementById("knell-effect");
+    els.knellCost = document.getElementById("knell-cost");
+    els.knellBuy = document.getElementById("knell-buy");
     els.longerProcessionRow = document.getElementById("longer-procession-row");
     els.longerProcessionEffect = document.getElementById("longer-procession-effect");
     els.longerProcessionCost = document.getElementById("longer-procession-cost");
@@ -7383,6 +7487,7 @@
     if (els.ashenTideBuy) els.ashenTideBuy.addEventListener("click", buyAshenTide);
     if (els.ossuaryBuy) els.ossuaryBuy.addEventListener("click", buyOssuary);
     if (els.processionBuy) els.processionBuy.addEventListener("click", beginProcession);
+    if (els.knellBuy) els.knellBuy.addEventListener("click", soundKnell);
     if (els.longerProcessionBuy) els.longerProcessionBuy.addEventListener("click", buyLongerProcession);
     if (els.deeperTollBuy) els.deeperTollBuy.addEventListener("click", buyDeeperToll);
     if (els.longerWakeBuy) els.longerWakeBuy.addEventListener("click", buyLongerWake);
@@ -7575,6 +7680,17 @@
         ) {
           ev.preventDefault();
           beginProcession();
+        }
+        return;
+      }
+      if ((ev.key === "k" || ev.key === "K") && !otherButton) {
+        if (
+          remembranceUnlocked() &&
+          !knellActive() &&
+          (Number(state.remembrance) || 0) >= KNELL_COST
+        ) {
+          ev.preventDefault();
+          soundKnell();
         }
         return;
       }
@@ -7771,6 +7887,9 @@
     processionMult: processionMult,
     PROCESSION_COST: PROCESSION_COST,
     PROCESSION_SECS: PROCESSION_SECS,
+    knellMult: knellMult,
+    KNELL_COST: KNELL_COST,
+    KNELL_SECS: KNELL_SECS,
     ashPerSec: ashPerSec
   };
 })();

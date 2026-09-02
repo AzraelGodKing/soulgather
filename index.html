@@ -22,6 +22,7 @@
       <div class="souls-favor is-hidden" id="souls-favor">Blessing ×1.0</div>
       <div class="souls-hymn is-hidden" id="souls-hymn">Hymn ×1.25 — 0s</div>
       <div class="souls-wake is-hidden" id="souls-wake">Wake ×2 — 0s</div>
+      <div class="souls-knell is-hidden" id="souls-knell">Knell ×2 — 0s</div>
       <div class="next-goal" id="next-goal">Bind a Shade to wake the well.</div>
     </section>
 
@@ -1004,6 +1005,18 @@
         <button type="button" class="card-buy" id="procession-buy" disabled>Begin the Procession</button>
       </div>
 
+      <div class="crown-row is-hidden" id="knell-row">
+        <div class="crown-copy">
+          <h3 class="crown-upgrade-name">The Knell</h3>
+          <p class="crown-upgrade-flavor">The well answers twice.</p>
+          <p class="crown-stats">
+            Effect: <span id="knell-effect">Burst ×2 · 20s</span>
+            · Cost: <span id="knell-cost">1 Remembrance</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="knell-buy" disabled>Sound the Knell</button>
+      </div>
+
       <div class="crown-row is-hidden" id="longer-procession-row">
         <div class="crown-copy">
           <h3 class="crown-upgrade-name">Longer Procession</h3>
@@ -1094,7 +1107,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v5.4 · prototype</span>
+      <span>Soulgather v5.5 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
