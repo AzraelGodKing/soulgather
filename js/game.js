@@ -63,6 +63,9 @@
   var VEIL_MIN = 20;
   var VEIL_FRAC = 0.15;
   var VEIL_SECS = 20;
+  var WAKE_COST = 30;
+  var WAKE_SECS = 40;
+  var UNLOCK_WAKE_ASH = 40;
   var NIGHT_TITHE_MIN = 10;
   var NIGHT_TITHE_FRAC = 0.25;
   var NIGHT_TITHE_SECS = 30;
@@ -291,6 +294,10 @@
 
   function hymnMult(on) {
     return on ? HYMN_MULT : 1;
+  }
+
+  function wakeMult(on) {
+    return on ? 2 : 1;
   }
 
   function hymnSecs(level) {
@@ -609,6 +616,7 @@
     "giftFiveTributes",
     "giftNamesComplete",
     "giftFirstVeil",
+    "giftFirstWake",
     "giftPeakLanterns",
     "giftPeakFetters",
     "giftPeakCensers",
@@ -625,6 +633,7 @@
     "giftHundredDraws",
     "choir",
     "veil",
+    "wake",
     "choirEdict",
     "hymnEdict",
     "smokeEdict",
@@ -687,6 +696,7 @@
     giftFiveTributes: "Five tributes. The GodKing returned two Favor.",
     giftNamesComplete: "The names complete. The GodKing returned Favor.",
     giftFirstVeil: "The first veil. The well returned ten ash.",
+    giftFirstWake: "The first wake. The well returned eight ash.",
     giftPeakLanterns: "Ten lanterns. The well returned twenty souls.",
     giftPeakFetters: "Eight fetters. The well returned fifteen shades.",
     giftPeakCensers: "Five censers. The well returned eight ash.",
@@ -703,6 +713,7 @@
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
+    wake: "The wake was kept.",
     choirEdict: "The choir was spoken.",
     hymnEdict: "The hymn was spoken.",
     smokeEdict: "The smoke was spoken.",
@@ -985,6 +996,9 @@
     if ((Number(state.veilLeft) || 0) > 0) {
       if (markChronicle("veil")) added = true;
     }
+    if ((Number(state.wakeLeft) || 0) > 0) {
+      if (markChronicle("wake")) added = true;
+    }
     var namesN = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
     var ni;
     for (ni = 1; ni <= namesN; ni++) {
@@ -1045,6 +1059,7 @@
       unlockedAutobindChalices: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
+      unlockedWake: false,
       toastShown: false,
       vesselToastShown: false,
       throneToastShown: false,
@@ -1082,6 +1097,7 @@
       autobindChalices: false,
       clicksThisRun: 0,
       veilLeft: 0,
+      wakeLeft: 0,
       peakShades: N.fromNumber(0),
       peakLanterns: N.fromNumber(0),
       peakFetters: N.fromNumber(0),
@@ -1102,6 +1118,7 @@
       giftFiveTributes: false,
       giftNamesComplete: false,
       giftFirstVeil: false,
+      giftFirstWake: false,
       giftPeakLanterns: false,
       giftPeakFetters: false,
       giftPeakCensers: false,
@@ -1185,6 +1202,10 @@
     return (Number(state.veilLeft) || 0) > 0;
   }
 
+  function wakeActive() {
+    return (Number(state.wakeLeft) || 0) > 0;
+  }
+
   function rateMult() {
     return currentMult() * titheMult(titheActive());
   }
@@ -1253,20 +1274,26 @@
     var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
     var fromCensers = N.mul(
       N.mul(
-        N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
-        nightMult(nightActive())
-      ),
-      hymnMult(hymnActive())
-    );
-    var fromPyres = N.mul(
-      N.mul(
         N.mul(
-          N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
           nightMult(nightActive())
         ),
         hymnMult(hymnActive())
       ),
-      cinderMult(state.cinderLevel)
+      wakeMult(wakeActive())
+    );
+    var fromPyres = N.mul(
+      N.mul(
+        N.mul(
+          N.mul(
+            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
+        ),
+        cinderMult(state.cinderLevel)
+      ),
+      wakeMult(wakeActive())
     );
     return N.add(N.add(fromShades, fromCensers), fromPyres);
   }
@@ -1310,11 +1337,14 @@
       if (hymn < 0) hymn = 0;
       var veil = Number(state.veilLeft) || 0;
       if (veil < 0) veil = 0;
+      var wake = Number(state.wakeLeft) || 0;
+      if (wake < 0) wake = 0;
       var slice = remaining;
       if (tithe > 0 && tithe < slice) slice = tithe;
       if (night > 0 && night < slice) slice = night;
       if (hymn > 0 && hymn < slice) slice = hymn;
       if (veil > 0 && veil < slice) slice = veil;
+      if (wake > 0 && wake < slice) slice = wake;
       applyRates(slice);
       if (tithe > 0) {
         state.titheLeft = tithe - slice;
@@ -1331,6 +1361,10 @@
       if (veil > 0) {
         state.veilLeft = veil - slice;
         if (state.veilLeft < 0) state.veilLeft = 0;
+      }
+      if (wake > 0) {
+        state.wakeLeft = wake - slice;
+        if (state.wakeLeft < 0) state.wakeLeft = 0;
       }
       remaining -= slice;
     }
@@ -1470,6 +1504,12 @@
     if (!state.unlockedNightTithe) {
       if (state.tithePaid || N.cmp(state.lanterns, UNLOCK_NIGHT_LANTERNS) >= 0) {
         state.unlockedNightTithe = true;
+      }
+    }
+
+    if (!state.unlockedWake) {
+      if (state.unlockedPyres || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || (Number(state.wakeLeft) || 0) > 0) {
+        state.unlockedWake = true;
       }
     }
 
@@ -1893,6 +1933,25 @@
     state.ash = N.sub(state.ash, cost);
     state.nightLeft = nightSecs(state.deeperNightLevel);
     showToast("The GodKing hungers at midnight.");
+    save();
+    render();
+  }
+
+  function keepWake() {
+    if (!state.unlockedWake) return;
+    if (wakeActive()) return;
+    var cost = N.fromNumber(WAKE_COST);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state.wakeLeft = WAKE_SECS;
+    markChronicle("wake");
+    if (!state.giftFirstWake) {
+      state.giftFirstWake = true;
+      state.ash = N.add(state.ash, 8);
+      markChronicle("giftFirstWake");
+      showToast("Eight ash for the first wake.");
+    }
+    showToast("The fire does not sleep.");
     save();
     render();
   }
@@ -2553,6 +2612,7 @@
     "unlockedAutobindChalices",
     "unlockedNightTithe",
     "unlockedVeil",
+    "unlockedWake",
     "toastShown",
     "vesselToastShown",
     "throneToastShown",
@@ -2590,6 +2650,7 @@
     "autobindChalices",
     "clicksThisRun",
     "veilLeft",
+    "wakeLeft",
     "peakShades",
     "peakLanterns",
     "peakFetters",
@@ -2610,6 +2671,7 @@
     "giftFiveTributes",
     "giftNamesComplete",
     "giftFirstVeil",
+    "giftFirstWake",
     "giftPeakLanterns",
     "giftPeakFetters",
     "giftPeakCensers",
@@ -2695,6 +2757,7 @@
       unlockedAutobindChalices: !!state.unlockedAutobindChalices,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
+      unlockedWake: !!state.unlockedWake,
       toastShown: state.toastShown,
       vesselToastShown: state.vesselToastShown,
       throneToastShown: state.throneToastShown,
@@ -2732,6 +2795,7 @@
       autobindChalices: !!state.autobindChalices,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
+      wakeLeft: Number(state.wakeLeft) || 0,
       peakShades: dumpNum(state.peakShades),
       peakLanterns: dumpNum(state.peakLanterns),
       peakFetters: dumpNum(state.peakFetters),
@@ -2752,6 +2816,7 @@
       giftFiveTributes: !!state.giftFiveTributes,
       giftNamesComplete: !!state.giftNamesComplete,
       giftFirstVeil: !!state.giftFirstVeil,
+      giftFirstWake: !!state.giftFirstWake,
       giftPeakLanterns: !!state.giftPeakLanterns,
       giftPeakFetters: !!state.giftPeakFetters,
       giftPeakCensers: !!state.giftPeakCensers,
@@ -2842,6 +2907,7 @@
     state.unlockedAutobindChalices = !!data.unlockedAutobindChalices;
     state.unlockedNightTithe = !!data.unlockedNightTithe;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS;
+    state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
     state.throneToastShown = !!data.throneToastShown;
@@ -2878,6 +2944,11 @@
     if (state.hymnLeft < 0) state.hymnLeft = 0;
     state.veilLeft = Number(data.veilLeft) || 0;
     if (state.veilLeft < 0) state.veilLeft = 0;
+    state.wakeLeft = Number(data.wakeLeft) || 0;
+    if (state.wakeLeft < 0) state.wakeLeft = 0;
+    if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) {
+      state.unlockedWake = true;
+    }
     state.tithePaid = !!data.tithePaid || (Number(data.titheLeft) || 0) > 0;
     state.autobind = !!data.autobind;
     state.autobindSpirits = !!data.autobindSpirits;
@@ -2890,6 +2961,14 @@
     state.autobindChalices = !!data.autobindChalices;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS) state.unlockedVeil = true;
+    if (
+      state.unlockedPyres ||
+      N.cmp(state.pyres, 1) >= 0 ||
+      N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 ||
+      state.wakeLeft > 0
+    ) {
+      state.unlockedWake = true;
+    }
     state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
     state.peakLanterns = N.max(N.load(data.peakLanterns), N.load(data.lanterns));
     state.peakFetters = N.max(N.load(data.peakFetters), N.load(data.fetters));
@@ -2944,6 +3023,11 @@
       state.giftFirstVeil = hasChronicle("veil") || (Number(data.veilLeft) || 0) > 0;
     } else {
       state.giftFirstVeil = !!data.giftFirstVeil;
+    }
+    if (data.giftFirstWake == null) {
+      state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (Number(data.wakeLeft) || 0) > 0;
+    } else {
+      state.giftFirstWake = !!data.giftFirstWake;
     }
     if (data.giftPeakLanterns == null) {
       state.giftPeakLanterns = false;
@@ -3272,6 +3356,7 @@
     var keptGiftFiveTributes = !!state.giftFiveTributes;
     var keptGiftNamesComplete = !!state.giftNamesComplete;
     var keptGiftFirstVeil = !!state.giftFirstVeil;
+    var keptGiftFirstWake = !!state.giftFirstWake;
     var keptGiftPeakLanterns = !!state.giftPeakLanterns;
     var keptGiftPeakFetters = !!state.giftPeakFetters;
     var keptGiftPeakCensers = !!state.giftPeakCensers;
@@ -3337,6 +3422,7 @@
     state.giftFiveTributes = keptGiftFiveTributes;
     state.giftNamesComplete = keptGiftNamesComplete;
     state.giftFirstVeil = keptGiftFirstVeil;
+    state.giftFirstWake = keptGiftFirstWake;
     state.giftPeakLanterns = keptGiftPeakLanterns;
     state.giftPeakFetters = keptGiftPeakFetters;
     state.giftPeakCensers = keptGiftPeakCensers;
@@ -3370,6 +3456,7 @@
     state.nightLeft = 0;
     state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict);
     state.veilLeft = 0;
+    state.wakeLeft = 0;
     state.tithePaid = false;
     state.autobind = false;
     state.autobindSpirits = false;
@@ -3645,6 +3732,7 @@
     if (els.autobindChalicesRow) els.autobindChalicesRow.classList.add("is-hidden");
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.veilRow) els.veilRow.classList.add("is-hidden");
+    if (els.wakeRow) els.wakeRow.classList.add("is-hidden");
   }
 
   function hideMarks() {
@@ -3842,6 +3930,7 @@
         state.unlockedNightTithe ||
         state.unlockedChoir ||
         state.unlockedVeil ||
+        state.unlockedWake ||
         state.unlockedChalices ||
         N.cmp(state.ash, 0) > 0 ||
         N.cmp(state.pyres, 0) > 0;
@@ -3869,6 +3958,16 @@
         els.soulsHymn.classList.remove("is-hidden");
       } else {
         els.soulsHymn.classList.add("is-hidden");
+      }
+    }
+
+    if (els.soulsWake) {
+      if (wakeActive()) {
+        var wHud = Number(state.wakeLeft) || 0;
+        els.soulsWake.textContent = "Wake ×2 — " + Math.ceil(wHud) + "s";
+        els.soulsWake.classList.remove("is-hidden");
+      } else {
+        els.soulsWake.classList.add("is-hidden");
       }
     }
 
@@ -3975,10 +4074,13 @@
       var censerC = censerCost(state.censers);
       var censerRate = N.mul(
         N.mul(
-          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
-          nightMult(nightActive())
+          N.mul(
+            N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
         ),
-        hymnMult(hymnActive())
+        wakeMult(wakeActive())
       );
       var canCenser = N.cmp(state.vessels, censerC) >= 0;
       els.censerOwned.textContent = F.formatNumber(state.censers);
@@ -3997,12 +4099,15 @@
       var pyreRate = N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
-            nightMult(nightActive())
+            N.mul(
+              N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+              nightMult(nightActive())
+            ),
+            hymnMult(hymnActive())
           ),
-          hymnMult(hymnActive())
+          cinderMult(state.cinderLevel)
         ),
-        cinderMult(state.cinderLevel)
+        wakeMult(wakeActive())
       );
       if (els.pyreOwned) els.pyreOwned.textContent = F.formatNumber(state.pyres);
       if (els.pyreProd) els.pyreProd.textContent = F.formatNumber(pyreRate) + " ash / sec";
@@ -4053,7 +4158,7 @@
       if (els.chaliceCard) els.chaliceCard.classList.toggle("can-buy", cupPlan.can);
     }
 
-    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedPyres;
+    var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedWake || !!state.unlockedPyres;
     if (els.ritesPanel) {
       els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
     }
@@ -4157,6 +4262,31 @@
           } else {
             els.nightTitheBuy.disabled = N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
             els.nightTitheBuy.textContent = "Pay the Night's Tithe";
+          }
+        }
+      }
+
+      var wakeOpen = !!state.unlockedWake;
+      if (els.wakeRow) {
+        els.wakeRow.classList.toggle("is-hidden", !wakeOpen);
+        els.wakeRow.classList.toggle("is-burning", wakeOpen && wakeActive());
+      }
+      if (wakeOpen) {
+        var wLeft = Number(state.wakeLeft) || 0;
+        var wCost = N.fromNumber(WAKE_COST);
+        if (els.wakeEffect) {
+          els.wakeEffect.textContent = wakeActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 40s";
+        }
+        if (els.wakeCost) {
+          els.wakeCost.textContent = F.formatNumber(wCost) + " Ash";
+        }
+        if (els.wakeBuy) {
+          if (wakeActive()) {
+            els.wakeBuy.disabled = true;
+            els.wakeBuy.textContent = "The wake burns \u2014 " + Math.ceil(wLeft) + "s";
+          } else {
+            els.wakeBuy.disabled = N.cmp(state.ash, wCost) < 0;
+            els.wakeBuy.textContent = "Keep the Wake";
           }
         }
       }
@@ -4843,6 +4973,7 @@
     els.soulsAsh = document.getElementById("souls-ash");
     els.soulsFavor = document.getElementById("souls-favor");
     els.soulsHymn = document.getElementById("souls-hymn");
+    els.soulsWake = document.getElementById("souls-wake");
     els.gatherBtn = document.getElementById("gather-btn");
     els.buyMode = document.getElementById("buy-mode");
     els.wellCard = document.getElementById("well-card");
@@ -4970,6 +5101,10 @@
     els.nightTitheEffect = document.getElementById("night-tithe-effect");
     els.nightTitheCost = document.getElementById("night-tithe-cost");
     els.nightTitheBuy = document.getElementById("night-tithe-buy");
+    els.wakeRow = document.getElementById("wake-row");
+    els.wakeEffect = document.getElementById("wake-effect");
+    els.wakeCost = document.getElementById("wake-cost");
+    els.wakeBuy = document.getElementById("wake-buy");
     els.choirRow = document.getElementById("choir-row");
     els.choirEffect = document.getElementById("choir-effect");
     els.choirCost = document.getElementById("choir-cost");
@@ -5106,6 +5241,7 @@
     if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
     if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
     if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
+    if (els.wakeBuy) els.wakeBuy.addEventListener("click", keepWake);
     if (els.choirBuy) els.choirBuy.addEventListener("click", raiseChoir);
     if (els.autobindBuy) els.autobindBuy.addEventListener("click", toggleAutobind);
     if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
@@ -5239,6 +5375,13 @@
         }
         return;
       }
+      if ((ev.key === "w" || ev.key === "W") && !otherButton) {
+        if (state.unlockedWake && !wakeActive() && N.cmp(state.ash, N.fromNumber(WAKE_COST)) >= 0) {
+          ev.preventDefault();
+          keepWake();
+        }
+        return;
+      }
       if ((ev.key === "v" || ev.key === "V") && !otherButton) {
         if (state.unlockedVeil && !veilActive() && N.cmp(state.ash, VEIL_MIN) >= 0) {
           ev.preventDefault();
@@ -5258,7 +5401,7 @@
         if (
           remembranceUnlocked() &&
           (Number(state.ossuaryLevel) || 0) < OSSUARY_MAX &&
-          (Number(state.remembrance) || 0) >= 1
+          (Number(state.remembrance) || 0) >= OSSUARY_COST
         ) {
           ev.preventDefault();
           buyOssuary();
@@ -5393,6 +5536,9 @@
     nightMult: nightMult,
     veilCost: veilCost,
     veilMult: veilMult,
+    wakeMult: wakeMult,
+    WAKE_COST: WAKE_COST,
+    WAKE_SECS: WAKE_SECS,
     ashPerSec: ashPerSec
   };
 })();

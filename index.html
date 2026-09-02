@@ -21,6 +21,7 @@
       <div class="souls-ash is-hidden" id="souls-ash">Ash 0</div>
       <div class="souls-favor is-hidden" id="souls-favor">Blessing ×1.0</div>
       <div class="souls-hymn is-hidden" id="souls-hymn">Hymn ×1.25 — 0s</div>
+      <div class="souls-wake is-hidden" id="souls-wake">Wake ×2 — 0s</div>
       <div class="next-goal" id="next-goal">Bind a Shade to wake the well.</div>
     </section>
 
@@ -256,6 +257,18 @@
           </p>
         </div>
         <button type="button" class="card-buy" id="night-tithe-buy" disabled>Pay the Night's Tithe</button>
+      </div>
+
+      <div class="rite-row is-hidden" id="wake-row">
+        <div class="rite-copy">
+          <h3 class="rite-name">The Wake</h3>
+          <p class="rite-flavor">The fire does not sleep.</p>
+          <p class="rite-stats">
+            <span id="wake-effect">Burst ×2 · 40s</span>
+            · Cost: <span id="wake-cost">30 Ash</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="wake-buy" disabled>Keep the Wake</button>
       </div>
 
       <div class="rite-row is-hidden" id="veil-row">
@@ -798,7 +811,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v2.9 · prototype</span>
+      <span>Soulgather v3.0 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

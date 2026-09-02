@@ -1,4 +1,4 @@
-/* Soulgather v2.9 — void well, gold, crimson, bone. Original motif. */
+/* Soulgather v3.0 — void well, gold, crimson, bone. Original motif. */
 
 :root {
   --void: #07050a;
@@ -167,6 +167,20 @@ body::before {
 }
 
 .souls-hymn.is-hidden {
+  display: none;
+}
+
+.souls-wake {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+
+.souls-wake.is-hidden {
   display: none;
 }
 

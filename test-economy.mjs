@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v2.9 economy smoke test.
+ * Soulgather v3.0 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -363,6 +363,13 @@ function hymnEdictCost(level) {
 function veilMult(on) {
   return on ? 2 : 1;
 }
+
+function wakeMult(on) {
+  return on ? 2 : 1;
+}
+
+const WAKE_COST = 30;
+const WAKE_SECS = 40;
 
 function veilCost(ash) {
   const n = N.max(N.from(ash), 0);
@@ -906,6 +913,10 @@ assertEqual("hymnEdictCost(1)", hymnEdictCost(1), 8);
 
 assertEqual("veilMult(true)", veilMult(true), 2);
 assertEqual("veilMult(false)", veilMult(false), 1);
+assertEqual("wakeMult(false)", wakeMult(false), 1);
+assertEqual("wakeMult(true)", wakeMult(true), 2);
+assertEqual("WAKE_COST", WAKE_COST, 30);
+assertEqual("WAKE_SECS", WAKE_SECS, 40);
 assertEqual("veilCost(20)", veilCost(20), 20);
 assertEqual("veilCost(200)", veilCost(200), 30);
 
@@ -930,7 +941,32 @@ assertEqual("ossuaryMult(0)", ossuaryMult(0), 1);
 assertEqual("ossuaryMult(1)", ossuaryMult(1), 1.05);
 assertEqual("ossuaryMult(8)", ossuaryMult(8), 1.40);
 assertEqual("prodMult ossuary 8 fold", prodMult(0, 0, 0, 0.1, 0, false, 0, 8), 1.40);
-// Full ossuary gift is 8 bones; hundred-draws gift is 100 clicks this emptying. No extra formula.
+
+function ossuaryCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  if (n >= 8) return Infinity;
+  return 1;
+}
+function giftFullOssuaryReady(n) {
+  return Math.max(0, Math.min(8, Math.floor(Number(n) || 0))) >= 8;
+}
+function giftHundredDrawsReady(n) {
+  return (Number(n) || 0) >= 100;
+}
+function ossuaryHotkeyReady(unlocked, ossuaryLevel, remembrance) {
+  return !!unlocked && Math.max(0, Math.floor(Number(ossuaryLevel) || 0)) < 8 && (Number(remembrance) || 0) >= 1;
+}
+assertEqual("ossuaryCost(0)", ossuaryCost(0), 1);
+assertEqual("ossuaryCost(7)", ossuaryCost(7), 1);
+assertEqual("ossuaryCost(8)", ossuaryCost(8), Infinity);
+assertTrue("giftFullOssuaryReady(7) is false", !giftFullOssuaryReady(7));
+assertTrue("giftFullOssuaryReady(8) is true", giftFullOssuaryReady(8));
+assertTrue("giftHundredDrawsReady(99) is false", !giftHundredDrawsReady(99));
+assertTrue("giftHundredDrawsReady(100) is true", giftHundredDrawsReady(100));
+assertTrue("ossuaryHotkeyReady unlocked under cap", ossuaryHotkeyReady(true, 7, 1));
+assertTrue("ossuaryHotkeyReady blocked at cap", !ossuaryHotkeyReady(true, 8, 99));
+assertTrue("ossuaryHotkeyReady blocked without remembrance", !ossuaryHotkeyReady(true, 0, 0));
+assertTrue("ossuaryHotkeyReady blocked if locked", !ossuaryHotkeyReady(false, 0, 8));
 
 assertEqual("smokeEdictCost(0)", smokeEdictCost(0), 6);
 assertTrue("smokeStartsCenserAutobind(0) is false", !smokeStartsCenserAutobind(0));
