@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v5.8 economy smoke test.
+ * Soulgather v5.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -372,6 +372,10 @@ function quietCourtStartsUrnAutobind(level) {
 }
 
 function quietCourtStartsHearthAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function quietCourtStartsBeaconAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -1368,6 +1372,9 @@ assertTrue("quietCourtStartsUrnAutobind(1) is true", quietCourtStartsUrnAutobind
 assertTrue("quietCourtStartsHearthAutobind(0) is false", !quietCourtStartsHearthAutobind(0));
 assertTrue("quietCourtStartsHearthAutobind(1) is true", quietCourtStartsHearthAutobind(1));
 
+assertTrue("quietCourtStartsBeaconAutobind(0) is false", !quietCourtStartsBeaconAutobind(0));
+assertTrue("quietCourtStartsBeaconAutobind(1) is true", quietCourtStartsBeaconAutobind(1));
+
 function unlockAutobindHearths(n) {
   return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
 }
@@ -1378,6 +1385,17 @@ assertTrue("unlockAutobindHearths(2) is false", !unlockAutobindHearths(2));
 assertTrue("unlockAutobindHearths(3) is true", unlockAutobindHearths(3));
 assertTrue("giftPeakHearthsReady(4) is false", !giftPeakHearthsReady(4));
 assertTrue("giftPeakHearthsReady(5) is true", giftPeakHearthsReady(5));
+
+function unlockAutobindBeacons(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
+}
+function giftPeakBeaconsReady(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 5;
+}
+assertTrue("unlockAutobindBeacons(2) is false", !unlockAutobindBeacons(2));
+assertTrue("unlockAutobindBeacons(3) is true", unlockAutobindBeacons(3));
+assertTrue("giftPeakBeaconsReady(4) is false", !giftPeakBeaconsReady(4));
+assertTrue("giftPeakBeaconsReady(5) is true", giftPeakBeaconsReady(5));
 
 assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
 assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));
