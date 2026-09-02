@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v3.3 economy smoke test.
+ * Soulgather v3.4 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -830,6 +830,7 @@ assertEqual("vowExtraFavor stillness still 1", vowExtraFavor("stillness"), 1);
 assertEqual("vowExtraFavor none still 0", vowExtraFavor(""), 0);
 assertEqual("vowsKnownCount empty", vowsKnownCount({}), 0);
 assertEqual("vowsKnownCount all-false", vowsKnownCount({ stillness: false, poverty: false, hunger: false, ember: false }), 0);
+assertEqual("vowsKnownCount two true", vowsKnownCount({ stillness: true, poverty: true, hunger: false, ember: false }), 2);
 assertEqual("vowsKnownCount all four", vowsKnownCount({ stillness: true, poverty: true, hunger: true, ember: true }), 4);
 assertEqual("fetterMult(2)", fetterMult(2), 1.1);
 

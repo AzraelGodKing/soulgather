@@ -698,6 +698,7 @@
     "giftFullOssuary",
     "giftHundredDraws",
     "giftFirstEmberVow",
+    "giftTwoVows",
     "giftAllVows",
     "choir",
     "veil",
@@ -786,6 +787,7 @@
     giftFullOssuary: "Eight bones. The well returned twenty souls.",
     giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
     giftFirstEmberVow: "The ember vow. The well returned eight ash.",
+    giftTwoVows: "Two vows remembered. The well returned ten souls.",
     giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
     choir: "The choir of ash was raised.",
     veil: "The veil thinned.",
@@ -1231,6 +1233,7 @@
       giftFullOssuary: false,
       giftHundredDraws: false,
       giftFirstEmberVow: false,
+      giftTwoVows: false,
       giftAllVows: false,
       choirLevel: 0,
       unlockedChoir: false,
@@ -2431,6 +2434,14 @@
 
     if (normalizeVow(state.vow)) rememberVow(state.vow);
 
+    if (!state.giftTwoVows && vowsKnownCount(state.vowsKnown) >= 2) {
+      state.giftTwoVows = true;
+      state.souls = N.add(state.souls, 10);
+      markChronicle("giftTwoVows");
+      showToast("Ten souls for two vows.");
+      granted = true;
+    }
+
     if (!state.giftAllVows && vowsKnownCount(state.vowsKnown) >= 4) {
       state.giftAllVows = true;
       state.souls = N.add(state.souls, 25);
@@ -2844,6 +2855,7 @@
     "giftFullOssuary",
     "giftHundredDraws",
     "giftFirstEmberVow",
+    "giftTwoVows",
     "giftAllVows",
     "choirLevel",
     "unlockedChoir",
@@ -2994,6 +3006,7 @@
       giftFullOssuary: !!state.giftFullOssuary,
       giftHundredDraws: !!state.giftHundredDraws,
       giftFirstEmberVow: !!state.giftFirstEmberVow,
+      giftTwoVows: !!state.giftTwoVows,
       giftAllVows: !!state.giftAllVows,
       choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
       unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
@@ -3277,6 +3290,11 @@
     } else {
       state.giftFirstEmberVow = !!data.giftFirstEmberVow;
     }
+    if (data.giftTwoVows == null) {
+      state.giftTwoVows = hasChronicle("giftTwoVows");
+    } else {
+      state.giftTwoVows = !!data.giftTwoVows;
+    }
     if (data.giftAllVows == null) {
       state.giftAllVows = hasChronicle("giftAllVows");
     } else {
@@ -3556,6 +3574,7 @@
     var keptGiftFullOssuary = !!state.giftFullOssuary;
     var keptGiftHundredDraws = !!state.giftHundredDraws;
     var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
+    var keptGiftTwoVows = !!state.giftTwoVows;
     var keptGiftAllVows = !!state.giftAllVows;
     var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
     var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
@@ -3627,6 +3646,7 @@
     state.giftFullOssuary = keptGiftFullOssuary;
     state.giftHundredDraws = keptGiftHundredDraws;
     state.giftFirstEmberVow = keptGiftFirstEmberVow;
+    state.giftTwoVows = keptGiftTwoVows;
     state.giftAllVows = keptGiftAllVows;
     state.vowsKnown = keptVowsKnown;
     state.choirEdictLevel = keptChoirEdict;
