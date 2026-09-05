@@ -536,8 +536,13 @@ function beaconRiteMult(level) {
   return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
 }
 
+function spireRiteMult(level) {
+  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+}
+
 const HEARTH_RITE_COST = 14;
 const BEACON_RITE_COST = 16;
+const SPIRE_RITE_COST = 18;
 
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
@@ -812,6 +817,10 @@ assertEqual("beaconRiteMult(0)", beaconRiteMult(0), 1);
 assertEqual("beaconRiteMult(1)", beaconRiteMult(1), 2);
 assertEqual("beaconRiteMult(2)", beaconRiteMult(2), 4);
 assertEqual("BEACON_RITE_COST", BEACON_RITE_COST, 16);
+assertEqual("spireRiteMult(0)", spireRiteMult(0), 1);
+assertEqual("spireRiteMult(1)", spireRiteMult(1), 2);
+assertEqual("spireRiteMult(2)", spireRiteMult(2), 4);
+assertEqual("SPIRE_RITE_COST", SPIRE_RITE_COST, 18);
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
