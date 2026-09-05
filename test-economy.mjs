@@ -124,28 +124,48 @@ function pyreCost(owned) {
   return N.cost(2, 1.2, owned);
 }
 
+const URN_COST_BASE = 3;
+const URN_COST_MULT = 1.28;
+const UNLOCK_URNS = 6;
+const HEARTH_COST_BASE = 4;
+const HEARTH_COST_MULT = 1.28;
+const UNLOCK_HEARTHS = 6;
+const BEACON_COST_BASE = 4;
+const BEACON_COST_MULT = 1.28;
+const UNLOCK_BEACONS = 6;
+const SPIRE_COST_BASE = 5;
+const SPIRE_COST_MULT = 1.28;
+const UNLOCK_SPIRES = 6;
+const OBELISK_COST_BASE = 6;
+const OBELISK_COST_MULT = 1.28;
+const UNLOCK_OBELISKS = 6;
+const CHALICE_COST_BASE = 32;
+const CHALICE_COST_MULT = 1.65;
+const CHALICE_MAX = 12;
+const PEAK_BEACON_SPIRE_OBELISK_ASH = 7;
+
 function urnCost(owned) {
-  return N.cost(3, 1.2, owned);
+  return N.cost(URN_COST_BASE, URN_COST_MULT, owned);
 }
 
 function hearthCost(owned) {
-  return N.cost(4, 1.2, owned);
+  return N.cost(HEARTH_COST_BASE, HEARTH_COST_MULT, owned);
 }
 
 function beaconCost(owned) {
-  return N.cost(4, 1.2, owned);
+  return N.cost(BEACON_COST_BASE, BEACON_COST_MULT, owned);
 }
 
 function spireCost(owned) {
-  return N.cost(5, 1.2, owned);
+  return N.cost(SPIRE_COST_BASE, SPIRE_COST_MULT, owned);
 }
 
 function obeliskCost(owned) {
-  return N.cost(6, 1.2, owned);
+  return N.cost(OBELISK_COST_BASE, OBELISK_COST_MULT, owned);
 }
 
 function chaliceCost(owned) {
-  return N.cost(20, 1.5, owned);
+  return N.cost(CHALICE_COST_BASE, CHALICE_COST_MULT, owned);
 }
 
 function chaliceMult(n) {
@@ -992,7 +1012,7 @@ assertTrue("riseEdictStartsSpireAutobind(0) is false", !riseEdictStartsSpireAuto
 assertTrue("riseEdictStartsSpireAutobind(1) is true", riseEdictStartsSpireAutobind(1));
 assertEqual("chaliceMult(0)", chaliceMult(0), 1);
 assertEqual("chaliceMult(1)", chaliceMult(1), 1.08);
-assertEqual("chaliceCost(0)", chaliceCost(0), 20);
+assertEqual("chaliceCost(0)", chaliceCost(0), 32);
 assertEqual("cupEdictCost(0)", cupEdictCost(0), 9);
 assertEqual("cupStartsChalices(0)", cupStartsChalices(0), 0);
 assertEqual("cupStartsChalices(2)", cupStartsChalices(2), 2);
@@ -1749,6 +1769,28 @@ assertEqual("obeliskEdictCost(0)", obeliskEdictCost(0), 12);
 assertEqual("obeliskEdictCost(1)", obeliskEdictCost(1), 24);
 assertEqual("obeliskEdictStartsObelisks(0)", obeliskEdictStartsObelisks(0), 0);
 assertEqual("obeliskEdictStartsObelisks(2)", obeliskEdictStartsObelisks(2), 2);
+
+// AZR-118 steepen mid/late ash ladder
+assertEqual("URN_COST_MULT", URN_COST_MULT, 1.28);
+assertEqual("HEARTH_COST_MULT", HEARTH_COST_MULT, 1.28);
+assertEqual("BEACON_COST_MULT", BEACON_COST_MULT, 1.28);
+assertEqual("SPIRE_COST_MULT", SPIRE_COST_MULT, 1.28);
+assertEqual("OBELISK_COST_MULT", OBELISK_COST_MULT, 1.28);
+assertEqual("UNLOCK_URNS", UNLOCK_URNS, 6);
+assertEqual("UNLOCK_HEARTHS", UNLOCK_HEARTHS, 6);
+assertEqual("UNLOCK_BEACONS", UNLOCK_BEACONS, 6);
+assertEqual("UNLOCK_SPIRES", UNLOCK_SPIRES, 6);
+assertEqual("UNLOCK_OBELISKS", UNLOCK_OBELISKS, 6);
+assertEqual("CHALICE_COST_BASE", CHALICE_COST_BASE, 32);
+assertEqual("CHALICE_COST_MULT", CHALICE_COST_MULT, 1.65);
+assertEqual("CHALICE_MAX", CHALICE_MAX, 12);
+assertEqual("urnCost(1) 1.28 curve", urnCost(1), Math.floor(3 * 1.28));
+assertEqual("hearthCost(1) 1.28 curve", hearthCost(1), Math.floor(4 * 1.28));
+assertEqual("beaconCost(1) 1.28 curve", beaconCost(1), Math.floor(4 * 1.28));
+assertEqual("spireCost(1) 1.28 curve", spireCost(1), Math.floor(5 * 1.28));
+assertEqual("obeliskCost(1) 1.28 curve", obeliskCost(1), Math.floor(6 * 1.28));
+assertEqual("chaliceCost(1) 1.65 curve", chaliceCost(1), Math.floor(32 * 1.65));
+assertEqual("peak beacon/spire/obelisk ash gift", PEAK_BEACON_SPIRE_OBELISK_ASH, 7);
 
 assertEqual(
   "nextGoal pyre half-step",
