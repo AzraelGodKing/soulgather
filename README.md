@@ -17,11 +17,12 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 **Fix.** Wired those four stackable producers through `purchasePlan` / `bulkCost` the same way as Shades, Spirits, Vessels, Thrones, Pyres, and the later ash half-steps. Cost display, disabled/can-buy, and bindLabel button text use the planned bulk cost and count.
 
-**Still ×1 by design.** Rites, Reliquary edicts, Marks, one-shots (Tithe / Veil / Toll / Wake / Night / Procession / Knell / Ossuary / Choir / etc.), and Autobind (still buy 1 per pulse, ignore buyMode).
+**Still ×1 by design.** Rites, Reliquary edicts, Marks, one-shots (Tithe / Veil / Toll / Wake / Night / Procession / Knell / Ossuary / Choir / etc.), and Autobind (still buy 1 per pulse, ignore buyMode). Autobind ×1 / ignores buyMode is locked by economy asserts (AZR-112).
 
 **Autobind rate limit.** While the tab is live, Autobind is capped to about one buy per second per path (`AUTOBIND_INTERVAL = 1` of accumulated `dt`). Each `tryAutobind*` still buys ×1 and ignores buyMode; manual Buy 10 / Max is unchanged. Offline shade/spirit autobind remains one pulse per catchup `applyDt`.
 
 **Buy 10 clamp.** Buy 10 clamps to how many you can afford (up to 10); no longer dead-ends when full 10 is too expensive (AZR-113).
+
 
 Visual direction stays locked. Footer/CSS remain **v6.6** (bugfix, not a content version). Save key stays `soulgather-v0`.
 
