@@ -2534,10 +2534,10 @@
 
   function buyWell() {
     if (!state.unlockedWell) return;
-    var cost = wellCost(state.wellDepth);
-    if (N.cmp(state.souls, cost) < 0) return;
-    state.souls = N.sub(state.souls, cost);
-    state.wellDepth += 1;
+    var plan = purchasePlan(state.wellDepth, state.souls, WELL_COST_BASE, WELL_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.souls = N.sub(state.souls, plan.cost);
+    state.wellDepth += plan.k;
     syncChronicle();
     save();
     render();
@@ -2591,10 +2591,10 @@
 
   function buyLantern() {
     if (!state.unlockedLanterns) return;
-    var cost = lanternCost(state.lanterns);
-    if (N.cmp(state.souls, cost) < 0) return;
-    state.souls = N.sub(state.souls, cost);
-    state.lanterns = N.add(state.lanterns, 1);
+    var plan = purchasePlan(state.lanterns, state.souls, LANTERN_COST_BASE, LANTERN_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.souls = N.sub(state.souls, plan.cost);
+    state.lanterns = N.add(state.lanterns, plan.k);
     if (!state.lanternToastShown) {
       state.lanternToastShown = true;
       showToast("A lantern kindles.");
@@ -2607,10 +2607,10 @@
 
   function buyFetter() {
     if (!state.unlockedFetters) return;
-    var cost = fetterCost(state.fetters);
-    if (N.cmp(state.shades, cost) < 0) return;
-    state.shades = N.sub(state.shades, cost);
-    state.fetters = N.add(state.fetters, 1);
+    var plan = purchasePlan(state.fetters, state.shades, FETTER_COST_BASE, FETTER_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.shades = N.sub(state.shades, plan.cost);
+    state.fetters = N.add(state.fetters, plan.k);
     markChronicle("fetter");
     checkUnlock();
     save();
@@ -2619,10 +2619,10 @@
 
   function buyCenser() {
     if (!state.unlockedCensers) return;
-    var cost = censerCost(state.censers);
-    if (N.cmp(state.vessels, cost) < 0) return;
-    state.vessels = N.sub(state.vessels, cost);
-    state.censers = N.add(state.censers, 1);
+    var plan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.vessels = N.sub(state.vessels, plan.cost);
+    state.censers = N.add(state.censers, plan.k);
     markChronicle("censer");
     checkUnlock();
     save();
@@ -6609,14 +6609,15 @@
       if (els.wellCard && els.wellCard.classList.contains("is-hidden")) {
         revealWell();
       }
-      var wCost = wellCost(state.wellDepth);
-      var canWell = N.cmp(state.souls, wCost) >= 0;
+      var wellPlan = purchasePlan(state.wellDepth, state.souls, WELL_COST_BASE, WELL_COST_MULT);
+      var canWell = wellPlan.can;
       var power = clickPower();
       els.wellOwned.textContent = F.formatNumber(state.wellDepth);
       els.wellPower.textContent =
         F.formatNumber(power) + (N.cmp(power, 1) === 0 ? " soul / click" : " souls / click");
-      els.wellCost.textContent = F.formatNumber(wCost) + " Souls";
+      els.wellCost.textContent = F.formatNumber(wellPlan.cost) + " Souls";
       els.wellBuy.disabled = !canWell;
+      els.wellBuy.textContent = bindLabel("Deepen the Well", "Deepen", wellPlan.k, "level", "levels");
       els.wellCard.classList.toggle("can-buy", canWell);
     }
 
@@ -6635,14 +6636,14 @@
       if (els.lanternCard && els.lanternCard.classList.contains("is-hidden")) {
         revealLanterns(false);
       }
-      var lanternC = lanternCost(state.lanterns);
+      var lanternPlan = purchasePlan(state.lanterns, state.souls, LANTERN_COST_BASE, LANTERN_COST_MULT);
       var lMult = lanternMult(state.lanterns);
-      var canLantern = N.cmp(state.souls, lanternC) >= 0;
+      var canLantern = lanternPlan.can;
       els.lanternOwned.textContent = F.formatNumber(state.lanterns);
       els.lanternProd.textContent = "Shade souls \u00d7" + formatTimes(lMult);
-      els.lanternCost.textContent = F.formatNumber(lanternC) + " Souls";
+      els.lanternCost.textContent = F.formatNumber(lanternPlan.cost) + " Souls";
       els.lanternBuy.disabled = !canLantern;
-      els.lanternBuy.textContent = "Kindle a Lantern";
+      els.lanternBuy.textContent = bindLabel("Kindle a Lantern", "Kindle", lanternPlan.k, "Lantern", "Lanterns");
       els.lanternCard.classList.toggle("can-buy", canLantern);
     }
 
@@ -6664,15 +6665,15 @@
       if (els.fetterCard && els.fetterCard.classList.contains("is-hidden")) {
         revealFetters(false);
       }
-      var fetterC = fetterCost(state.fetters);
+      var fetterPlan = purchasePlan(state.fetters, state.shades, FETTER_COST_BASE, FETTER_COST_MULT);
       var fMult = fetterMult(state.fetters);
-      var canFetter = N.cmp(state.shades, fetterC) >= 0;
+      var canFetter = fetterPlan.can;
       if (els.fetterOwned) els.fetterOwned.textContent = F.formatNumber(state.fetters);
       if (els.fetterProd) els.fetterProd.textContent = "Spirit shades \u00d7" + formatTimes(fMult);
-      if (els.fetterCost) els.fetterCost.textContent = F.formatNumber(fetterC) + " Shades";
+      if (els.fetterCost) els.fetterCost.textContent = F.formatNumber(fetterPlan.cost) + " Shades";
       if (els.fetterBuy) {
         els.fetterBuy.disabled = !canFetter;
-        els.fetterBuy.textContent = "Bind a Fetter";
+        els.fetterBuy.textContent = bindLabel("Bind a Fetter", "Bind", fetterPlan.k, "Fetter", "Fetters");
       }
       if (els.fetterCard) els.fetterCard.classList.toggle("can-buy", canFetter);
     }
@@ -6695,7 +6696,7 @@
       if (els.censerCard && els.censerCard.classList.contains("is-hidden")) {
         revealCensers(false);
       }
-      var censerC = censerCost(state.censers);
+      var censerPlan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
       var censerRate = N.mul(
         N.mul(
           N.mul(
@@ -6706,12 +6707,12 @@
         ),
         wakeMult(wakeActive())
       );
-      var canCenser = N.cmp(state.vessels, censerC) >= 0;
+      var canCenser = censerPlan.can;
       els.censerOwned.textContent = F.formatNumber(state.censers);
       els.censerProd.textContent = F.formatNumber(censerRate) + " ash / sec";
-      els.censerCost.textContent = F.formatNumber(censerC) + " Vessels";
+      els.censerCost.textContent = F.formatNumber(censerPlan.cost) + " Vessels";
       els.censerBuy.disabled = !canCenser;
-      els.censerBuy.textContent = "Raise a Censer";
+      els.censerBuy.textContent = bindLabel("Raise a Censer", "Raise", censerPlan.k, "Censer", "Censers");
       els.censerCard.classList.toggle("can-buy", canCenser);
     }
 

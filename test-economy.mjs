@@ -63,6 +63,10 @@ function fetterCost(owned) {
   return N.cost(20, 1.2, owned);
 }
 
+function censerCost(owned) {
+  return producerCost(owned);
+}
+
 function pyreCost(owned) {
   return N.cost(2, 1.2, owned);
 }
@@ -114,15 +118,47 @@ function markCost(level) {
   return N.cost(8, 2, level);
 }
 
-function bulkCost(base, owned, k) {
+function bulkCost(base, owned, k, mult) {
   const b = Number(base);
+  const m = mult == null ? 1.15 : Number(mult);
   const n = Math.max(0, Math.floor(k));
   let total = N.fromNumber(0);
   for (let i = 0; i < n; i++) {
     const o = Math.max(0, Math.floor(owned)) + i;
-    total = N.add(total, N.cost(b, 1.15, o));
+    total = N.add(total, N.cost(b, m, o));
   }
   return total;
+}
+
+/** Mirror of game purchasePlan for documenting buyMode on stackable producers (no DOM). */
+function purchasePlan(owned, currency, base, mult, buyMode) {
+  const b = base == null ? 10 : base;
+  const m = mult == null ? 1.15 : mult;
+  const mode = buyMode || "1";
+  const one = N.cost(b, m, owned);
+  if (mode === "10") {
+    const cost10 = bulkCost(b, owned, 10, m);
+    return { k: 10, cost: cost10, can: N.cmp(currency, cost10) >= 0 };
+  }
+  if (mode === "max") {
+    // tiny maxAffordable for tests
+    let remaining = currency;
+    if (remaining && typeof remaining === "object" && typeof remaining.m === "number") {
+      /* Num */
+    } else {
+      remaining = N.fromNumber(Number(remaining) || 0);
+    }
+    let k = 0;
+    while (k < 10000) {
+      const c = N.cost(b, m, Math.max(0, Math.floor(Number(owned) || 0)) + k);
+      if (N.cmp(remaining, c) < 0) break;
+      remaining = N.sub(remaining, c);
+      k += 1;
+    }
+    if (k < 1) return { k: 0, cost: one, can: false };
+    return { k, cost: bulkCost(b, owned, k, m), can: true };
+  }
+  return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
 }
 
 function favorGain(lifetimeSouls) {
@@ -1168,6 +1204,23 @@ assertTrue("format doesn't throw", !formatThrew);
 
 assertEqual("lanternCost(0)", lanternCost(0), 30);
 assertEqual("lanternCost(1)", lanternCost(1), 36);
+assertEqual("producerCost(0) censer base", producerCost(0), 10);
+assertEqual("censerCost(0)", censerCost(0), 10);
+assertEqual("censerCost matches producerCost", unwrap(censerCost(3)), unwrap(producerCost(3)));
+{
+  const p1 = purchasePlan(0, N.fromNumber(1000), 30, 1.2, "1");
+  assertEqual("purchasePlan lantern mode1 k", p1.k, 1);
+  assertEqual("purchasePlan lantern mode1 cost", unwrap(p1.cost), 30);
+  const p10 = purchasePlan(0, N.fromNumber(100000), 30, 1.2, "10");
+  assertEqual("purchasePlan lantern mode10 k", p10.k, 10);
+  assertTrue("purchasePlan lantern mode10 cost > one", N.cmp(p10.cost, 30) > 0);
+  const pw = purchasePlan(0, N.fromNumber(100000), 25, 1.5, "10");
+  assertEqual("purchasePlan well mode10 k", pw.k, 10);
+  const pf = purchasePlan(0, N.fromNumber(100000), 20, 1.2, "10");
+  assertEqual("purchasePlan fetter mode10 k", pf.k, 10);
+  const pc = purchasePlan(0, N.fromNumber(100000), 10, 1.15, "10");
+  assertEqual("purchasePlan censer mode10 k", pc.k, 10);
+}
 assertEqual("markCost(0)", markCost(0), 8);
 assertEqual("markCost(1)", markCost(1), 16);
 assertEqual("lanternMult(2)", lanternMult(2), 1.1);
