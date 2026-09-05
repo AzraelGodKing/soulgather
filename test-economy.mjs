@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.1 economy smoke test.
+ * Soulgather v6.2 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -77,6 +77,10 @@ function hearthCost(owned) {
 
 function beaconCost(owned) {
   return N.cost(4, 1.2, owned);
+}
+
+function spireCost(owned) {
+  return N.cost(5, 1.2, owned);
 }
 
 function chaliceCost(owned) {
@@ -421,6 +425,15 @@ function beaconEdictCost(level) {
 }
 
 function beaconEdictStartsBeacons(level) {
+  return Math.max(0, Math.floor(Number(level) || 0));
+}
+
+function spireEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 11 * Math.pow(2, n);
+}
+
+function spireEdictStartsSpires(level) {
   return Math.max(0, Math.floor(Number(level) || 0));
 }
 
@@ -886,6 +899,7 @@ function nextGoal(view, format) {
   const urns = Number(view.urns) || 0;
   const hearths = Number(view.hearths) || 0;
   const beacons = Number(view.beacons) || 0;
+  const spires = Number(view.spires) || 0;
   const fetters = Number(view.fetters) || 0;
   const chalices = Number(view.chalices) || 0;
   const unlockedSpirits = !!view.unlockedSpirits;
@@ -949,6 +963,9 @@ function nextGoal(view, format) {
   }
   if (view.unlockedBeacons && beacons < 1) {
     return "Raise a Beacon. A light after the fire.";
+  }
+  if (view.unlockedSpires && spires < 1) {
+    return "Raise a Spire. Height after the light.";
   }
   if (view.unlockedChalices && chalices < 1) {
     return "Raise a Chalice. He drinks from the emptied well.";
@@ -1486,6 +1503,11 @@ assertEqual("beaconEdictCost(0)", beaconEdictCost(0), 10);
 assertEqual("beaconEdictCost(1)", beaconEdictCost(1), 20);
 assertEqual("beaconEdictStartsBeacons(0)", beaconEdictStartsBeacons(0), 0);
 assertEqual("beaconEdictStartsBeacons(2)", beaconEdictStartsBeacons(2), 2);
+assertEqual("spireCost(0)", spireCost(0), 5);
+assertEqual("spireEdictCost(0)", spireEdictCost(0), 11);
+assertEqual("spireEdictCost(1)", spireEdictCost(1), 22);
+assertEqual("spireEdictStartsSpires(0)", spireEdictStartsSpires(0), 0);
+assertEqual("spireEdictStartsSpires(2)", spireEdictStartsSpires(2), 2);
 
 assertEqual(
   "nextGoal pyre half-step",
@@ -1638,6 +1660,45 @@ assertEqual(
     unlockedThrones: true,
     unlockedBeacons: true,
     beacons: 0,
+    favorEarned: 1,
+  }),
+  "Swear an Aspect. The GodKing waits."
+);
+
+assertEqual(
+  "nextGoal spire half-step",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedBeacons: true,
+    beacons: 5,
+    unlockedSpires: true,
+    spires: 0,
+    lifetimeSouls: 412,
+  }),
+  "Raise a Spire. Height after the light."
+);
+assertEqual(
+  "nextGoal spire does not steal tribute",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedSpires: true,
+    spires: 0,
+    lifetimeSouls: 25000,
+  }),
+  "Lay Tribute. The GodKing will remember."
+);
+assertEqual(
+  "nextGoal spire does not steal aspect",
+  nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    unlockedSpires: true,
+    spires: 0,
     favorEarned: 1,
   }),
   "Swear an Aspect. The GodKing waits."

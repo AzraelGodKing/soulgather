@@ -191,6 +191,18 @@
         <button type="button" class="card-buy" id="beacon-buy" disabled>Raise a Beacon</button>
       </article>
 
+
+      <article class="card is-hidden" id="spire-card">
+        <h2 class="card-name">Spires</h2>
+        <div class="card-owned" id="spire-owned">0</div>
+        <p class="card-flavor">Height after the light.</p>
+        <div class="card-stats">
+          <div>Raise: <span id="spire-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="spire-cost">5 Beacons</span></div>
+        </div>
+        <button type="button" class="card-buy" id="spire-buy" disabled>Raise a Spire</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -826,6 +838,19 @@
 
       <div class="edict-row">
         <div class="edict-copy">
+          <h3 class="edict-name">Edict of Spires</h3>
+          <p class="edict-flavor">The height is remembered.</p>
+          <p class="edict-stats">
+            Effect: <span id="spire-edict-effect">+0 Spire at tribute</span>
+            · Cost: <span id="spire-edict-cost">11 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="spire-edict-buy" disabled>Speak the Spire</button>
+      </div>
+
+
+      <div class="edict-row">
+        <div class="edict-copy">
           <h3 class="edict-name">Edict of Cinders</h3>
           <p class="edict-flavor">The doubling is remembered.</p>
           <p class="edict-stats">
@@ -1189,7 +1214,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v6.1 · prototype</span>
+      <span>Soulgather v6.2 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
