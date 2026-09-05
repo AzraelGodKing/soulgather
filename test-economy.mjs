@@ -130,6 +130,26 @@ function bulkCost(base, owned, k, mult) {
   return total;
 }
 
+/** Tiny maxAffordable mirror for purchasePlan tests (no DOM). */
+function maxAffordable(base, owned, currency, mult) {
+  const b = Number(base);
+  const m = mult == null ? 1.15 : Number(mult);
+  let remaining = currency;
+  if (remaining && typeof remaining === "object" && typeof remaining.m === "number") {
+    /* Num */
+  } else {
+    remaining = N.fromNumber(Number(remaining) || 0);
+  }
+  let k = 0;
+  while (k < 10000) {
+    const c = N.cost(b, m, Math.max(0, Math.floor(Number(owned) || 0)) + k);
+    if (N.cmp(remaining, c) < 0) break;
+    remaining = N.sub(remaining, c);
+    k += 1;
+  }
+  return k;
+}
+
 /** Mirror of game purchasePlan for documenting buyMode on stackable producers (no DOM). */
 function purchasePlan(owned, currency, base, mult, buyMode) {
   const b = base == null ? 10 : base;
@@ -137,24 +157,15 @@ function purchasePlan(owned, currency, base, mult, buyMode) {
   const mode = buyMode || "1";
   const one = N.cost(b, m, owned);
   if (mode === "10") {
-    const cost10 = bulkCost(b, owned, 10, m);
-    return { k: 10, cost: cost10, can: N.cmp(currency, cost10) >= 0 };
+    let k10 = maxAffordable(b, owned, currency, m);
+    if (k10 < 1) {
+      return { k: 0, cost: one, can: false };
+    }
+    if (k10 > 10) k10 = 10;
+    return { k: k10, cost: bulkCost(b, owned, k10, m), can: true };
   }
   if (mode === "max") {
-    // tiny maxAffordable for tests
-    let remaining = currency;
-    if (remaining && typeof remaining === "object" && typeof remaining.m === "number") {
-      /* Num */
-    } else {
-      remaining = N.fromNumber(Number(remaining) || 0);
-    }
-    let k = 0;
-    while (k < 10000) {
-      const c = N.cost(b, m, Math.max(0, Math.floor(Number(owned) || 0)) + k);
-      if (N.cmp(remaining, c) < 0) break;
-      remaining = N.sub(remaining, c);
-      k += 1;
-    }
+    const k = maxAffordable(b, owned, currency, m);
     if (k < 1) return { k: 0, cost: one, can: false };
     return { k, cost: bulkCost(b, owned, k, m), can: true };
   }
@@ -1226,6 +1237,20 @@ assertEqual("censerCost matches producerCost", unwrap(censerCost(3)), unwrap(pro
   assertEqual("purchasePlan fetter mode10 k", pf.k, 10);
   const pc = purchasePlan(0, N.fromNumber(100000), 10, 1.15, "10");
   assertEqual("purchasePlan censer mode10 k", pc.k, 10);
+  // AZR-113: Buy 10 clamps to affordable (up to 10); never dead-ends if Max could buy ≥1
+  const steepBase = 100;
+  const steepMult = 2;
+  const costExactly3 = bulkCost(steepBase, 0, 3, steepMult);
+  const pClamp3 = purchasePlan(0, costExactly3, steepBase, steepMult, "10");
+  assertEqual("purchasePlan mode10 clamp k===3", pClamp3.k, 3);
+  assertTrue("purchasePlan mode10 clamp can when partial", pClamp3.can === true);
+  const pClamp10 = purchasePlan(0, N.fromNumber(1e9), steepBase, steepMult, "10");
+  assertEqual("purchasePlan mode10 clamp k===10 when rich", pClamp10.k, 10);
+  const pClamp0 = purchasePlan(0, N.fromNumber(0), steepBase, steepMult, "10");
+  assertEqual("purchasePlan mode10 clamp k===0", pClamp0.k, 0);
+  assertTrue("purchasePlan mode10 clamp can===false when broke", pClamp0.can === false);
+  const pMode1 = purchasePlan(0, costExactly3, steepBase, steepMult, "1");
+  assertEqual("purchasePlan mode1 still k===1", pMode1.k, 1);
 }
 assertEqual("markCost(0)", markCost(0), 8);
 assertEqual("markCost(1)", markCost(1), 16);

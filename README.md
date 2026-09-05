@@ -21,6 +21,8 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 **Autobind rate limit.** While the tab is live, Autobind is capped to about one buy per second per path (`AUTOBIND_INTERVAL = 1` of accumulated `dt`). Each `tryAutobind*` still buys ×1 and ignores buyMode; manual Buy 10 / Max is unchanged. Offline shade/spirit autobind remains one pulse per catchup `applyDt`.
 
+**Buy 10 clamp.** Buy 10 clamps to how many you can afford (up to 10); no longer dead-ends when full 10 is too expensive (AZR-113).
+
 Visual direction stays locked. Footer/CSS remain **v6.6** (bugfix, not a content version). Save key stays `soulgather-v0`.
 
 ## Loop (short)
