@@ -51,8 +51,61 @@ function throneCost(owned) {
   return producerCost(owned);
 }
 
+const WELL_COST_BASE = 25;
+const WELL_COST_MULT = 1.5;
+const WELL_EARLY_MULT = 1.35;
+
 function wellCost(depth) {
-  return N.cost(25, 1.5, depth);
+  const d = Math.max(0, Math.floor(Number(depth) || 0));
+  if (d <= 5) {
+    return N.cost(WELL_COST_BASE, WELL_EARLY_MULT, d);
+  }
+  return N.cost(WELL_COST_BASE, WELL_COST_MULT, d);
+}
+
+function wellBulkCost(owned, k) {
+  const n = Math.max(0, Math.floor(k));
+  let total = N.fromNumber(0);
+  const baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+  for (let i = 0; i < n; i++) {
+    total = N.add(total, wellCost(baseDepth + i));
+  }
+  return total;
+}
+
+function wellMaxAffordable(owned, currency) {
+  let remaining = currency;
+  if (remaining && typeof remaining === "object" && typeof remaining.m === "number") {
+    /* Num */
+  } else {
+    remaining = N.fromNumber(Number(remaining) || 0);
+  }
+  const baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+  let k = 0;
+  while (k < 10000) {
+    const c = wellCost(baseDepth + k);
+    if (N.cmp(remaining, c) < 0) break;
+    remaining = N.sub(remaining, c);
+    k += 1;
+  }
+  return k;
+}
+
+function wellPurchasePlan(owned, currency, buyMode) {
+  const mode = buyMode || "1";
+  const one = wellCost(owned);
+  if (mode === "10") {
+    let k10 = wellMaxAffordable(owned, currency);
+    if (k10 < 1) return { k: 0, cost: one, can: false };
+    if (k10 > 10) k10 = 10;
+    return { k: k10, cost: wellBulkCost(owned, k10), can: true };
+  }
+  if (mode === "max") {
+    const k = wellMaxAffordable(owned, currency);
+    if (k < 1) return { k: 0, cost: one, can: false };
+    return { k, cost: wellBulkCost(owned, k), can: true };
+  }
+  return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
 }
 
 function lanternCost(owned) {
@@ -833,7 +886,17 @@ assertEqual("vesselCost(1)", vesselCost(1), 11);
 assertEqual("vesselCost(10)", vesselCost(10), 40);
 
 assertEqual("wellCost(0)", wellCost(0), 25);
-assertEqual("wellCost(1)", wellCost(1), 37); // floor(25 * 1.5)
+assertEqual("wellCost(1)", wellCost(1), 33); // floor(25 * 1.35) AZR-117 early soft
+assertTrue("wellCost(1) softer than old 37", unwrap(wellCost(1)) < 37);
+assertTrue("wellCost(5) softer than old 189", unwrap(wellCost(5)) < 189);
+assertEqual("wellCost(5)", wellCost(5), Math.floor(25 * Math.pow(1.35, 5)));
+assertEqual("wellCost(6) original 1.5 curve", wellCost(6), Math.floor(25 * Math.pow(1.5, 6)));
+{
+  const late = unwrap(wellCost(10));
+  const ref = Math.floor(25 * Math.pow(1.5, 10));
+  assertTrue("wellCost(10) within ±5% of floor(25*1.5^10)", Math.abs(late - ref) <= ref * 0.05);
+  assertEqual("wellCost(10) equals late curve", late, ref);
+}
 
 assertEqual("favorGain(24999)", favorGain(24999), 0);
 assertEqual("favorGain(25000)", favorGain(25000), 1);
@@ -848,7 +911,15 @@ assertEqual("shadeCost(2)", shadeCost(2), Math.floor(10 * Math.pow(1.15, 2)));
 assertEqual("spiritCost matches shadeCost for n=7", unwrap(spiritCost(7)), unwrap(shadeCost(7)));
 assertEqual("fractional owned floors", unwrap(shadeCost(1.9)), unwrap(shadeCost(1)));
 assertEqual("vesselCost matches producerCost n=10", unwrap(vesselCost(10)), unwrap(producerCost(10)));
-assertEqual("wellCost(2)", wellCost(2), Math.floor(25 * Math.pow(1.5, 2)));
+assertEqual("wellCost(2)", wellCost(2), Math.floor(25 * Math.pow(1.35, 2)));
+{
+  const softBulk = unwrap(wellBulkCost(0, 3));
+  const oldBulk = unwrap(N.add(N.add(N.cost(25, 1.5, 0), N.cost(25, 1.5, 1)), N.cost(25, 1.5, 2)));
+  assertTrue("wellBulkCost early softer than flat 1.5", softBulk < oldBulk);
+  const wp = wellPurchasePlan(0, N.fromNumber(100), "10");
+  assertTrue("wellPurchasePlan mode10 uses wellCost (AZR-113 clamp)", wp.k >= 1 && wp.k <= 10 && wp.can);
+  assertEqual("wellPurchasePlan mode10 cost matches wellBulkCost", unwrap(wp.cost), unwrap(wellBulkCost(0, wp.k)));
+}
 
 // v0.2
 assertEqual("throneCost(0)", throneCost(0), 10);

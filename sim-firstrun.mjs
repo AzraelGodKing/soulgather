@@ -9,6 +9,7 @@ const COST_BASE = 10;
 const COST_MULT = 1.15;
 const WELL_COST_BASE = 25;
 const WELL_COST_MULT = 1.5;
+const WELL_EARLY_MULT = 1.35;
 const SHADE_SOULS_PER_SEC = 1;
 const SPIRIT_SHADES_PER_SEC = 0.1;
 const VESSEL_SPIRITS_PER_SEC = 0.1;
@@ -47,6 +48,9 @@ function throneCost(owned) {
 }
 function wellCost(depth) {
   const n = Math.max(0, Math.floor(depth));
+  if (n <= 5) {
+    return Math.floor(WELL_COST_BASE * Math.pow(WELL_EARLY_MULT, n));
+  }
   return Math.floor(WELL_COST_BASE * Math.pow(WELL_COST_MULT, n));
 }
 function siphonCost(level) {
