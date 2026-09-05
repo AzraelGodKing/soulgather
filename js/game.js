@@ -2536,8 +2536,12 @@
     var one = N.cost(base, mult, owned);
     var mode = state.buyMode;
     if (mode === "10") {
-      var cost10 = bulkCost(base, owned, 10, mult);
-      return { k: 10, cost: cost10, can: N.cmp(currency, cost10) >= 0 };
+      var k10 = maxAffordable(base, owned, currency, mult);
+      if (k10 < 1) {
+        return { k: 0, cost: one, can: false };
+      }
+      if (k10 > 10) k10 = 10;
+      return { k: k10, cost: bulkCost(base, owned, k10, mult), can: true };
     }
     if (mode === "max") {
       var k = maxAffordable(base, owned, currency, mult);
