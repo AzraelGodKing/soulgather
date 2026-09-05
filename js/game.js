@@ -76,6 +76,7 @@
   var UNLOCK_AUTOBIND_URNS = 3;
   var UNLOCK_AUTOBIND_HEARTHS = 3;
   var UNLOCK_AUTOBIND_BEACONS = 3;
+  var UNLOCK_AUTOBIND_SPIRES = 3;
   var CINDER_COST = 15;
   var URN_RITE_COST = 12;
   var HEARTH_RITE_COST = 14;
@@ -571,6 +572,10 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function quietCourtStartsSpireAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
@@ -1035,6 +1040,7 @@
     "giftPeakUrns",
     "giftPeakHearths",
     "giftPeakBeacons",
+    "giftPeakSpires",
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
@@ -1181,6 +1187,7 @@
     giftPeakUrns: "Five urns. The well returned eight ash.",
     giftPeakHearths: "Five hearths. The well returned ten ash.",
     giftPeakBeacons: "Five beacons. The well returned twelve ash.",
+    giftPeakSpires: "Five spires. The well returned twelve ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstUrnRite: "The first cut urn. The well returned six ash.",
     giftFirstHearthRite: "The first cut hearth. The well returned eight ash.",
@@ -1716,6 +1723,7 @@
       unlockedAutobindUrns: false,
       unlockedAutobindHearths: false,
       unlockedAutobindBeacons: false,
+      unlockedAutobindSpires: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       unlockedWake: false,
@@ -1761,6 +1769,7 @@
       autobindUrns: false,
       autobindHearths: false,
       autobindBeacons: false,
+      autobindSpires: false,
       clicksThisRun: 0,
       veilLeft: 0,
       tollLeft: 0,
@@ -1805,6 +1814,7 @@
       giftPeakUrns: false,
       giftPeakHearths: false,
       giftPeakBeacons: false,
+      giftPeakSpires: false,
       giftFirstCinders: false,
       giftFirstUrnRite: false,
       giftFirstHearthRite: false,
@@ -2199,6 +2209,7 @@
     if (live) tryAutobindUrns();
     if (live) tryAutobindHearths();
     if (live) tryAutobindBeacons();
+    if (live) tryAutobindSpires();
     if (live) tryAutobindChalices();
     checkUnlock();
   }
@@ -2353,6 +2364,9 @@
 
     if (!state.unlockedAutobindBeacons && N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
       state.unlockedAutobindBeacons = true;
+    }
+    if (!state.unlockedAutobindSpires && N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
+      state.unlockedAutobindSpires = true;
     }
 
     if (!state.unlockedAutobindChalices && (Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
@@ -3223,6 +3237,23 @@
     state.beacons = N.add(state.beacons, 1);
   }
 
+  function toggleAutobindSpires() {
+    if (!state.unlockedAutobindSpires) return;
+    state.autobindSpires = !state.autobindSpires;
+    save();
+    render();
+  }
+
+  function tryAutobindSpires() {
+    /* No extra hold-back vs saving Beacons for a manual spire. Autobind Spires can spend a beacon Autobind Beacons just bought. */
+    if (!state.autobindSpires) return;
+    if (!state.unlockedSpires) return;
+    var cost = spireCost(state.spires);
+    if (N.cmp(state.beacons, cost) < 0) return;
+    state.beacons = N.sub(state.beacons, cost);
+    state.spires = N.add(state.spires, 1);
+  }
+
   function toggleAutobindChalices() {
     if (!state.unlockedAutobindChalices) return;
     state.autobindChalices = !state.autobindChalices;
@@ -3490,6 +3521,15 @@
         showToast("Eight ash for the first spire.");
         granted = true;
       }
+    }
+
+    bumpPeakSpires();
+    if (!state.giftPeakSpires && N.cmp(state.peakSpires, 5) >= 0) {
+      state.giftPeakSpires = true;
+      state.ash = N.add(state.ash, 12);
+      markChronicle("giftPeakSpires");
+      showToast("Twelve ash for five spires.");
+      granted = true;
     }
 
     bumpPeakBeacons();
@@ -4229,6 +4269,7 @@
     "unlockedAutobindUrns",
     "unlockedAutobindHearths",
     "unlockedAutobindBeacons",
+    "unlockedAutobindSpires",
     "unlockedNightTithe",
     "unlockedVeil",
     "unlockedWake",
@@ -4274,6 +4315,7 @@
     "autobindUrns",
     "autobindHearths",
     "autobindBeacons",
+    "autobindSpires",
     "clicksThisRun",
     "veilLeft",
     "tollLeft",
@@ -4318,6 +4360,7 @@
     "giftPeakUrns",
     "giftPeakHearths",
     "giftPeakBeacons",
+    "giftPeakSpires",
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
@@ -4452,6 +4495,7 @@
       unlockedAutobindUrns: !!state.unlockedAutobindUrns,
       unlockedAutobindHearths: !!state.unlockedAutobindHearths,
       unlockedAutobindBeacons: !!state.unlockedAutobindBeacons,
+      unlockedAutobindSpires: !!state.unlockedAutobindSpires,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       unlockedWake: !!state.unlockedWake,
@@ -4497,6 +4541,7 @@
       autobindUrns: !!state.autobindUrns,
       autobindHearths: !!state.autobindHearths,
       autobindBeacons: !!state.autobindBeacons,
+      autobindSpires: !!state.autobindSpires,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       tollLeft: Number(state.tollLeft) || 0,
@@ -4541,6 +4586,7 @@
       giftPeakUrns: !!state.giftPeakUrns,
       giftPeakHearths: !!state.giftPeakHearths,
       giftPeakBeacons: !!state.giftPeakBeacons,
+      giftPeakSpires: !!state.giftPeakSpires,
       giftFirstCinders: !!state.giftFirstCinders,
       giftFirstUrnRite: !!state.giftFirstUrnRite,
       giftFirstHearthRite: !!state.giftFirstHearthRite,
@@ -4680,6 +4726,7 @@
     state.unlockedAutobindUrns = !!data.unlockedAutobindUrns;
     state.unlockedAutobindHearths = !!data.unlockedAutobindHearths;
     state.unlockedAutobindBeacons = !!data.unlockedAutobindBeacons;
+    state.unlockedAutobindSpires = !!data.unlockedAutobindSpires;
     state.unlockedNightTithe = !!data.unlockedNightTithe || (Number(data.nightLeft) || 0) > 0;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (Number(data.veilLeft) || 0) > 0;
     state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
@@ -4747,6 +4794,7 @@
     state.autobindUrns = !!data.autobindUrns;
     state.autobindHearths = !!data.autobindHearths;
     state.autobindBeacons = !!data.autobindBeacons;
+    state.autobindSpires = !!data.autobindSpires;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
     if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
@@ -4934,6 +4982,11 @@
       state.giftPeakBeacons = false;
     } else {
       state.giftPeakBeacons = !!data.giftPeakBeacons;
+    }
+    if (data.giftPeakSpires == null) {
+      state.giftPeakSpires = false;
+    } else {
+      state.giftPeakSpires = !!data.giftPeakSpires;
     }
     if (data.giftFirstCinders == null) {
       state.giftFirstCinders =
@@ -5419,6 +5472,7 @@
     var keptGiftPeakUrns = !!state.giftPeakUrns;
     var keptGiftPeakHearths = !!state.giftPeakHearths;
     var keptGiftPeakBeacons = !!state.giftPeakBeacons;
+    var keptGiftPeakSpires = !!state.giftPeakSpires;
     var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptGiftFirstUrnRite = !!state.giftFirstUrnRite;
     var keptGiftFirstHearthRite = !!state.giftFirstHearthRite;
@@ -5542,6 +5596,7 @@
     state.giftPeakUrns = keptGiftPeakUrns;
     state.giftPeakHearths = keptGiftPeakHearths;
     state.giftPeakBeacons = keptGiftPeakBeacons;
+    state.giftPeakSpires = keptGiftPeakSpires;
     state.giftFirstCinders = keptGiftFirstCinders;
     state.giftFirstUrnRite = keptGiftFirstUrnRite;
     state.giftFirstHearthRite = keptGiftFirstHearthRite;
@@ -5644,6 +5699,7 @@
     state.autobindUrns = false;
     state.autobindHearths = false;
     state.autobindBeacons = false;
+    state.autobindSpires = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -5722,6 +5778,12 @@
         state.unlockedAutobindBeacons = true;
       }
     }
+    if (quietCourtStartsSpireAutobind(keptQuietCourt)) {
+      state.autobindSpires = true;
+      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
+        state.unlockedAutobindSpires = true;
+      }
+    }
     if (smokeStartsCenserAutobind(keptSmokeEdict)) {
       state.autobindCensers = true;
       if (N.cmp(state.censers, UNLOCK_AUTOBIND_CENSERS) >= 0) {
@@ -5769,6 +5831,12 @@
       state.autobindBeacons = true;
       if (N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
         state.unlockedAutobindBeacons = true;
+      }
+    }
+    if (quietCourtStartsSpireAutobind(keptQuietCourt)) {
+      state.autobindSpires = true;
+      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
+        state.unlockedAutobindSpires = true;
       }
     }
     if (cinderEdictStartsPyreAutobind(keptCinderEdict)) {
@@ -6003,6 +6071,7 @@
     if (els.autobindUrnsRow) els.autobindUrnsRow.classList.add("is-hidden");
     if (els.autobindHearthsRow) els.autobindHearthsRow.classList.add("is-hidden");
     if (els.autobindBeaconsRow) els.autobindBeaconsRow.classList.add("is-hidden");
+    if (els.autobindSpiresRow) els.autobindSpiresRow.classList.add("is-hidden");
     if (els.autobindChalicesRow) els.autobindChalicesRow.classList.add("is-hidden");
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.urnRiteRow) els.urnRiteRow.classList.add("is-hidden");
@@ -6967,6 +7036,22 @@
         }
       }
 
+      var autoSpireOpen = !!state.unlockedAutobindSpires;
+      if (els.autobindSpiresRow) {
+        els.autobindSpiresRow.classList.toggle("is-hidden", !autoSpireOpen);
+        els.autobindSpiresRow.classList.toggle("is-on", autoSpireOpen && !!state.autobindSpires);
+      }
+      if (autoSpireOpen) {
+        if (els.autobindSpiresEffect) {
+          els.autobindSpiresEffect.textContent = state.autobindSpires ? "The spire rises" : "Idle bind";
+        }
+        if (els.autobindSpiresBuy) {
+          els.autobindSpiresBuy.disabled = false;
+          els.autobindSpiresBuy.textContent = "Autobind Spires";
+          els.autobindSpiresBuy.setAttribute("aria-pressed", state.autobindSpires ? "true" : "false");
+        }
+      }
+
       var autoChaliceOpen = !!state.unlockedAutobindChalices;
       if (els.autobindChalicesRow) {
         els.autobindChalicesRow.classList.toggle("is-hidden", !autoChaliceOpen);
@@ -7510,8 +7595,8 @@
       if (els.crownCourtEffect) {
         els.crownCourtEffect.textContent =
           quietCourtStartsUrnAutobind(qcN)
-            ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, and Beacons at tribute"
-            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, and Beacons at tribute";
+            ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, and Spires at tribute"
+            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, and Spires at tribute";
       }
       if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
       if (els.crownCourtBuy) {
@@ -8071,6 +8156,9 @@
     els.autobindBeaconsRow = document.getElementById("autobind-beacons-row");
     els.autobindBeaconsEffect = document.getElementById("autobind-beacons-effect");
     els.autobindBeaconsBuy = document.getElementById("autobind-beacons-buy");
+    els.autobindSpiresRow = document.getElementById("autobind-spires-row");
+    els.autobindSpiresEffect = document.getElementById("autobind-spires-effect");
+    els.autobindSpiresBuy = document.getElementById("autobind-spires-buy");
     els.autobindChalicesRow = document.getElementById("autobind-chalices-row");
     els.autobindChalicesEffect = document.getElementById("autobind-chalices-effect");
     els.autobindChalicesBuy = document.getElementById("autobind-chalices-buy");
@@ -8255,6 +8343,7 @@
     if (els.autobindUrnsBuy) els.autobindUrnsBuy.addEventListener("click", toggleAutobindUrns);
     if (els.autobindHearthsBuy) els.autobindHearthsBuy.addEventListener("click", toggleAutobindHearths);
     if (els.autobindBeaconsBuy) els.autobindBeaconsBuy.addEventListener("click", toggleAutobindBeacons);
+    if (els.autobindSpiresBuy) els.autobindSpiresBuy.addEventListener("click", toggleAutobindSpires);
     if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.tollBuy) els.tollBuy.addEventListener("click", soundToll);
@@ -8571,6 +8660,7 @@
     quietCourtStartsUrnAutobind: quietCourtStartsUrnAutobind,
     quietCourtStartsHearthAutobind: quietCourtStartsHearthAutobind,
     quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
+    quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,

@@ -383,6 +383,10 @@ function quietCourtStartsBeaconAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
+function quietCourtStartsSpireAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function smokeEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 6 * Math.pow(2, n);
@@ -1419,6 +1423,9 @@ assertTrue("quietCourtStartsHearthAutobind(1) is true", quietCourtStartsHearthAu
 assertTrue("quietCourtStartsBeaconAutobind(0) is false", !quietCourtStartsBeaconAutobind(0));
 assertTrue("quietCourtStartsBeaconAutobind(1) is true", quietCourtStartsBeaconAutobind(1));
 
+assertTrue("quietCourtStartsSpireAutobind(0) is false", !quietCourtStartsSpireAutobind(0));
+assertTrue("quietCourtStartsSpireAutobind(1) is true", quietCourtStartsSpireAutobind(1));
+
 function unlockAutobindHearths(n) {
   return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
 }
@@ -1440,6 +1447,17 @@ assertTrue("unlockAutobindBeacons(2) is false", !unlockAutobindBeacons(2));
 assertTrue("unlockAutobindBeacons(3) is true", unlockAutobindBeacons(3));
 assertTrue("giftPeakBeaconsReady(4) is false", !giftPeakBeaconsReady(4));
 assertTrue("giftPeakBeaconsReady(5) is true", giftPeakBeaconsReady(5));
+
+function unlockAutobindSpires(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
+}
+function giftPeakSpiresReady(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 5;
+}
+assertTrue("unlockAutobindSpires(2) is false", !unlockAutobindSpires(2));
+assertTrue("unlockAutobindSpires(3) is true", unlockAutobindSpires(3));
+assertTrue("giftPeakSpiresReady(4) is false", !giftPeakSpiresReady(4));
+assertTrue("giftPeakSpiresReady(5) is true", giftPeakSpiresReady(5));
 
 assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
 assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));
