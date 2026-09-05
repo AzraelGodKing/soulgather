@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.6 economy smoke test.
+ * Soulgather v6.7 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -488,6 +488,10 @@ function quietCourtStartsBeaconAutobind(level) {
 }
 
 function quietCourtStartsSpireAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
+function quietCourtStartsObeliskAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
@@ -1626,6 +1630,9 @@ assertTrue("quietCourtStartsBeaconAutobind(1) is true", quietCourtStartsBeaconAu
 assertTrue("quietCourtStartsSpireAutobind(0) is false", !quietCourtStartsSpireAutobind(0));
 assertTrue("quietCourtStartsSpireAutobind(1) is true", quietCourtStartsSpireAutobind(1));
 
+assertTrue("quietCourtStartsObeliskAutobind(0) is false", !quietCourtStartsObeliskAutobind(0));
+assertTrue("quietCourtStartsObeliskAutobind(1) is true", quietCourtStartsObeliskAutobind(1));
+
 function unlockAutobindHearths(n) {
   return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
 }
@@ -1658,6 +1665,17 @@ assertTrue("unlockAutobindSpires(2) is false", !unlockAutobindSpires(2));
 assertTrue("unlockAutobindSpires(3) is true", unlockAutobindSpires(3));
 assertTrue("giftPeakSpiresReady(4) is false", !giftPeakSpiresReady(4));
 assertTrue("giftPeakSpiresReady(5) is true", giftPeakSpiresReady(5));
+
+function unlockAutobindObelisks(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 3;
+}
+function giftPeakObelisksReady(n) {
+  return Math.max(0, Math.floor(Number(n) || 0)) >= 5;
+}
+assertTrue("unlockAutobindObelisks(2) is false", !unlockAutobindObelisks(2));
+assertTrue("unlockAutobindObelisks(3) is true", unlockAutobindObelisks(3));
+assertTrue("giftPeakObelisksReady(4) is false", !giftPeakObelisksReady(4));
+assertTrue("giftPeakObelisksReady(5) is true", giftPeakObelisksReady(5));
 
 assertEqual("draughtEdictCost(0)", draughtEdictCost(0), 10);
 assertTrue("draughtStartsChaliceAutobind(0) is false", !draughtStartsChaliceAutobind(0));
@@ -2019,6 +2037,7 @@ assertEqual(
     "tryAutobindHearths",
     "tryAutobindBeacons",
     "tryAutobindSpires",
+    "tryAutobindObelisks",
     "tryAutobindChalices",
   ];
 

@@ -84,6 +84,7 @@
   var UNLOCK_AUTOBIND_HEARTHS = 3;
   var UNLOCK_AUTOBIND_BEACONS = 3;
   var UNLOCK_AUTOBIND_SPIRES = 3;
+  var UNLOCK_AUTOBIND_OBELISKS = 3;
   var CINDER_COST = 15;
   var URN_RITE_COST = 12;
   var HEARTH_RITE_COST = 14;
@@ -638,6 +639,10 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function quietCourtStartsObeliskAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
@@ -1129,6 +1134,7 @@
     "giftPeakHearths",
     "giftPeakBeacons",
     "giftPeakSpires",
+    "giftPeakObelisks",
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
@@ -1283,6 +1289,7 @@
     giftPeakHearths: "Five hearths. The well returned ten ash.",
     giftPeakBeacons: "Five beacons. The well returned twelve ash.",
     giftPeakSpires: "Five spires. The well returned twelve ash.",
+    giftPeakObelisks: "Five obelisks. The well returned twelve ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstUrnRite: "The first cut urn. The well returned six ash.",
     giftFirstHearthRite: "The first cut hearth. The well returned eight ash.",
@@ -1841,6 +1848,7 @@
       unlockedAutobindHearths: false,
       unlockedAutobindBeacons: false,
       unlockedAutobindSpires: false,
+      unlockedAutobindObelisks: false,
       unlockedNightTithe: false,
       unlockedVeil: false,
       unlockedWake: false,
@@ -1888,6 +1896,7 @@
       autobindHearths: false,
       autobindBeacons: false,
       autobindSpires: false,
+      autobindObelisks: false,
       clicksThisRun: 0,
       veilLeft: 0,
       tollLeft: 0,
@@ -1935,6 +1944,7 @@
       giftPeakHearths: false,
       giftPeakBeacons: false,
       giftPeakSpires: false,
+      giftPeakObelisks: false,
       giftFirstCinders: false,
       giftFirstUrnRite: false,
       giftFirstHearthRite: false,
@@ -2284,6 +2294,7 @@
     tryAutobindHearths();
     tryAutobindBeacons();
     tryAutobindSpires();
+    tryAutobindObelisks();
     tryAutobindChalices();
   }
 
@@ -2529,6 +2540,9 @@
     }
     if (!state.unlockedAutobindSpires && N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
       state.unlockedAutobindSpires = true;
+    }
+    if (!state.unlockedAutobindObelisks && N.cmp(state.obelisks, UNLOCK_AUTOBIND_OBELISKS) >= 0) {
+      state.unlockedAutobindObelisks = true;
     }
 
     if (!state.unlockedAutobindChalices && (Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
@@ -3480,6 +3494,23 @@
     state.spires = N.add(state.spires, 1);
   }
 
+  function toggleAutobindObelisks() {
+    if (!state.unlockedAutobindObelisks) return;
+    state.autobindObelisks = !state.autobindObelisks;
+    save();
+    render();
+  }
+
+  function tryAutobindObelisks() {
+    /* No extra hold-back vs saving Spires for a manual obelisk. Autobind Obelisks can spend a spire Autobind Spires just bought. */
+    if (!state.autobindObelisks) return;
+    if (!state.unlockedObelisks) return;
+    var cost = obeliskCost(state.obelisks);
+    if (N.cmp(state.spires, cost) < 0) return;
+    state.spires = N.sub(state.spires, cost);
+    state.obelisks = N.add(state.obelisks, 1);
+  }
+
   function toggleAutobindChalices() {
     if (!state.unlockedAutobindChalices) return;
     state.autobindChalices = !state.autobindChalices;
@@ -3774,6 +3805,15 @@
       state.ash = N.add(state.ash, 12);
       markChronicle("giftPeakSpires");
       showToast("Twelve ash for five spires.");
+      granted = true;
+    }
+
+    bumpPeakObelisks();
+    if (!state.giftPeakObelisks && N.cmp(state.peakObelisks, 5) >= 0) {
+      state.giftPeakObelisks = true;
+      state.ash = N.add(state.ash, 12);
+      markChronicle("giftPeakObelisks");
+      showToast("Twelve ash for five obelisks.");
       granted = true;
     }
 
@@ -4536,6 +4576,7 @@
     "unlockedAutobindHearths",
     "unlockedAutobindBeacons",
     "unlockedAutobindSpires",
+    "unlockedAutobindObelisks",
     "unlockedNightTithe",
     "unlockedVeil",
     "unlockedWake",
@@ -4583,6 +4624,7 @@
     "autobindHearths",
     "autobindBeacons",
     "autobindSpires",
+    "autobindObelisks",
     "clicksThisRun",
     "veilLeft",
     "tollLeft",
@@ -4628,6 +4670,7 @@
     "giftPeakHearths",
     "giftPeakBeacons",
     "giftPeakSpires",
+    "giftPeakObelisks",
     "giftFirstCinders",
     "giftFirstUrnRite",
     "giftFirstHearthRite",
@@ -4768,6 +4811,7 @@
       unlockedAutobindHearths: !!state.unlockedAutobindHearths,
       unlockedAutobindBeacons: !!state.unlockedAutobindBeacons,
       unlockedAutobindSpires: !!state.unlockedAutobindSpires,
+      unlockedAutobindObelisks: !!state.unlockedAutobindObelisks,
       unlockedNightTithe: !!state.unlockedNightTithe,
       unlockedVeil: !!state.unlockedVeil,
       unlockedWake: !!state.unlockedWake,
@@ -4815,6 +4859,7 @@
       autobindHearths: !!state.autobindHearths,
       autobindBeacons: !!state.autobindBeacons,
       autobindSpires: !!state.autobindSpires,
+      autobindObelisks: !!state.autobindObelisks,
       clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
       veilLeft: Number(state.veilLeft) || 0,
       tollLeft: Number(state.tollLeft) || 0,
@@ -4862,6 +4907,7 @@
       giftPeakHearths: !!state.giftPeakHearths,
       giftPeakBeacons: !!state.giftPeakBeacons,
       giftPeakSpires: !!state.giftPeakSpires,
+      giftPeakObelisks: !!state.giftPeakObelisks,
       giftFirstCinders: !!state.giftFirstCinders,
       giftFirstUrnRite: !!state.giftFirstUrnRite,
       giftFirstHearthRite: !!state.giftFirstHearthRite,
@@ -5008,6 +5054,7 @@
     state.unlockedAutobindHearths = !!data.unlockedAutobindHearths;
     state.unlockedAutobindBeacons = !!data.unlockedAutobindBeacons;
     state.unlockedAutobindSpires = !!data.unlockedAutobindSpires;
+    state.unlockedAutobindObelisks = !!data.unlockedAutobindObelisks;
     state.unlockedNightTithe = !!data.unlockedNightTithe || (Number(data.nightLeft) || 0) > 0;
     state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (Number(data.veilLeft) || 0) > 0;
     state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
@@ -5077,6 +5124,7 @@
     state.autobindHearths = !!data.autobindHearths;
     state.autobindBeacons = !!data.autobindBeacons;
     state.autobindSpires = !!data.autobindSpires;
+    state.autobindObelisks = !!data.autobindObelisks;
     state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
     if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
@@ -5285,6 +5333,11 @@
       state.giftPeakSpires = false;
     } else {
       state.giftPeakSpires = !!data.giftPeakSpires;
+    }
+    if (data.giftPeakObelisks == null) {
+      state.giftPeakObelisks = false;
+    } else {
+      state.giftPeakObelisks = !!data.giftPeakObelisks;
     }
     if (data.giftFirstCinders == null) {
       state.giftFirstCinders =
@@ -5785,6 +5838,7 @@
     var keptGiftPeakHearths = !!state.giftPeakHearths;
     var keptGiftPeakBeacons = !!state.giftPeakBeacons;
     var keptGiftPeakSpires = !!state.giftPeakSpires;
+    var keptGiftPeakObelisks = !!state.giftPeakObelisks;
     var keptGiftFirstCinders = !!state.giftFirstCinders;
     var keptGiftFirstUrnRite = !!state.giftFirstUrnRite;
     var keptGiftFirstHearthRite = !!state.giftFirstHearthRite;
@@ -5915,6 +5969,7 @@
     state.giftPeakHearths = keptGiftPeakHearths;
     state.giftPeakBeacons = keptGiftPeakBeacons;
     state.giftPeakSpires = keptGiftPeakSpires;
+    state.giftPeakObelisks = keptGiftPeakObelisks;
     state.giftFirstCinders = keptGiftFirstCinders;
     state.giftFirstUrnRite = keptGiftFirstUrnRite;
     state.giftFirstHearthRite = keptGiftFirstHearthRite;
@@ -6022,6 +6077,7 @@
     state.autobindHearths = false;
     state.autobindBeacons = false;
     state.autobindSpires = false;
+    state.autobindObelisks = false;
     state.clicksThisRun = 0;
     state.vow = "";
     state.vowHungerPaid = false;
@@ -6106,6 +6162,12 @@
         state.unlockedAutobindSpires = true;
       }
     }
+    if (quietCourtStartsObeliskAutobind(keptQuietCourt)) {
+      state.autobindObelisks = true;
+      if (N.cmp(state.obelisks, UNLOCK_AUTOBIND_OBELISKS) >= 0) {
+        state.unlockedAutobindObelisks = true;
+      }
+    }
     if (smokeStartsCenserAutobind(keptSmokeEdict)) {
       state.autobindCensers = true;
       if (N.cmp(state.censers, UNLOCK_AUTOBIND_CENSERS) >= 0) {
@@ -6164,6 +6226,12 @@
       state.autobindSpires = true;
       if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
         state.unlockedAutobindSpires = true;
+      }
+    }
+    if (quietCourtStartsObeliskAutobind(keptQuietCourt)) {
+      state.autobindObelisks = true;
+      if (N.cmp(state.obelisks, UNLOCK_AUTOBIND_OBELISKS) >= 0) {
+        state.unlockedAutobindObelisks = true;
       }
     }
     if (cinderEdictStartsPyreAutobind(keptCinderEdict)) {
@@ -6410,6 +6478,7 @@
     if (els.autobindHearthsRow) els.autobindHearthsRow.classList.add("is-hidden");
     if (els.autobindBeaconsRow) els.autobindBeaconsRow.classList.add("is-hidden");
     if (els.autobindSpiresRow) els.autobindSpiresRow.classList.add("is-hidden");
+    if (els.autobindObelisksRow) els.autobindObelisksRow.classList.add("is-hidden");
     if (els.autobindChalicesRow) els.autobindChalicesRow.classList.add("is-hidden");
     if (els.cinderRow) els.cinderRow.classList.add("is-hidden");
     if (els.urnRiteRow) els.urnRiteRow.classList.add("is-hidden");
@@ -7436,6 +7505,22 @@
         }
       }
 
+      var autoObeliskOpen = !!state.unlockedAutobindObelisks;
+      if (els.autobindObelisksRow) {
+        els.autobindObelisksRow.classList.toggle("is-hidden", !autoObeliskOpen);
+        els.autobindObelisksRow.classList.toggle("is-on", autoObeliskOpen && !!state.autobindObelisks);
+      }
+      if (autoObeliskOpen) {
+        if (els.autobindObelisksEffect) {
+          els.autobindObelisksEffect.textContent = state.autobindObelisks ? "The obelisk rises" : "Idle bind";
+        }
+        if (els.autobindObelisksBuy) {
+          els.autobindObelisksBuy.disabled = false;
+          els.autobindObelisksBuy.textContent = "Autobind Obelisks";
+          els.autobindObelisksBuy.setAttribute("aria-pressed", state.autobindObelisks ? "true" : "false");
+        }
+      }
+
       var autoChaliceOpen = !!state.unlockedAutobindChalices;
       if (els.autobindChalicesRow) {
         els.autobindChalicesRow.classList.toggle("is-hidden", !autoChaliceOpen);
@@ -8001,8 +8086,8 @@
       if (els.crownCourtEffect) {
         els.crownCourtEffect.textContent =
           quietCourtStartsUrnAutobind(qcN)
-            ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, and Spires at tribute"
-            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, and Spires at tribute";
+            ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute"
+            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute";
       }
       if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
       if (els.crownCourtBuy) {
@@ -8580,6 +8665,9 @@
     els.autobindSpiresRow = document.getElementById("autobind-spires-row");
     els.autobindSpiresEffect = document.getElementById("autobind-spires-effect");
     els.autobindSpiresBuy = document.getElementById("autobind-spires-buy");
+    els.autobindObelisksRow = document.getElementById("autobind-obelisks-row");
+    els.autobindObelisksEffect = document.getElementById("autobind-obelisks-effect");
+    els.autobindObelisksBuy = document.getElementById("autobind-obelisks-buy");
     els.autobindChalicesRow = document.getElementById("autobind-chalices-row");
     els.autobindChalicesEffect = document.getElementById("autobind-chalices-effect");
     els.autobindChalicesBuy = document.getElementById("autobind-chalices-buy");
@@ -8769,6 +8857,7 @@
     if (els.autobindHearthsBuy) els.autobindHearthsBuy.addEventListener("click", toggleAutobindHearths);
     if (els.autobindBeaconsBuy) els.autobindBeaconsBuy.addEventListener("click", toggleAutobindBeacons);
     if (els.autobindSpiresBuy) els.autobindSpiresBuy.addEventListener("click", toggleAutobindSpires);
+    if (els.autobindObelisksBuy) els.autobindObelisksBuy.addEventListener("click", toggleAutobindObelisks);
     if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
     if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
     if (els.tollBuy) els.tollBuy.addEventListener("click", soundToll);
@@ -9098,6 +9187,7 @@
     quietCourtStartsHearthAutobind: quietCourtStartsHearthAutobind,
     quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
     quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
+    quietCourtStartsObeliskAutobind: quietCourtStartsObeliskAutobind,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,
