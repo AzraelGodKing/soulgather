@@ -60,6 +60,8 @@
   var BULK_CAP = 10000;
   var AUTOSAVE_MS = 5000;
   var MAX_DT = 8 * 60 * 60;
+  var AUTOBIND_INTERVAL = 1;
+  var autobindAcc = 0;
   var TOAST_MS = 5200;
   var AWAY_MIN_DT = 2;
   var TITHE_MIN = 25;
@@ -2218,6 +2220,22 @@
     }
   }
 
+  function runLiveAutobinds() {
+    tryAutobind();
+    tryAutobindSpirits();
+    tryAutobindVessels();
+    tryAutobindLanterns();
+    tryAutobindFetters();
+    tryAutobindCensers();
+    tryAutobindThrones();
+    tryAutobindPyres();
+    tryAutobindUrns();
+    tryAutobindHearths();
+    tryAutobindBeacons();
+    tryAutobindSpires();
+    tryAutobindChalices();
+  }
+
   function applyDt(dt, live) {
     if (dt <= 0 || !isFinite(dt)) return;
     dt = clamp(dt, 0, MAX_DT);
@@ -2285,19 +2303,18 @@
       remaining -= slice;
     }
 
-    tryAutobind();
-    tryAutobindSpirits();
-    if (live) tryAutobindVessels();
-    if (live) tryAutobindLanterns();
-    if (live) tryAutobindFetters();
-    if (live) tryAutobindCensers();
-    if (live) tryAutobindThrones();
-    if (live) tryAutobindPyres();
-    if (live) tryAutobindUrns();
-    if (live) tryAutobindHearths();
-    if (live) tryAutobindBeacons();
-    if (live) tryAutobindSpires();
-    if (live) tryAutobindChalices();
+    if (live) {
+      autobindAcc += dt;
+      if (autobindAcc >= AUTOBIND_INTERVAL) {
+        autobindAcc -= AUTOBIND_INTERVAL;
+        if (autobindAcc > AUTOBIND_INTERVAL) autobindAcc = 0; // no multi-pulse same call from lag
+        runLiveAutobinds();
+      }
+    } else {
+      // offline catchup: one pulse per applyDt (existing shade/spirit offline behavior)
+      tryAutobind();
+      tryAutobindSpirits();
+    }
     checkUnlock();
   }
 
