@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.7 economy smoke test.
+ * Soulgather v6.8 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -191,22 +191,28 @@ function markCost(level) {
   return N.cost(8, 2, level);
 }
 
-function bulkCost(base, owned, k, mult) {
+function bulkCost(base, owned, k, mult, extraMult) {
   const b = Number(base);
   const m = mult == null ? 1.15 : Number(mult);
+  let em = extraMult == null ? 1 : Number(extraMult);
+  if (!isFinite(em) || em <= 0) em = 1;
   const n = Math.max(0, Math.floor(k));
   let total = N.fromNumber(0);
   for (let i = 0; i < n; i++) {
     const o = Math.max(0, Math.floor(owned)) + i;
-    total = N.add(total, N.cost(b, m, o));
+    let unit = N.cost(b, m, o);
+    if (em !== 1) unit = N.mul(unit, em);
+    total = N.add(total, unit);
   }
   return total;
 }
 
 /** Tiny maxAffordable mirror for purchasePlan tests (no DOM). */
-function maxAffordable(base, owned, currency, mult) {
+function maxAffordable(base, owned, currency, mult, extraMult) {
   const b = Number(base);
   const m = mult == null ? 1.15 : Number(mult);
+  let em = extraMult == null ? 1 : Number(extraMult);
+  if (!isFinite(em) || em <= 0) em = 1;
   let remaining = currency;
   if (remaining && typeof remaining === "object" && typeof remaining.m === "number") {
     /* Num */
@@ -215,7 +221,8 @@ function maxAffordable(base, owned, currency, mult) {
   }
   let k = 0;
   while (k < 10000) {
-    const c = N.cost(b, m, Math.max(0, Math.floor(Number(owned) || 0)) + k);
+    let c = N.cost(b, m, Math.max(0, Math.floor(Number(owned) || 0)) + k);
+    if (em !== 1) c = N.mul(c, em);
     if (N.cmp(remaining, c) < 0) break;
     remaining = N.sub(remaining, c);
     k += 1;
@@ -224,23 +231,26 @@ function maxAffordable(base, owned, currency, mult) {
 }
 
 /** Mirror of game purchasePlan for documenting buyMode on stackable producers (no DOM). */
-function purchasePlan(owned, currency, base, mult, buyMode) {
+function purchasePlan(owned, currency, base, mult, buyMode, extraMult) {
   const b = base == null ? 10 : base;
   const m = mult == null ? 1.15 : mult;
+  let em = extraMult == null ? 1 : Number(extraMult);
+  if (!isFinite(em) || em <= 0) em = 1;
   const mode = buyMode || "1";
-  const one = N.cost(b, m, owned);
+  let one = N.cost(b, m, owned);
+  if (em !== 1) one = N.mul(one, em);
   if (mode === "10") {
-    let k10 = maxAffordable(b, owned, currency, m);
+    let k10 = maxAffordable(b, owned, currency, m, em);
     if (k10 < 1) {
       return { k: 0, cost: one, can: false };
     }
     if (k10 > 10) k10 = 10;
-    return { k: k10, cost: bulkCost(b, owned, k10, m), can: true };
+    return { k: k10, cost: bulkCost(b, owned, k10, m, em), can: true };
   }
   if (mode === "max") {
-    const k = maxAffordable(b, owned, currency, m);
+    const k = maxAffordable(b, owned, currency, m, em);
     if (k < 1) return { k: 0, cost: one, can: false };
-    return { k, cost: bulkCost(b, owned, k, m), can: true };
+    return { k, cost: bulkCost(b, owned, k, m, em), can: true };
   }
   return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
 }
@@ -661,6 +671,53 @@ function siphonCost(level) {
 
 function levyCost(level) {
   return N.cost(15, 3, level);
+}
+
+const BINDING_TOLL_COST_BASE = 40;
+const BINDING_TOLL_COST_MULT = 1.45;
+const BINDING_TOLL_MAX = 4;
+const BINDING_TOLL_RATE = 1.12;
+const BINDING_TOLL_COST_BONUS = 0.15;
+
+function bindingTollCost(level) {
+  return N.cost(BINDING_TOLL_COST_BASE, BINDING_TOLL_COST_MULT, level);
+}
+
+function bindingTollRateMult(level) {
+  let n = Math.max(0, Math.floor(Number(level) || 0));
+  if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
+  return Math.pow(BINDING_TOLL_RATE, n);
+}
+
+function bindingTollCostMult(level) {
+  let n = Math.max(0, Math.floor(Number(level) || 0));
+  if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
+  return 1 + BINDING_TOLL_COST_BONUS * n;
+}
+
+function bindingTollUnlocked(fetters, favorEarned, level) {
+  if ((Number(level) || 0) >= 1) return true;
+  return N.cmp(fetters, 5) >= 0 && (Number(favorEarned) || 0) >= 1;
+}
+
+/** ×1 only — ignores buyMode; cap 4. */
+function buyBindingTollOnce(level, ash, buyMode) {
+  void buyMode;
+  let n = Math.max(0, Math.floor(Number(level) || 0));
+  if (n >= BINDING_TOLL_MAX) return { level: n, ash, bought: false };
+  const cost = bindingTollCost(n);
+  let cur = ash;
+  if (!(cur && typeof cur === "object" && typeof cur.m === "number")) {
+    cur = N.fromNumber(Number(cur) || 0);
+  }
+  if (N.cmp(cur, cost) < 0) return { level: n, ash: cur, bought: false };
+  return { level: n + 1, ash: N.sub(cur, cost), bought: true };
+}
+
+/** Tribute wipes this-run bindingTollLevel via freshState (not restored). */
+function tributeWipesBindingToll(levelBefore) {
+  void levelBefore;
+  return 0;
 }
 
 function siphonMult(level) {
@@ -1139,6 +1196,14 @@ function nextGoal(view, format) {
   }
   if (view.unlockedFetters && fetters < 1) {
     return "Bind a Fetter. A chain that teaches the will to pull.";
+  }
+  const tollLevel = Number(view.bindingTollLevel) || 0;
+  const tollOpen =
+    !!view.unlockedBindingToll ||
+    tollLevel >= 1 ||
+    (fetters >= 5 && favorEarned >= 1);
+  if (tollOpen && tollLevel < 1) {
+    return "Pay the Binding Toll. The chain bites both ways.";
   }
   if (view.unlockedMarks && marksBought < 1) {
     return "Press a Mark. Ash is what the well will not keep.";
@@ -2163,6 +2228,56 @@ assertEqual(
     purchasePlan(0, N.fromNumber(100000), 10, 1.15, "10").k,
     10
   );
+}
+
+
+// AZR-119 Binding Toll
+assertEqual("bindingToll unlock fetters4 favor1", bindingTollUnlocked(4, 1, 0), false);
+assertEqual("bindingToll unlock fetters5 favor0", bindingTollUnlocked(5, 0, 0), false);
+assertEqual("bindingToll unlock fetters5 favor1", bindingTollUnlocked(5, 1, 0), true);
+assertEqual("bindingTollCost(0)", bindingTollCost(0), 40);
+assertEqual("bindingTollCost(1)", bindingTollCost(1), Math.floor(40 * 1.45));
+assertEqual("bindingTollCost(2)", bindingTollCost(2), Math.floor(40 * Math.pow(1.45, 2)));
+assertEqual("bindingTollRateMult(0)", bindingTollRateMult(0), 1);
+assertEqual("bindingTollRateMult(1)", bindingTollRateMult(1), 1.12);
+assertTrue(
+  "bindingTollRateMult(2) ≈ 1.2544",
+  Math.abs(bindingTollRateMult(2) - Math.pow(1.12, 2)) < 1e-12
+);
+assertEqual("bindingTollCostMult(1)", bindingTollCostMult(1), 1.15);
+assertEqual("bindingTollCostMult(4)", bindingTollCostMult(4), 1.6);
+assertEqual("BINDING_TOLL_MAX", BINDING_TOLL_MAX, 4);
+{
+  let level = 0;
+  let ash = N.fromNumber(1e9);
+  for (let i = 0; i < 4; i++) {
+    const r = buyBindingTollOnce(level, ash, "max");
+    assertTrue("bindingToll buy " + (i + 1) + " ok", r.bought);
+    assertEqual("bindingToll buy " + (i + 1) + " +1", r.level, level + 1);
+    level = r.level;
+    ash = r.ash;
+  }
+  const fifth = buyBindingTollOnce(level, ash, "max");
+  assertEqual("bindingToll 5th buy no-ops level", fifth.level, 4);
+  assertEqual("bindingToll 5th buy no-ops bought", fifth.bought, false);
+}
+{
+  const plan0 = purchasePlan(0, N.fromNumber(1e9), 10, 1.15, "10", 1);
+  const plan1 = purchasePlan(0, N.fromNumber(1e9), 10, 1.15, "10", 1.15);
+  assertEqual("purchasePlan Buy10 k with toll", plan1.k, 10);
+  assertEqual(
+    "purchasePlan Buy10 toll 1.15x",
+    unwrap(plan1.cost),
+    unwrap(N.mul(plan0.cost, 1.15))
+  );
+}
+assertEqual("tribute wipes bindingTollLevel", tributeWipesBindingToll(3), 0);
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  assertTrue("game has BINDING_TOLL_MAX", gameSrc.includes("BINDING_TOLL_MAX = 4"));
+  assertTrue("game has bindingTollLevel in freshState", /bindingTollLevel:\s*0/.test(gameSrc));
+  assertTrue("layTribute does not restore bindingTollLevel", !/keptBindingToll/.test(gameSrc));
+  assertTrue("buyBindingToll ignores buyMode", /function buyBindingToll\(/.test(gameSrc) && !/function buyBindingToll\([\s\S]*?buyMode/.test(gameSrc.split("function buyBindingToll(")[1].slice(0, 500)));
 }
 
 if (failed > 0) {

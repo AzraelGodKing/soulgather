@@ -91,6 +91,11 @@
   var HEARTH_RITE_COST = 14;
   var BEACON_RITE_COST = 16;
   var SPIRE_RITE_COST = 18;
+  var BINDING_TOLL_COST_BASE = 40;
+  var BINDING_TOLL_COST_MULT = 1.45;
+  var BINDING_TOLL_MAX = 4;
+  var BINDING_TOLL_RATE = 1.12;
+  var BINDING_TOLL_COST_BONUS = 0.15;
   var UNLOCK_NIGHT_LANTERNS = 8;
   var UNLOCK_VEIL_CLICKS = 50;
   var UNLOCK_TOLL_CLICKS = 80;
@@ -168,11 +173,11 @@
   }
 
   function shadeCost(owned) {
-    return producerCost(owned);
+    return N.mul(producerCost(owned), bindingTollCostMult(state.bindingTollLevel));
   }
 
   function spiritCost(owned) {
-    return producerCost(owned);
+    return N.mul(producerCost(owned), bindingTollCostMult(state.bindingTollLevel));
   }
 
   function vesselCost(owned) {
@@ -281,28 +286,35 @@
     return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
   }
 
-  function bulkCost(base, owned, k, mult) {
+  function bulkCost(base, owned, k, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
     if (mult == null) mult = COST_MULT;
+    var em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
     var n = Math.max(0, Math.floor(k));
     if (n > BULK_CAP) n = BULK_CAP;
     var total = N.fromNumber(0);
     var i;
     for (i = 0; i < n; i++) {
-      total = N.add(total, N.cost(b, mult, addOwned(owned, i)));
+      var unit = N.cost(b, mult, addOwned(owned, i));
+      if (em !== 1) unit = N.mul(unit, em);
+      total = N.add(total, unit);
     }
     return total;
   }
 
-  function maxAffordable(base, owned, currency, mult) {
+  function maxAffordable(base, owned, currency, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
     if (mult == null) mult = COST_MULT;
+    var em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
     var remaining = num(currency);
     var k = 0;
     while (k < BULK_CAP) {
       var c = N.cost(b, mult, addOwned(owned, k));
+      if (em !== 1) c = N.mul(c, em);
       if (N.cmp(remaining, c) < 0) break;
       remaining = N.sub(remaining, c);
       k += 1;
@@ -925,6 +937,28 @@
     return N.cost(15, 3, level);
   }
 
+  function bindingTollCost(level) {
+    return N.cost(BINDING_TOLL_COST_BASE, BINDING_TOLL_COST_MULT, level);
+  }
+
+  function bindingTollRateMult(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
+    return Math.pow(BINDING_TOLL_RATE, n);
+  }
+
+  function bindingTollCostMult(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
+    return 1 + BINDING_TOLL_COST_BONUS * n;
+  }
+
+  function bindingTollRowOpen() {
+    if ((Number(state.bindingTollLevel) || 0) >= 1) return true;
+    if (state.unlockedBindingToll) return true;
+    return N.cmp(state.fetters, 5) >= 0 && (Number(state.favorEarned) || 0) >= 1;
+  }
+
   function siphonMult(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     if (n < 40) return N.fromNumber(Math.pow(2, n));
@@ -1088,6 +1122,7 @@
     "hearthRite",
     "beaconRite",
     "spireRite",
+    "bindingToll",
     "wellDraw",
     "tribute",
     "aspect",
@@ -1243,6 +1278,7 @@
     hearthRite: "The hearth was cut.",
     beaconRite: "The beacon was cut.",
     spireRite: "The spire was cut.",
+    bindingToll: "The binding toll was paid.",
     wellDraw: "The well began to draw.",
     tribute: "Tribute was laid. The GodKing remembers.",
     aspect: "An aspect was sworn.",
@@ -1460,6 +1496,14 @@
     if (view.unlockedFetters && fetters < 1) {
       return "Bind a Fetter. A chain that teaches the will to pull.";
     }
+    var tollLevel = Number(view.bindingTollLevel) || 0;
+    var tollOpen =
+      !!view.unlockedBindingToll ||
+      tollLevel >= 1 ||
+      (fetters >= 5 && favorEarned >= 1);
+    if (tollOpen && tollLevel < 1) {
+      return "Pay the Binding Toll. The chain bites both ways.";
+    }
     if (view.unlockedMarks && marksBought < 1) {
       return "Press a Mark. Ash is what the well will not keep.";
     }
@@ -1595,6 +1639,9 @@
     }
     if ((Number(state.spireRiteLevel) || 0) >= 1) {
       if (markChronicle("spireRite")) added = true;
+    }
+    if ((Number(state.bindingTollLevel) || 0) >= 1) {
+      if (markChronicle("bindingToll")) added = true;
     }
     if (state.wellDraws) {
       if (markChronicle("wellDraw")) added = true;
@@ -1877,6 +1924,8 @@
       hearthRiteLevel: 0,
       beaconRiteLevel: 0,
       spireRiteLevel: 0,
+      bindingTollLevel: 0,
+      unlockedBindingToll: false,
       wellDraws: false,
       unlockedWellDraws: false,
       aspect: "",
@@ -2126,10 +2175,8 @@
       ),
       nightMult(nightActive())
     );
-    return N.mul(
-      base,
-      hymnMult(hymnActive())
-    );
+    base = N.mul(base, hymnMult(hymnActive()));
+    return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
   function soulsPerSec() {
@@ -2152,7 +2199,8 @@
       ),
       fetterMult(state.fetters)
     );
-    return N.mul(base, hymnMult(hymnActive()));
+    base = N.mul(base, hymnMult(hymnActive()));
+    return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
   function spiritsPerSec() {
@@ -2490,6 +2538,16 @@
       revealFetters(true);
     }
 
+    if (
+      !state.unlockedBindingToll &&
+      (N.cmp(state.fetters, 5) >= 0 && (Number(state.favorEarned) || 0) >= 1)
+    ) {
+      state.unlockedBindingToll = true;
+    }
+    if ((Number(state.bindingTollLevel) || 0) >= 1) {
+      state.unlockedBindingToll = true;
+    }
+
     if (!state.unlockedAutobind && N.cmp(state.shades, UNLOCK_AUTOBIND_SHADES) >= 0) {
       state.unlockedAutobind = true;
     }
@@ -2597,25 +2655,28 @@
     render();
   }
 
-  function purchasePlan(owned, currency, base, mult) {
+  function purchasePlan(owned, currency, base, mult, extraMult) {
     if (base == null) base = COST_BASE;
     if (mult == null) mult = COST_MULT;
+    var em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
     var one = N.cost(base, mult, owned);
+    if (em !== 1) one = N.mul(one, em);
     var mode = state.buyMode;
     if (mode === "10") {
-      var k10 = maxAffordable(base, owned, currency, mult);
+      var k10 = maxAffordable(base, owned, currency, mult, em);
       if (k10 < 1) {
         return { k: 0, cost: one, can: false };
       }
       if (k10 > 10) k10 = 10;
-      return { k: k10, cost: bulkCost(base, owned, k10, mult), can: true };
+      return { k: k10, cost: bulkCost(base, owned, k10, mult, em), can: true };
     }
     if (mode === "max") {
-      var k = maxAffordable(base, owned, currency, mult);
+      var k = maxAffordable(base, owned, currency, mult, em);
       if (k < 1) {
         return { k: 0, cost: one, can: false };
       }
-      return { k: k, cost: bulkCost(base, owned, k, mult), can: true };
+      return { k: k, cost: bulkCost(base, owned, k, mult, em), can: true };
     }
     return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
   }
@@ -2633,7 +2694,13 @@
   }
 
   function buyShade() {
-    var plan = purchasePlan(state.shades, state.souls);
+    var plan = purchasePlan(
+      state.shades,
+      state.souls,
+      COST_BASE,
+      COST_MULT,
+      bindingTollCostMult(state.bindingTollLevel)
+    );
     if (!plan.can || plan.k < 1) return;
     state.souls = N.sub(state.souls, plan.cost);
     state.shades = N.add(state.shades, plan.k);
@@ -2646,7 +2713,13 @@
 
   function buySpirit() {
     if (!state.unlockedSpirits) return;
-    var plan = purchasePlan(state.spirits, state.shades);
+    var plan = purchasePlan(
+      state.spirits,
+      state.shades,
+      COST_BASE,
+      COST_MULT,
+      bindingTollCostMult(state.bindingTollLevel)
+    );
     if (!plan.can || plan.k < 1) return;
     state.shades = N.sub(state.shades, plan.cost);
     state.spirits = N.add(state.spirits, plan.k);
@@ -3157,6 +3230,22 @@
     state.shades = N.sub(state.shades, cost);
     state.levyLevel += 1;
     syncChronicle();
+    save();
+    render();
+  }
+
+  function buyBindingToll() {
+    if (!bindingTollRowOpen()) return;
+    var level = Math.max(0, Math.floor(Number(state.bindingTollLevel) || 0));
+    if (level >= BINDING_TOLL_MAX) return;
+    var cost = bindingTollCost(level);
+    if (N.cmp(state.ash, cost) < 0) return;
+    state.ash = N.sub(state.ash, cost);
+    state.bindingTollLevel = level + 1;
+    state.unlockedBindingToll = true;
+    markChronicle("bindingToll");
+    syncChronicle();
+    checkUnlock();
     save();
     render();
   }
@@ -4616,6 +4705,8 @@
     "hearthRiteLevel",
     "beaconRiteLevel",
     "spireRiteLevel",
+    "bindingTollLevel",
+    "unlockedBindingToll",
     "wellDraws",
     "unlockedWellDraws",
     "aspect",
@@ -4852,6 +4943,8 @@
       hearthRiteLevel: Number(state.hearthRiteLevel) || 0,
       beaconRiteLevel: Number(state.beaconRiteLevel) || 0,
       spireRiteLevel: Number(state.spireRiteLevel) || 0,
+      bindingTollLevel: Math.max(0, Math.min(BINDING_TOLL_MAX, Math.floor(Number(state.bindingTollLevel) || 0))),
+      unlockedBindingToll: !!state.unlockedBindingToll || (Number(state.bindingTollLevel) || 0) >= 1,
       wellDraws: state.wellDraws,
       unlockedWellDraws: state.unlockedWellDraws,
       aspect: normalizeAspect(state.aspect),
@@ -5101,6 +5194,8 @@
     state.hearthRiteLevel = Number(data.hearthRiteLevel) || 0;
     state.beaconRiteLevel = Number(data.beaconRiteLevel) || 0;
     state.spireRiteLevel = Number(data.spireRiteLevel) || 0;
+    state.bindingTollLevel = Math.max(0, Math.min(BINDING_TOLL_MAX, Math.floor(Number(data.bindingTollLevel) || 0)));
+    state.unlockedBindingToll = !!data.unlockedBindingToll || state.bindingTollLevel >= 1;
     state.wellDraws = !!data.wellDraws;
     state.unlockedWellDraws = !!data.unlockedWellDraws;
     state.aspect = normalizeAspect(data.aspect);
@@ -6494,6 +6589,7 @@
   function hideRites() {
     if (els.ritesPanel) els.ritesPanel.classList.add("is-hidden");
     if (els.levyRow) els.levyRow.classList.add("is-hidden");
+    if (els.bindingTollRow) els.bindingTollRow.classList.add("is-hidden");
     if (els.wellDrawsRow) els.wellDrawsRow.classList.add("is-hidden");
     if (els.titheRow) els.titheRow.classList.add("is-hidden");
     if (els.nightTitheRow) els.nightTitheRow.classList.add("is-hidden");
@@ -6820,7 +6916,13 @@
       els.wellCard.classList.toggle("can-buy", canWell);
     }
 
-    var shadePlan = purchasePlan(state.shades, state.souls);
+    var shadePlan = purchasePlan(
+      state.shades,
+      state.souls,
+      COST_BASE,
+      COST_MULT,
+      bindingTollCostMult(state.bindingTollLevel)
+    );
     var canShade = shadePlan.can;
     els.shadeOwned.textContent = F.formatNumber(state.shades);
     els.shadeProd.textContent =
@@ -6850,7 +6952,13 @@
       if (els.spiritCard.classList.contains("is-hidden")) {
         revealSpirits(false);
       }
-      var spiritPlan = purchasePlan(state.spirits, state.shades);
+      var spiritPlan = purchasePlan(
+        state.spirits,
+        state.shades,
+        COST_BASE,
+        COST_MULT,
+        bindingTollCostMult(state.bindingTollLevel)
+      );
       els.spiritOwned.textContent = F.formatNumber(state.spirits);
       els.spiritProd.textContent =
         F.formatNumber(shadesPerSec()) + " shades / sec";
@@ -7139,6 +7247,36 @@
         if (els.levyEffect) els.levyEffect.textContent = "Levy \u00d7" + formatTimes(levyM);
         if (els.levyCost) els.levyCost.textContent = F.formatNumber(lCost) + " Shades";
         if (els.levyBuy) els.levyBuy.disabled = N.cmp(state.shades, lCost) < 0;
+      }
+
+      var bindingOpen = bindingTollRowOpen();
+      if (els.bindingTollRow) {
+        els.bindingTollRow.classList.toggle("is-hidden", !bindingOpen);
+      }
+      if (bindingOpen) {
+        var btLevel = Math.max(0, Math.floor(Number(state.bindingTollLevel) || 0));
+        if (btLevel > BINDING_TOLL_MAX) btLevel = BINDING_TOLL_MAX;
+        var btRate = bindingTollRateMult(btLevel);
+        var btCostBonusPct = Math.round(BINDING_TOLL_COST_BONUS * btLevel * 100);
+        var btCost = bindingTollCost(btLevel);
+        var btAtCap = btLevel >= BINDING_TOLL_MAX;
+        if (els.bindingTollEffect) {
+          els.bindingTollEffect.textContent =
+            "Shade/Spirit \u00d7" +
+            formatTimes(btRate) +
+            " \u00b7 costs +" +
+            btCostBonusPct +
+            "% \u00b7 " +
+            btLevel +
+            "/" +
+            BINDING_TOLL_MAX;
+        }
+        if (els.bindingTollCost) {
+          els.bindingTollCost.textContent = btAtCap ? "\u2014" : F.formatNumber(btCost) + " Ash";
+        }
+        if (els.bindingTollBuy) {
+          els.bindingTollBuy.disabled = btAtCap || N.cmp(state.ash, btCost) < 0;
+        }
       }
 
       var cinderOpen = !!state.unlockedPyres;
@@ -8630,6 +8768,10 @@
     els.levyEffect = document.getElementById("levy-effect");
     els.levyCost = document.getElementById("levy-cost");
     els.levyBuy = document.getElementById("levy-buy");
+    els.bindingTollRow = document.getElementById("binding-toll-row");
+    els.bindingTollEffect = document.getElementById("binding-toll-effect");
+    els.bindingTollCost = document.getElementById("binding-toll-cost");
+    els.bindingTollBuy = document.getElementById("binding-toll-buy");
     els.cinderRow = document.getElementById("cinder-row");
     els.cinderEffect = document.getElementById("cinder-effect");
     els.cinderCost = document.getElementById("cinder-cost");
@@ -8876,6 +9018,7 @@
     if (els.nightEdictBuy) els.nightEdictBuy.addEventListener("click", buyNightEdict);
     if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
     if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
+    if (els.bindingTollBuy) els.bindingTollBuy.addEventListener("click", buyBindingToll);
     if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
     if (els.urnRiteBuy) els.urnRiteBuy.addEventListener("click", buyUrnRite);
     if (els.hearthRiteBuy) els.hearthRiteBuy.addEventListener("click", buyHearthRite);
@@ -9329,6 +9472,12 @@
     normalizeVow: normalizeVow,
     siphonCost: siphonCost,
     levyCost: levyCost,
+    bindingTollCost: bindingTollCost,
+    bindingTollRateMult: bindingTollRateMult,
+    bindingTollCostMult: bindingTollCostMult,
+    BINDING_TOLL_MAX: BINDING_TOLL_MAX,
+    BINDING_TOLL_RATE: BINDING_TOLL_RATE,
+    BINDING_TOLL_COST_BONUS: BINDING_TOLL_COST_BONUS,
     siphonMult: siphonMult,
     levyMult: levyMult,
     cinderMult: cinderMult,
