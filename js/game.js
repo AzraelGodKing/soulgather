@@ -672,6 +672,15 @@
     return (Number(level) || 0) >= 1;
   }
 
+  function riseEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 14 * Math.pow(2, n);
+  }
+
+  function riseEdictStartsSpireAutobind(level) {
+    return (Number(level) || 0) >= 1;
+  }
+
   function cupEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 9 * Math.pow(2, n);
@@ -1061,6 +1070,7 @@
     "giftTwentyEightTributes",
     "giftThirtyTwoTributes",
     "giftThirtySixTributes",
+    "giftFortyTributes",
     "giftFullCup",
     "giftFirstOssuary",
     "giftFullOssuary",
@@ -1106,6 +1116,7 @@
     "cutEdict",
     "tendingEdict",
     "gleamEdict",
+    "riseEdict",
     "cupEdict",
     "draughtEdict",
     "wakeEdict",
@@ -1209,6 +1220,7 @@
     giftTwentyEightTributes: "Twenty-eight emptyings. The well returned eighty souls.",
     giftThirtyTwoTributes: "Thirty-two emptyings. The well returned ninety souls.",
     giftThirtySixTributes: "Thirty-six emptyings. The well returned a hundred souls.",
+    giftFortyTributes: "Forty emptyings. The well returned a hundred and ten souls.",
     giftFullCup: "The cup was full. The well returned twenty-five souls.",
     giftThreeChalices: "Three chalices. The well returned ten ash.",
     giftFirstOssuary: "The first bone. The well returned ten souls.",
@@ -1255,6 +1267,7 @@
     cutEdict: "The cut was spoken.",
     tendingEdict: "The tending was spoken.",
     gleamEdict: "The gleam was spoken.",
+    riseEdict: "The rise was spoken.",
     cupEdict: "The cup was spoken.",
     draughtEdict: "The draught was spoken.",
     wakeEdict: "The wake was spoken.",
@@ -1597,6 +1610,9 @@
     if ((Number(state.gleamEdictLevel) || 0) >= 1) {
       if (markChronicle("gleamEdict")) added = true;
     }
+    if ((Number(state.riseEdictLevel) || 0) >= 1) {
+      if (markChronicle("riseEdict")) added = true;
+    }
     if ((Number(state.cupEdictLevel) || 0) >= 1) {
       if (markChronicle("cupEdict")) added = true;
     }
@@ -1841,6 +1857,7 @@
       giftTwentyEightTributes: false,
       giftThirtyTwoTributes: false,
       giftThirtySixTributes: false,
+      giftFortyTributes: false,
       giftFullCup: false,
       giftThreeChalices: false,
       giftFirstOssuary: false,
@@ -1876,6 +1893,7 @@
       cutEdictLevel: 0,
       tendingEdictLevel: 0,
       gleamEdictLevel: 0,
+      riseEdictLevel: 0,
       cupEdictLevel: 0,
       draughtEdictLevel: 0,
       wakeEdictLevel: 0,
@@ -2844,6 +2862,16 @@
     state.favor -= cost;
     state.gleamEdictLevel += 1;
     markChronicle("gleamEdict");
+    save();
+    render();
+  }
+
+  function buyRiseEdict() {
+    var cost = riseEdictCost(state.riseEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.riseEdictLevel += 1;
+    markChronicle("riseEdict");
     save();
     render();
   }
@@ -3916,6 +3944,17 @@
       granted = true;
     }
 
+    if (
+      !state.giftFortyTributes &&
+      (Number(state.tributesLaid) || 0) >= 40
+    ) {
+      state.giftFortyTributes = true;
+      state.souls = N.add(state.souls, 110);
+      markChronicle("giftFortyTributes");
+      showToast("A hundred and ten souls for forty emptyings.");
+      granted = true;
+    }
+
     if (tryNamesBound()) granted = true;
 
     if (granted) save();
@@ -4414,6 +4453,7 @@
     "giftTwentyEightTributes",
     "giftThirtyTwoTributes",
     "giftThirtySixTributes",
+    "giftFortyTributes",
     "giftFullCup",
     "giftFirstOssuary",
     "giftFullOssuary",
@@ -4448,6 +4488,7 @@
     "cutEdictLevel",
     "tendingEdictLevel",
     "gleamEdictLevel",
+    "riseEdictLevel",
     "cupEdictLevel",
     "draughtEdictLevel",
     "wakeEdictLevel",
@@ -4641,6 +4682,7 @@
       giftTwentyEightTributes: !!state.giftTwentyEightTributes,
       giftThirtyTwoTributes: !!state.giftThirtyTwoTributes,
       giftThirtySixTributes: !!state.giftThirtySixTributes,
+      giftFortyTributes: !!state.giftFortyTributes,
       giftFullCup: !!state.giftFullCup,
       giftThreeChalices: !!state.giftThreeChalices,
       giftFirstOssuary: !!state.giftFirstOssuary,
@@ -4676,6 +4718,7 @@
       cutEdictLevel: Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0)),
       tendingEdictLevel: Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0)),
       gleamEdictLevel: Math.max(0, Math.floor(Number(state.gleamEdictLevel) || 0)),
+      riseEdictLevel: Math.max(0, Math.floor(Number(state.riseEdictLevel) || 0)),
       cupEdictLevel: Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0)),
       draughtEdictLevel: Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0)),
       wakeEdictLevel: Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0)),
@@ -4935,6 +4978,13 @@
         (Number(data.tributesLaid) || 0) >= 36;
     } else {
       state.giftThirtySixTributes = !!data.giftThirtySixTributes;
+    }
+    if (data.giftFortyTributes == null) {
+      state.giftFortyTributes =
+        hasChronicle("giftFortyTributes") ||
+        (Number(data.tributesLaid) || 0) >= 40;
+    } else {
+      state.giftFortyTributes = !!data.giftFortyTributes;
     }
     if (data.giftNamesComplete == null) {
       state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 12;
@@ -5235,6 +5285,7 @@
     }
     state.tendingEdictLevel = Math.max(0, Math.floor(Number(tendingLoaded) || 0));
     state.gleamEdictLevel = Math.max(0, Math.floor(Number(data.gleamEdictLevel) || 0));
+    state.riseEdictLevel = Math.max(0, Math.floor(Number(data.riseEdictLevel) || 0));
     state.cupEdictLevel = Math.max(0, Math.floor(Number(data.cupEdictLevel) || 0));
     state.draughtEdictLevel = Math.max(0, Math.floor(Number(data.draughtEdictLevel) || 0));
     state.wakeEdictLevel = Math.max(0, Math.floor(Number(data.wakeEdictLevel) || 0));
@@ -5537,6 +5588,7 @@
     var keptGiftTwentyEightTributes = !!state.giftTwentyEightTributes;
     var keptGiftThirtyTwoTributes = !!state.giftThirtyTwoTributes;
     var keptGiftThirtySixTributes = !!state.giftThirtySixTributes;
+    var keptGiftFortyTributes = !!state.giftFortyTributes;
     var keptGiftFullCup = !!state.giftFullCup;
     var keptGiftThreeChalices = !!state.giftThreeChalices;
     var keptGiftFirstOssuary = !!state.giftFirstOssuary;
@@ -5571,6 +5623,7 @@
     var keptCutEdict = Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0));
     var keptTendingEdict = Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0));
     var keptGleamEdict = Math.max(0, Math.floor(Number(state.gleamEdictLevel) || 0));
+    var keptRiseEdict = Math.max(0, Math.floor(Number(state.riseEdictLevel) || 0));
     var keptCupEdict = Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0));
     var keptDraughtEdict = Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0));
     var keptWakeEdict = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
@@ -5662,6 +5715,7 @@
     state.giftTwentyEightTributes = keptGiftTwentyEightTributes;
     state.giftThirtyTwoTributes = keptGiftThirtyTwoTributes;
     state.giftThirtySixTributes = keptGiftThirtySixTributes;
+    state.giftFortyTributes = keptGiftFortyTributes;
     state.giftFullCup = keptGiftFullCup;
     state.giftThreeChalices = keptGiftThreeChalices;
     state.giftFirstOssuary = keptGiftFirstOssuary;
@@ -5696,6 +5750,7 @@
     state.cutEdictLevel = keptCutEdict;
     state.tendingEdictLevel = keptTendingEdict;
     state.gleamEdictLevel = keptGleamEdict;
+    state.riseEdictLevel = keptRiseEdict;
     state.cupEdictLevel = keptCupEdict;
     state.draughtEdictLevel = keptDraughtEdict;
     state.wakeEdictLevel = keptWakeEdict;
@@ -5914,6 +5969,12 @@
       state.autobindBeacons = true;
       if (N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
         state.unlockedAutobindBeacons = true;
+      }
+    }
+    if (riseEdictStartsSpireAutobind(keptRiseEdict)) {
+      state.autobindSpires = true;
+      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
+        state.unlockedAutobindSpires = true;
       }
     }
     var startChalices = cupStartsChalices(keptCupEdict);
@@ -7542,6 +7603,15 @@
         els.gleamEdictBuy.disabled = !isFinite(gleamECost) || state.favor < gleamECost;
       }
 
+      var riseECost = riseEdictCost(state.riseEdictLevel);
+      if (els.riseEdictEffect) {
+        els.riseEdictEffect.textContent = "Autobind Spires at tribute";
+      }
+      if (els.riseEdictCost) els.riseEdictCost.textContent = F.formatNumber(riseECost) + " Favor";
+      if (els.riseEdictBuy) {
+        els.riseEdictBuy.disabled = !isFinite(riseECost) || state.favor < riseECost;
+      }
+
       var cupECost = cupEdictCost(state.cupEdictLevel);
       var cupN = cupStartsChalices(state.cupEdictLevel);
       if (els.cupEffect) {
@@ -8124,6 +8194,9 @@
     els.gleamEdictEffect = document.getElementById("gleam-edict-effect");
     els.gleamEdictCost = document.getElementById("gleam-edict-cost");
     els.gleamEdictBuy = document.getElementById("gleam-edict-buy");
+    els.riseEdictEffect = document.getElementById("rise-edict-effect");
+    els.riseEdictCost = document.getElementById("rise-edict-cost");
+    els.riseEdictBuy = document.getElementById("rise-edict-buy");
     els.cupEffect = document.getElementById("cup-effect");
     els.cupCost = document.getElementById("cup-cost");
     els.cupBuy = document.getElementById("cup-buy");
@@ -8386,6 +8459,7 @@
     if (els.cutEdictBuy) els.cutEdictBuy.addEventListener("click", buyCutEdict);
     if (els.tendingEdictBuy) els.tendingEdictBuy.addEventListener("click", buyTendingEdict);
     if (els.gleamEdictBuy) els.gleamEdictBuy.addEventListener("click", buyGleamEdict);
+    if (els.riseEdictBuy) els.riseEdictBuy.addEventListener("click", buyRiseEdict);
     if (els.cupBuy) els.cupBuy.addEventListener("click", buyCupEdict);
     if (els.draughtEdictBuy) els.draughtEdictBuy.addEventListener("click", buyDraughtEdict);
     if (els.wakeEdictBuy) els.wakeEdictBuy.addEventListener("click", buyWakeEdict);
@@ -8763,6 +8837,8 @@
     tendingEdictStartsHearthAutobind: tendingEdictStartsHearthAutobind,
     gleamEdictCost: gleamEdictCost,
     gleamEdictStartsBeaconAutobind: gleamEdictStartsBeaconAutobind,
+    riseEdictCost: riseEdictCost,
+    riseEdictStartsSpireAutobind: riseEdictStartsSpireAutobind,
     cupEdictCost: cupEdictCost,
     cupStartsChalices: cupStartsChalices,
     draughtEdictCost: draughtEdictCost,

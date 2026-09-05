@@ -477,6 +477,16 @@ function gleamEdictStartsBeaconAutobind(level) {
   return (Number(level) || 0) >= 1;
 }
 
+
+function riseEdictCost(level) {
+  const n = Math.max(0, Math.floor(level));
+  return 14 * Math.pow(2, n);
+}
+
+function riseEdictStartsSpireAutobind(level) {
+  return (Number(level) || 0) >= 1;
+}
+
 function draughtEdictCost(level) {
   const n = Math.max(0, Math.floor(level));
   return 10 * Math.pow(2, n);
@@ -835,6 +845,10 @@ assertEqual("gleamEdictCost(0)", gleamEdictCost(0), 13);
 assertEqual("gleamEdictCost(1)", gleamEdictCost(1), 26);
 assertTrue("gleamEdictStartsBeaconAutobind(0) is false", !gleamEdictStartsBeaconAutobind(0));
 assertTrue("gleamEdictStartsBeaconAutobind(1) is true", gleamEdictStartsBeaconAutobind(1));
+assertEqual("riseEdictCost(0)", riseEdictCost(0), 14);
+assertEqual("riseEdictCost(1)", riseEdictCost(1), 28);
+assertTrue("riseEdictStartsSpireAutobind(0) is false", !riseEdictStartsSpireAutobind(0));
+assertTrue("riseEdictStartsSpireAutobind(1) is true", riseEdictStartsSpireAutobind(1));
 assertEqual("chaliceMult(0)", chaliceMult(0), 1);
 assertEqual("chaliceMult(1)", chaliceMult(1), 1.08);
 assertEqual("chaliceCost(0)", chaliceCost(0), 20);
@@ -871,6 +885,9 @@ function giftThirtyTwoTributesReady(n) {
 function giftThirtySixTributesReady(n) {
   return (Number(n) || 0) >= 36;
 }
+function giftFortyTributesReady(n) {
+  return (Number(n) || 0) >= 40;
+}
 assertTrue("unlockAutobindChalices(2) is false", !unlockAutobindChalices(2));
 assertTrue("unlockAutobindChalices(3) is true", unlockAutobindChalices(3));
 assertTrue("giftFullCupReady(11) is false", !giftFullCupReady(11));
@@ -889,6 +906,8 @@ assertTrue("giftThirtyTwoTributesReady(31) is false", !giftThirtyTwoTributesRead
 assertTrue("giftThirtyTwoTributesReady(32) is true", giftThirtyTwoTributesReady(32));
 assertTrue("giftThirtySixTributesReady(35) is false", !giftThirtySixTributesReady(35));
 assertTrue("giftThirtySixTributesReady(36) is true", giftThirtySixTributesReady(36));
+assertTrue("giftFortyTributesReady(39) is false", !giftFortyTributesReady(39));
+assertTrue("giftFortyTributesReady(40) is true", giftFortyTributesReady(40));
 assertEqual("chaliceMult(12) full cup", chaliceMult(12), 1.96);
 function autobindChalicesCanBuy(owned, ash) {
   const n = Math.max(0, Math.min(12, Math.floor(Number(owned) || 0)));
