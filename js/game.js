@@ -8,6 +8,7 @@
   var COST_MULT = 1.15;
   var WELL_COST_BASE = 25;
   var WELL_COST_MULT = 1.5;
+  var WELL_EARLY_MULT = 1.35;
   var LANTERN_COST_BASE = 30;
   var LANTERN_COST_MULT = 1.2;
   var MARK_COST_BASE = 8;
@@ -225,7 +226,57 @@
   }
 
   function wellCost(depth) {
-    return N.cost(WELL_COST_BASE, WELL_COST_MULT, depth);
+    var d = Math.max(0, Math.floor(Number(depth) || 0));
+    if (d <= 5) {
+      return N.cost(WELL_COST_BASE, WELL_EARLY_MULT, d);
+    }
+    return N.cost(WELL_COST_BASE, WELL_COST_MULT, d);
+  }
+
+  function wellBulkCost(owned, k) {
+    var n = Math.max(0, Math.floor(k));
+    if (n > BULK_CAP) n = BULK_CAP;
+    var total = N.fromNumber(0);
+    var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+    var i;
+    for (i = 0; i < n; i++) {
+      total = N.add(total, wellCost(baseDepth + i));
+    }
+    return total;
+  }
+
+  function wellMaxAffordable(owned, currency) {
+    var remaining = num(currency);
+    var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+    var k = 0;
+    while (k < BULK_CAP) {
+      var c = wellCost(baseDepth + k);
+      if (N.cmp(remaining, c) < 0) break;
+      remaining = N.sub(remaining, c);
+      k += 1;
+    }
+    return k;
+  }
+
+  function wellPurchasePlan(owned, currency) {
+    var one = wellCost(owned);
+    var mode = state.buyMode;
+    if (mode === "10") {
+      var k10 = wellMaxAffordable(owned, currency);
+      if (k10 < 1) {
+        return { k: 0, cost: one, can: false };
+      }
+      if (k10 > 10) k10 = 10;
+      return { k: k10, cost: wellBulkCost(owned, k10), can: true };
+    }
+    if (mode === "max") {
+      var k = wellMaxAffordable(owned, currency);
+      if (k < 1) {
+        return { k: 0, cost: one, can: false };
+      }
+      return { k: k, cost: wellBulkCost(owned, k), can: true };
+    }
+    return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
   }
 
   function bulkCost(base, owned, k, mult) {
@@ -2555,7 +2606,7 @@
 
   function buyWell() {
     if (!state.unlockedWell) return;
-    var plan = purchasePlan(state.wellDepth, state.souls, WELL_COST_BASE, WELL_COST_MULT);
+    var plan = wellPurchasePlan(state.wellDepth, state.souls);
     if (!plan.can || plan.k < 1) return;
     state.souls = N.sub(state.souls, plan.cost);
     state.wellDepth += plan.k;
@@ -6630,7 +6681,7 @@
       if (els.wellCard && els.wellCard.classList.contains("is-hidden")) {
         revealWell();
       }
-      var wellPlan = purchasePlan(state.wellDepth, state.souls, WELL_COST_BASE, WELL_COST_MULT);
+      var wellPlan = wellPurchasePlan(state.wellDepth, state.souls);
       var canWell = wellPlan.can;
       var power = clickPower();
       els.wellOwned.textContent = F.formatNumber(state.wellDepth);
@@ -8989,6 +9040,9 @@
     vesselCost: vesselCost,
     throneCost: throneCost,
     wellCost: wellCost,
+    WELL_EARLY_MULT: WELL_EARLY_MULT,
+    WELL_COST_MULT: WELL_COST_MULT,
+    WELL_COST_BASE: WELL_COST_BASE,
     lanternCost: lanternCost,
     fetterCost: fetterCost,
     censerCost: censerCost,
