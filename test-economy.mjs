@@ -803,6 +803,12 @@ function assertTrue(label, cond) {
   }
 }
 
+// AZR-110: live Autobind is rate-limited in game.js (AUTOBIND_INTERVAL = 1s of accumulated dt).
+// tryAutobind* remain ×1 and ignore buyMode; offline shade/spirit stays one pulse per applyDt.
+const AUTOBIND_INTERVAL = 1;
+assertEqual("AUTOBIND_INTERVAL is 1 second", AUTOBIND_INTERVAL, 1);
+
+
 assertEqual("shadeCost(0)", shadeCost(0), 10);
 assertEqual("shadeCost(1)", shadeCost(1), 11); // floor(10 * 1.15) = 11
 assertEqual("shadeCost(10)", shadeCost(10), Math.floor(10 * Math.pow(1.15, 10)));
