@@ -65,6 +65,7 @@
   var autobindAcc = 0;
   var TOAST_MS = 5200;
   var AWAY_MIN_DT = 2;
+  var AWAY_SUMMARY_DT = 60;
   var TITHE_MIN = 25;
   var TITHE_FRAC = 0.1;
   var TITHE_SECS = 60;
@@ -5645,20 +5646,35 @@
 
       var offline = (Date.now() - state.lastTick) / 1000;
       var soulsBefore = N.clone(state.souls);
+      var ashBefore = N.clone(state.ash);
       var shadesBefore = N.clone(state.shades);
       if (offline > 0.25) {
         applyDt(offline);
       }
       var soulsGained = N.sub(state.souls, soulsBefore);
+      var ashGained = N.sub(state.ash, ashBefore);
       var shadesGained = N.sub(state.shades, shadesBefore);
       state.lastTick = Date.now();
       syncChronicle();
       save();
 
-      if (offline > AWAY_MIN_DT && (N.cmp(soulsGained, 0) > 0 || N.cmp(shadesGained, 0) > 0)) {
+      if (
+        offline > AWAY_SUMMARY_DT &&
+        (
+          (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) ||
+          (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) ||
+          (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0)
+        )
+      ) {
         var awayMsg = "The well gathered while you were away.";
-        if (N.cmp(soulsGained, 0) > 0) {
+        if (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) {
           awayMsg += " +" + fmt(soulsGained) + " Souls";
+        }
+        if (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) {
+          awayMsg += " +" + fmt(ashGained) + " Ash";
+        }
+        if (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0) {
+          awayMsg += " +" + fmt(shadesGained) + " Shades";
         }
         pendingAwayToast = awayMsg;
       }
