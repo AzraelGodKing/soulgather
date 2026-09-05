@@ -29,6 +29,8 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 Visual direction stays locked. Footer/CSS **v6.7** (Autobind Obelisks content parity). Save key stays `soulgather-v0`.
 
+**AZR-116.** First-run buy-mode hint for hotkeys 1/2/3; dismisses on first switch or ×; persists Tribute, wipes Reset.
+
 **AZR-117 (early Well Depth).** Depths 0–5 use a gentler cost mult (`WELL_EARLY_MULT = 1.35`) via piecewise `wellCost`; depth ≥ 6 keeps the original `1.5` curve (`WELL_COST_MULT`). Depth 0 stays 25. Bulk Buy 10 / Max for the Well goes through `wellPurchasePlan` / `wellBulkCost` (costs via `wellCost`, including AZR-113 Buy 10 clamp), not the flat-mult `purchasePlan`. Late deepen at depth ≥ 10 stays within ±5% of `floor(25 × 1.5^n)`. No footer bump; save key unchanged.
 
 ## Loop (short)
