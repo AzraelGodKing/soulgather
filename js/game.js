@@ -4622,10 +4622,6 @@
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
-  Known",
-    "runStartedAt",
-    "allTimeSouls",
-    "tributesLaid"
   ];
 
   function dumpNum(v) {
