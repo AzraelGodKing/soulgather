@@ -2610,6 +2610,7 @@
     if (!plan.can || plan.k < 1) return;
     state.souls = N.sub(state.souls, plan.cost);
     state.wellDepth += plan.k;
+    toastBulk(plan.k, "Deepened " + plan.k + " levels");
     syncChronicle();
     save();
     render();
@@ -2621,6 +2622,7 @@
     state.souls = N.sub(state.souls, plan.cost);
     state.shades = N.add(state.shades, plan.k);
     state.lifetimeShades = N.add(state.lifetimeShades, plan.k);
+    toastBulk(plan.k, "Bound " + plan.k + " Shades");
     checkUnlock();
     save();
     render();
@@ -2633,6 +2635,7 @@
     state.shades = N.sub(state.shades, plan.cost);
     state.spirits = N.add(state.spirits, plan.k);
     state.lifetimeSpirits = N.add(state.lifetimeSpirits, plan.k);
+    toastBulk(plan.k, "Bound " + plan.k + " Spirits");
     checkUnlock();
     save();
     render();
@@ -2644,6 +2647,7 @@
     if (!plan.can || plan.k < 1) return;
     state.spirits = N.sub(state.spirits, plan.cost);
     state.vessels = N.add(state.vessels, plan.k);
+    toastBulk(plan.k, "Bound " + plan.k + " Vessels");
     checkUnlock();
     save();
     render();
@@ -2656,6 +2660,7 @@
     if (!plan.can || plan.k < 1) return;
     state.vessels = N.sub(state.vessels, plan.cost);
     state.thrones += plan.k;
+    toastBulk(plan.k, "Raised " + plan.k + " Thrones");
     checkUnlock();
     save();
     render();
@@ -2667,6 +2672,7 @@
     if (!plan.can || plan.k < 1) return;
     state.souls = N.sub(state.souls, plan.cost);
     state.lanterns = N.add(state.lanterns, plan.k);
+    toastBulk(plan.k, "Kindled " + plan.k + " Lanterns");
     if (!state.lanternToastShown) {
       state.lanternToastShown = true;
       showToast("A lantern kindles.");
@@ -2683,6 +2689,7 @@
     if (!plan.can || plan.k < 1) return;
     state.shades = N.sub(state.shades, plan.cost);
     state.fetters = N.add(state.fetters, plan.k);
+    toastBulk(plan.k, "Bound " + plan.k + " Fetters");
     markChronicle("fetter");
     checkUnlock();
     save();
@@ -2695,6 +2702,7 @@
     if (!plan.can || plan.k < 1) return;
     state.vessels = N.sub(state.vessels, plan.cost);
     state.censers = N.add(state.censers, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Censers");
     markChronicle("censer");
     checkUnlock();
     save();
@@ -2707,6 +2715,7 @@
     if (!plan.can || plan.k < 1) return;
     state.censers = N.sub(state.censers, plan.cost);
     state.pyres = N.add(state.pyres, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Pyres");
     markChronicle("pyre");
     checkUnlock();
     save();
@@ -2719,6 +2728,7 @@
     if (!plan.can || plan.k < 1) return;
     state.pyres = N.sub(state.pyres, plan.cost);
     state.urns = N.add(state.urns, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Urns");
     markChronicle("urn");
     checkUnlock();
     save();
@@ -2731,6 +2741,7 @@
     if (!plan.can || plan.k < 1) return;
     state.urns = N.sub(state.urns, plan.cost);
     state.hearths = N.add(state.hearths, plan.k);
+    toastBulk(plan.k, "Kindled " + plan.k + " Hearths");
     markChronicle("hearth");
     checkUnlock();
     save();
@@ -2743,6 +2754,7 @@
     if (!plan.can || plan.k < 1) return;
     state.hearths = N.sub(state.hearths, plan.cost);
     state.beacons = N.add(state.beacons, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Beacons");
     markChronicle("beacon");
     checkUnlock();
     save();
@@ -2755,6 +2767,7 @@
     if (!plan.can || plan.k < 1) return;
     state.beacons = N.sub(state.beacons, plan.cost);
     state.spires = N.add(state.spires, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Spires");
     markChronicle("spire");
     checkUnlock();
     save();
@@ -2767,6 +2780,7 @@
     if (!plan.can || plan.k < 1) return;
     state.spires = N.sub(state.spires, plan.cost);
     state.obelisks = N.add(state.obelisks, plan.k);
+    toastBulk(plan.k, "Raised " + plan.k + " Obelisks");
     markChronicle("obelisk");
     checkUnlock();
     save();
@@ -2797,6 +2811,7 @@
     state.ash = N.sub(state.ash, plan.cost);
     state.chalices = plan.owned + plan.k;
     if (state.chalices > CHALICE_MAX) state.chalices = CHALICE_MAX;
+    toastBulk(plan.k, "Raised " + plan.k + " Chalices");
     markChronicle("chalice");
     checkUnlock();
     save();
@@ -6517,6 +6532,10 @@
       return;
     }
     presentToast(message);
+  }
+
+  function toastBulk(k, message) {
+    if (k > 1) showToast(message);
   }
 
   function presentToast(message) {
