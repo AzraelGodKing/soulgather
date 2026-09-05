@@ -1868,6 +1868,7 @@
       ashenLevel: 0,
       depthLevel: 0,
       buyMode: "1",
+      buyModeHintDismissed: false,
       siphonLevel: 0,
       levyLevel: 0,
       cinderLevel: 0,
@@ -4516,10 +4517,20 @@
     render();
   }
 
+  function dismissBuyModeHint() {
+    if (state.buyModeHintDismissed) return;
+    state.buyModeHintDismissed = true;
+    save();
+    render();
+  }
+
   function setBuyMode(mode) {
     mode = normalizeBuyMode(mode);
     if (state.buyMode === mode) return;
     state.buyMode = mode;
+    if (!state.buyModeHintDismissed) {
+      state.buyModeHintDismissed = true;
+    }
     save();
     render();
   }
@@ -4596,6 +4607,7 @@
     "ashenLevel",
     "depthLevel",
     "buyMode",
+    "buyModeHintDismissed",
     "siphonLevel",
     "levyLevel",
     "cinderLevel",
@@ -4831,6 +4843,7 @@
       ashenLevel: Number(state.ashenLevel) || 0,
       depthLevel: Number(state.depthLevel) || 0,
       buyMode: state.buyMode,
+      buyModeHintDismissed: !!state.buyModeHintDismissed,
       siphonLevel: state.siphonLevel,
       levyLevel: state.levyLevel,
       cinderLevel: Number(state.cinderLevel) || 0,
@@ -5079,6 +5092,7 @@
     state.ashenLevel = Number(data.ashenLevel) || 0;
     state.depthLevel = Math.max(0, Math.floor(Number(data.depthLevel) || 0));
     state.buyMode = normalizeBuyMode(data.buyMode);
+    state.buyModeHintDismissed = !!data.buyModeHintDismissed;
     state.siphonLevel = Number(data.siphonLevel) || 0;
     state.levyLevel = Number(data.levyLevel) || 0;
     state.cinderLevel = Number(data.cinderLevel) || 0;
@@ -5795,6 +5809,7 @@
     var keptCrown = Number(state.crownWeight) || 0;
     var keptLongMem = Number(state.longMemoryLevel) || 0;
     var keptBuy = state.buyMode;
+    var keptBuyModeHintDismissed = !!state.buyModeHintDismissed;
     var keptChronicle = (state.chronicle || []).slice();
     var keptAllTime = N.clone(state.allTimeSouls);
     var keptPeakShades = N.max(num(state.peakShades), num(state.shades));
@@ -5925,6 +5940,7 @@
     state.crownWeight = keptCrown;
     state.longMemoryLevel = keptLongMem;
     state.buyMode = keptBuy;
+    state.buyModeHintDismissed = keptBuyModeHintDismissed;
     state.chronicle = keptChronicle;
     state.aspect = "";
     state.allTimeSouls = keptAllTime;
@@ -6763,6 +6779,13 @@
         buttons[bi].classList.toggle("is-on", on);
         buttons[bi].setAttribute("aria-pressed", on ? "true" : "false");
       }
+    }
+
+    if (els.buyModeHint) {
+      var showBuyHint =
+        !state.buyModeHintDismissed &&
+        !isTypingTarget(document.activeElement);
+      els.buyModeHint.classList.toggle("is-hidden", !showBuyHint);
     }
 
     if (state.unlockedWell) {
@@ -8410,6 +8433,8 @@
     els.soulsKnell = document.getElementById("souls-knell");
     els.gatherBtn = document.getElementById("gather-btn");
     els.buyMode = document.getElementById("buy-mode");
+    els.buyModeHint = document.getElementById("buy-mode-hint");
+    els.buyModeHintDismiss = document.getElementById("buy-mode-hint-dismiss");
     els.wellCard = document.getElementById("well-card");
     els.wellOwned = document.getElementById("well-owned");
     els.wellPower = document.getElementById("well-power");
@@ -8941,6 +8966,12 @@
         if (!t || !t.getAttribute) return;
         var mode = t.getAttribute("data-mode");
         if (mode) setBuyMode(mode);
+      });
+    }
+    if (els.buyModeHintDismiss) {
+      els.buyModeHintDismiss.addEventListener("click", function (ev) {
+        ev.preventDefault();
+        dismissBuyModeHint();
       });
     }
 
