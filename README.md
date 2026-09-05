@@ -23,6 +23,7 @@ Save is local (`soulgather-v0`). Footer Memory export/import. Reset wipes everyt
 
 **Buy 10 clamp.** Buy 10 clamps to how many you can afford (up to 10); no longer dead-ends when full 10 is too expensive (AZR-113).
 
+**Buy 10/Max toast.** Buy 10/Max shows a short toast with the count (AZR-111); Autobind silent.
 
 Visual direction stays locked. Footer/CSS remain **v6.6** (bugfix, not a content version). Save key stays `soulgather-v0`.
 
