@@ -23,28 +23,28 @@
   var UNLOCK_PYRES = 3;
   var URN_ASH_PER_SEC = 0.1;
   var URN_COST_BASE = 3;
-  var URN_COST_MULT = 1.2;
-  var UNLOCK_URNS = 4;
+  var URN_COST_MULT = 1.28;
+  var UNLOCK_URNS = 6;
   var HEARTH_ASH_PER_SEC = 0.08;
   var HEARTH_COST_BASE = 4;
-  var HEARTH_COST_MULT = 1.2;
-  var UNLOCK_HEARTHS = 4;
+  var HEARTH_COST_MULT = 1.28;
+  var UNLOCK_HEARTHS = 6;
   var BEACON_ASH_PER_SEC = 0.06;
   var BEACON_COST_BASE = 4;
-  var BEACON_COST_MULT = 1.2;
-  var UNLOCK_BEACONS = 4;
+  var BEACON_COST_MULT = 1.28;
+  var UNLOCK_BEACONS = 6;
   var SPIRE_ASH_PER_SEC = 0.045;
   var SPIRE_COST_BASE = 5;
-  var SPIRE_COST_MULT = 1.2;
-  var UNLOCK_SPIRES = 4;
+  var SPIRE_COST_MULT = 1.28;
+  var UNLOCK_SPIRES = 6;
   var OBELISK_ASH_PER_SEC = 0.03;
   var OBELISK_COST_BASE = 6;
-  var OBELISK_COST_MULT = 1.2;
-  var UNLOCK_OBELISKS = 4;
+  var OBELISK_COST_MULT = 1.28;
+  var UNLOCK_OBELISKS = 6;
   var UNLOCK_CHALICES = 5;
   var CHALICE_MAX = 12;
-  var CHALICE_COST_BASE = 20;
-  var CHALICE_COST_MULT = 1.5;
+  var CHALICE_COST_BASE = 32;
+  var CHALICE_COST_MULT = 1.65;
   var ASH_FROM_SHADE_FRAC = 0.01;
   var UNLOCK_SHADES = 10;
   var UNLOCK_LIFETIME = 100;
@@ -1288,9 +1288,9 @@
     giftPeakPyres: "Five pyres. The well returned ten ash.",
     giftPeakUrns: "Five urns. The well returned eight ash.",
     giftPeakHearths: "Five hearths. The well returned ten ash.",
-    giftPeakBeacons: "Five beacons. The well returned twelve ash.",
-    giftPeakSpires: "Five spires. The well returned twelve ash.",
-    giftPeakObelisks: "Five obelisks. The well returned twelve ash.",
+    giftPeakBeacons: "Five beacons. The well returned seven ash.",
+    giftPeakSpires: "Five spires. The well returned seven ash.",
+    giftPeakObelisks: "Five obelisks. The well returned seven ash.",
     giftFirstCinders: "The first cinders. The well returned eight ash.",
     giftFirstUrnRite: "The first cut urn. The well returned six ash.",
     giftFirstHearthRite: "The first cut hearth. The well returned eight ash.",
@@ -3804,27 +3804,27 @@
     bumpPeakSpires();
     if (!state.giftPeakSpires && N.cmp(state.peakSpires, 5) >= 0) {
       state.giftPeakSpires = true;
-      state.ash = N.add(state.ash, 12);
+      state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakSpires");
-      showToast("Twelve ash for five spires.");
+      showToast("Seven ash for five spires.");
       granted = true;
     }
 
     bumpPeakObelisks();
     if (!state.giftPeakObelisks && N.cmp(state.peakObelisks, 5) >= 0) {
       state.giftPeakObelisks = true;
-      state.ash = N.add(state.ash, 12);
+      state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakObelisks");
-      showToast("Twelve ash for five obelisks.");
+      showToast("Seven ash for five obelisks.");
       granted = true;
     }
 
     bumpPeakBeacons();
     if (!state.giftPeakBeacons && N.cmp(state.peakBeacons, 5) >= 0) {
       state.giftPeakBeacons = true;
-      state.ash = N.add(state.ash, 12);
+      state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakBeacons");
-      showToast("Twelve ash for five beacons.");
+      showToast("Seven ash for five beacons.");
       granted = true;
     }
 
