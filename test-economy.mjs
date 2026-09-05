@@ -2004,6 +2004,106 @@ assertEqual(
   "Swear an Aspect. The GodKing waits."
 );
 
+// AZR-112: Autobind always ×1 / never purchasePlan / never buyMode (source + behavioral lock).
+{
+  const EXPECTED_TRY_AUTOBIND = [
+    "tryAutobind",
+    "tryAutobindSpirits",
+    "tryAutobindVessels",
+    "tryAutobindLanterns",
+    "tryAutobindFetters",
+    "tryAutobindCensers",
+    "tryAutobindThrones",
+    "tryAutobindPyres",
+    "tryAutobindUrns",
+    "tryAutobindHearths",
+    "tryAutobindBeacons",
+    "tryAutobindSpires",
+    "tryAutobindChalices",
+  ];
+
+  const gameSrc = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+  const found = [];
+  const re = /function (tryAutobind\w*)\(/g;
+  let m;
+  while ((m = re.exec(gameSrc)) !== null) {
+    found.push(m[1]);
+  }
+  assertEqual("AZR-112 tryAutobind* count in game.js", found.length, EXPECTED_TRY_AUTOBIND.length);
+  for (const name of EXPECTED_TRY_AUTOBIND) {
+    assertTrue("AZR-112 game.js has " + name, found.includes(name));
+  }
+  for (const name of found) {
+    assertTrue("AZR-112 scan list covers " + name, EXPECTED_TRY_AUTOBIND.includes(name));
+  }
+
+  function stripComments(src) {
+    return src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/[^\n]*/g, "");
+  }
+
+  function extractTryAutobindBody(src, name) {
+    const startToken = "function " + name + "(";
+    const start = src.indexOf(startToken);
+    if (start < 0) return null;
+    const from = start;
+    const rest = src.slice(from);
+    const nextFn = rest.search(/\n  function /);
+    if (nextFn < 0) return rest;
+    return rest.slice(0, nextFn);
+  }
+
+  for (const name of EXPECTED_TRY_AUTOBIND) {
+    const slice = extractTryAutobindBody(gameSrc, name);
+    assertTrue("AZR-112 extract " + name, !!slice);
+    const body = stripComments(slice || "");
+    assertTrue(name + " must not use purchasePlan", !body.includes("purchasePlan"));
+    assertTrue(name + " must not read buyMode", !body.includes("buyMode"));
+    const addsOne =
+      body.includes(", 1)") ||
+      body.includes("+= 1") ||
+      /(?:owned|\w+)\s*\+\s*1\b/.test(body);
+    assertTrue(name + " success path adds exactly 1", addsOne);
+  }
+
+  /** Mirror of Autobind live tick: always buy 1 if affordable; never reads buyMode. */
+  function autobindBuyOnce(owned, currency, costFn) {
+    const o = Math.max(0, Math.floor(Number(owned) || 0));
+    const cost = costFn(o);
+    let cur = currency;
+    if (!(cur && typeof cur === "object" && typeof cur.m === "number")) {
+      cur = N.fromNumber(Number(cur) || 0);
+    }
+    if (N.cmp(cur, cost) < 0) {
+      return { owned: o, currency: cur, bought: false };
+    }
+    return {
+      owned: o + 1,
+      currency: N.sub(cur, cost),
+      bought: true,
+    };
+  }
+
+  // Even with buyMode conceptually "max" / enough currency for many, autobind still +1.
+  {
+    const soulsForMany = N.fromNumber(100000);
+    const maxPlan = purchasePlan(0, soulsForMany, 10, 1.15, "max");
+    assertTrue("AZR-112 max plan can buy many", maxPlan.k >= 10);
+    const once = autobindBuyOnce(0, soulsForMany, shadeCost);
+    assertTrue("AZR-112 autobindBuyOnce bought", once.bought);
+    assertEqual("AZR-112 autobindBuyOnce owned is 1 not bulk", once.owned, 1);
+    assertTrue("AZR-112 autobindBuyOnce owned is not 10", once.owned !== 10);
+  }
+
+  // Manual bulk remains covered (buyMode "10" still plans k=10).
+  assertEqual(
+    'purchasePlan(..., "10").k === 10',
+    purchasePlan(0, N.fromNumber(100000), 10, 1.15, "10").k,
+    10
+  );
+}
+
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
   process.exit(1);
