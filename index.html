@@ -203,6 +203,18 @@
         <button type="button" class="card-buy" id="spire-buy" disabled>Raise a Spire</button>
       </article>
 
+
+      <article class="card is-hidden" id="obelisk-card">
+        <h2 class="card-name">Obelisks</h2>
+        <div class="card-owned" id="obelisk-owned">0</div>
+        <p class="card-flavor">Stone after the height.</p>
+        <div class="card-stats">
+          <div>Raise: <span id="obelisk-prod">0 ash / sec</span></div>
+          <div>Raise cost: <span id="obelisk-cost">6 Spires</span></div>
+        </div>
+        <button type="button" class="card-buy" id="obelisk-buy" disabled>Raise an Obelisk</button>
+      </article>
+
       <article class="card is-hidden" id="throne-card">
         <h2 class="card-name">Thrones</h2>
         <div class="card-owned" id="throne-owned">0</div>
@@ -874,6 +886,19 @@
 
       <div class="edict-row">
         <div class="edict-copy">
+          <h3 class="edict-name">Edict of Obelisks</h3>
+          <p class="edict-flavor">The stone is remembered.</p>
+          <p class="edict-stats">
+            Effect: <span id="obelisk-edict-effect">+0 Obelisk at tribute</span>
+            · Cost: <span id="obelisk-edict-cost">12 Favor</span>
+          </p>
+        </div>
+        <button type="button" class="card-buy" id="obelisk-edict-buy" disabled>Speak the Obelisk</button>
+      </div>
+
+
+      <div class="edict-row">
+        <div class="edict-copy">
           <h3 class="edict-name">Edict of Cinders</h3>
           <p class="edict-flavor">The doubling is remembered.</p>
           <p class="edict-stats">
@@ -1249,7 +1274,7 @@
     </details>
 
     <footer class="foot">
-      <span>Soulgather v6.5 · prototype</span>
+      <span>Soulgather v6.6 · prototype</span>
       <div class="foot-actions">
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">

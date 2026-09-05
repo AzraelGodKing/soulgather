@@ -36,6 +36,10 @@
   var SPIRE_COST_BASE = 5;
   var SPIRE_COST_MULT = 1.2;
   var UNLOCK_SPIRES = 4;
+  var OBELISK_ASH_PER_SEC = 0.03;
+  var OBELISK_COST_BASE = 6;
+  var OBELISK_COST_MULT = 1.2;
+  var UNLOCK_OBELISKS = 4;
   var UNLOCK_CHALICES = 5;
   var CHALICE_MAX = 12;
   var CHALICE_COST_BASE = 20;
@@ -204,6 +208,10 @@
 
   function spireCost(owned) {
     return N.cost(SPIRE_COST_BASE, SPIRE_COST_MULT, owned);
+  }
+
+  function obeliskCost(owned) {
+    return N.cost(OBELISK_COST_BASE, OBELISK_COST_MULT, owned);
   }
 
   function chaliceCost(owned) {
@@ -636,6 +644,16 @@
     return n;
   }
 
+  function obeliskEdictCost(level) {
+    var n = Math.max(0, Math.floor(level));
+    return 12 * Math.pow(2, n);
+  }
+
+  function obeliskEdictStartsObelisks(level) {
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    return n;
+  }
+
   function cinderEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 8 * Math.pow(2, n);
@@ -1025,6 +1043,7 @@
     "hearth",
     "beacon",
     "spire",
+    "obelisk",
     "fetter",
     "giftSouls",
     "giftShades",
@@ -1050,6 +1069,7 @@
     "giftFirstHearth",
     "giftFirstBeacon",
     "giftFirstSpire",
+    "giftFirstObelisk",
     "giftEightTributes",
     "giftPeakPyres",
     "giftPeakUrns",
@@ -1112,6 +1132,7 @@
     "hearthEdict",
     "beaconEdict",
     "spireEdict",
+    "obeliskEdict",
     "cinderEdict",
     "cutEdict",
     "tendingEdict",
@@ -1176,6 +1197,7 @@
     hearth: "A hearth was kindled.",
     beacon: "A beacon was raised.",
     spire: "A spire was raised.",
+    obelisk: "An obelisk was raised.",
     fetter: "A fetter was bound.",
     giftSouls: "A hundred souls. The well returned a gift.",
     giftShades: "Ten shades. One more was given.",
@@ -1201,6 +1223,7 @@
     giftFirstHearth: "The first hearth. The well returned eight ash.",
     giftFirstBeacon: "The first beacon. The well returned eight ash.",
     giftFirstSpire: "The first spire. The well returned eight ash.",
+    giftFirstObelisk: "The first obelisk. The well returned eight ash.",
     giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
     giftPeakPyres: "Five pyres. The well returned ten ash.",
     giftPeakUrns: "Five urns. The well returned eight ash.",
@@ -1263,6 +1286,7 @@
     hearthEdict: "The hearth was spoken.",
     beaconEdict: "The beacon was spoken.",
     spireEdict: "The spire was spoken.",
+    obeliskEdict: "The obelisk was spoken.",
     cinderEdict: "The cinders were spoken.",
     cutEdict: "The cut was spoken.",
     tendingEdict: "The tending was spoken.",
@@ -1326,6 +1350,7 @@
     var hearths = nVal(view.hearths);
     var beacons = nVal(view.beacons);
     var spires = nVal(view.spires);
+    var obelisks = nVal(view.obelisks);
     var fetters = nVal(view.fetters);
     var chalices = Number(view.chalices) || 0;
     var unlockedSpirits = !!view.unlockedSpirits;
@@ -1394,6 +1419,9 @@
     }
     if (view.unlockedSpires && spires < 1) {
       return "Raise a Spire. Height after the light.";
+    }
+    if (view.unlockedObelisks && obelisks < 1) {
+      return "Raise an Obelisk. Stone after the height.";
     }
     if (view.unlockedChalices && chalices < 1) {
       return "Raise a Chalice. He drinks from the emptied well.";
@@ -1550,6 +1578,9 @@
     if (N.cmp(state.spires, 1) >= 0) {
       if (markChronicle("spire")) added = true;
     }
+    if (N.cmp(state.obelisks, 1) >= 0) {
+      if (markChronicle("obelisk")) added = true;
+    }
     if (N.cmp(state.fetters, 1) >= 0) {
       if (markChronicle("fetter")) added = true;
     }
@@ -1597,6 +1628,9 @@
     }
     if ((Number(state.spireEdictLevel) || 0) >= 1) {
       if (markChronicle("spireEdict")) added = true;
+    }
+    if ((Number(state.obeliskEdictLevel) || 0) >= 1) {
+      if (markChronicle("obeliskEdict")) added = true;
     }
     if ((Number(state.cinderEdictLevel) || 0) >= 1) {
       if (markChronicle("cinderEdict")) added = true;
@@ -1721,6 +1755,7 @@
       hearths: N.fromNumber(0),
       beacons: N.fromNumber(0),
       spires: N.fromNumber(0),
+      obelisks: N.fromNumber(0),
       fetters: N.fromNumber(0),
       emberLevel: 0,
       chainLevel: 0,
@@ -1738,6 +1773,7 @@
       unlockedHearths: false,
       unlockedBeacons: false,
       unlockedSpires: false,
+      unlockedObelisks: false,
       unlockedFetters: false,
       unlockedAutobind: false,
       unlockedAutobindSpirits: false,
@@ -1814,6 +1850,7 @@
       peakHearths: N.fromNumber(0),
       peakBeacons: N.fromNumber(0),
       peakSpires: N.fromNumber(0),
+      peakObelisks: N.fromNumber(0),
       bonusLifetimeSouls: false,
       bonusPeakShades: false,
       bonusFirstVessel: false,
@@ -1838,6 +1875,7 @@
       giftFirstHearth: false,
       giftFirstBeacon: false,
       giftFirstSpire: false,
+      giftFirstObelisk: false,
       giftEightTributes: false,
       giftPeakPyres: false,
       giftPeakUrns: false,
@@ -1889,6 +1927,7 @@
       hearthEdictLevel: 0,
       beaconEdictLevel: 0,
       spireEdictLevel: 0,
+      obeliskEdictLevel: 0,
       cinderEdictLevel: 0,
       cutEdictLevel: 0,
       tendingEdictLevel: 0,
@@ -2135,9 +2174,22 @@
       ),
       wakeMult(wakeActive())
     );
+    var fromObelisks = N.mul(
+      N.mul(
+        N.mul(
+          N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rateMult()),
+          nightMult(nightActive())
+        ),
+        hymnMult(hymnActive())
+      ),
+      wakeMult(wakeActive())
+    );
     return N.add(
-      N.add(N.add(N.add(N.add(N.add(fromShades, fromCensers), fromPyres), fromUrns), fromHearths), fromBeacons),
-      fromSpires
+      N.add(
+        N.add(N.add(N.add(N.add(N.add(fromShades, fromCensers), fromPyres), fromUrns), fromHearths), fromBeacons),
+        fromSpires
+      ),
+      fromObelisks
     );
   }
 
@@ -2331,6 +2383,13 @@
       if (N.cmp(state.beacons, UNLOCK_SPIRES) >= 0 || N.cmp(state.spires, 1) >= 0) {
         state.unlockedSpires = true;
         revealSpires(true);
+      }
+    }
+
+    if (!state.unlockedObelisks) {
+      if (N.cmp(state.spires, UNLOCK_OBELISKS) >= 0 || N.cmp(state.obelisks, 1) >= 0) {
+        state.unlockedObelisks = true;
+        revealObelisks(true);
       }
     }
 
@@ -2630,6 +2689,18 @@
     render();
   }
 
+  function buyObelisk() {
+    if (!state.unlockedObelisks) return;
+    var plan = purchasePlan(state.obelisks, state.spires, OBELISK_COST_BASE, OBELISK_COST_MULT);
+    if (!plan.can || plan.k < 1) return;
+    state.spires = N.sub(state.spires, plan.cost);
+    state.obelisks = N.add(state.obelisks, plan.k);
+    markChronicle("obelisk");
+    checkUnlock();
+    save();
+    render();
+  }
+
   function chalicePlan() {
     var owned = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0)));
     var room = CHALICE_MAX - owned;
@@ -2822,6 +2893,16 @@
     state.favor -= cost;
     state.spireEdictLevel += 1;
     markChronicle("spireEdict");
+    save();
+    render();
+  }
+
+  function buyObeliskEdict() {
+    var cost = obeliskEdictCost(state.obeliskEdictLevel);
+    if (!isFinite(cost) || state.favor < cost) return;
+    state.favor -= cost;
+    state.obeliskEdictLevel += 1;
+    markChronicle("obeliskEdict");
     save();
     render();
   }
@@ -3406,6 +3487,10 @@
     state.peakSpires = N.max(num(state.peakSpires), num(state.spires));
   }
 
+  function bumpPeakObelisks() {
+    state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
+  }
+
   function tryMilestoneGifts() {
     var granted = false;
     bumpPeakShades();
@@ -3417,6 +3502,7 @@
     bumpPeakHearths();
     bumpPeakBeacons();
     bumpPeakSpires();
+    bumpPeakObelisks();
 
     if (
       !state.bonusLifetimeSouls &&
@@ -3577,6 +3663,20 @@
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstSpire");
         showToast("Eight ash for the first spire.");
+        granted = true;
+      }
+    }
+
+    bumpPeakObelisks();
+    if (!state.giftFirstObelisk) {
+      var hasObeliskNow = N.cmp(state.obelisks, 1) >= 0;
+      var hasObeliskPeak = N.cmp(state.peakObelisks, 1) >= 0;
+      var hasObeliskChron = hasChronicle("obelisk") || hasChronicle("giftFirstObelisk");
+      if (hasObeliskNow || (hasObeliskPeak && !hasObeliskChron)) {
+        state.giftFirstObelisk = true;
+        state.ash = N.add(state.ash, 8);
+        markChronicle("giftFirstObelisk");
+        showToast("Eight ash for the first obelisk.");
         granted = true;
       }
     }
@@ -4316,6 +4416,7 @@
     "hearths",
     "beacons",
     "spires",
+    "obelisks",
     "fetters",
     "emberLevel",
     "chainLevel",
@@ -4333,6 +4434,7 @@
     "unlockedHearths",
     "unlockedBeacons",
     "unlockedSpires",
+    "unlockedObelisks",
     "unlockedFetters",
     "unlockedAutobind",
     "unlockedAutobindSpirits",
@@ -4520,6 +4622,10 @@
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
+  Known",
+    "runStartedAt",
+    "allTimeSouls",
+    "tributesLaid"
   ];
 
   function dumpNum(v) {
@@ -4546,6 +4652,7 @@
       hearths: dumpNum(state.hearths),
       beacons: dumpNum(state.beacons),
       spires: dumpNum(state.spires),
+      obelisks: dumpNum(state.obelisks),
       fetters: dumpNum(state.fetters),
       emberLevel: state.emberLevel,
       chainLevel: state.chainLevel,
@@ -4563,6 +4670,7 @@
       unlockedHearths: !!state.unlockedHearths,
       unlockedBeacons: !!state.unlockedBeacons,
       unlockedSpires: !!state.unlockedSpires,
+      unlockedObelisks: !!state.unlockedObelisks,
       unlockedFetters: !!state.unlockedFetters,
       unlockedAutobind: !!state.unlockedAutobind,
       unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
@@ -4639,6 +4747,7 @@
       peakHearths: dumpNum(state.peakHearths),
       peakBeacons: dumpNum(state.peakBeacons),
       peakSpires: dumpNum(state.peakSpires),
+      peakObelisks: dumpNum(state.peakObelisks),
       bonusLifetimeSouls: !!state.bonusLifetimeSouls,
       bonusPeakShades: !!state.bonusPeakShades,
       bonusFirstVessel: !!state.bonusFirstVessel,
@@ -4663,6 +4772,7 @@
       giftFirstHearth: !!state.giftFirstHearth,
       giftFirstBeacon: !!state.giftFirstBeacon,
       giftFirstSpire: !!state.giftFirstSpire,
+      giftFirstObelisk: !!state.giftFirstObelisk,
       giftEightTributes: !!state.giftEightTributes,
       giftPeakPyres: !!state.giftPeakPyres,
       giftPeakUrns: !!state.giftPeakUrns,
@@ -4714,6 +4824,7 @@
       hearthEdictLevel: Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0)),
       beaconEdictLevel: Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0)),
       spireEdictLevel: Math.max(0, Math.floor(Number(state.spireEdictLevel) || 0)),
+      obeliskEdictLevel: Math.max(0, Math.floor(Number(state.obeliskEdictLevel) || 0)),
       cinderEdictLevel: Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0)),
       cutEdictLevel: Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0)),
       tendingEdictLevel: Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0)),
@@ -4781,6 +4892,7 @@
     state.hearths = N.load(data.hearths);
     state.beacons = N.load(data.beacons);
     state.spires = N.load(data.spires);
+    state.obelisks = N.load(data.obelisks);
     state.fetters = N.load(data.fetters);
     state.emberLevel = Number(data.emberLevel) || 0;
     state.chainLevel = Number(data.chainLevel) || 0;
@@ -4798,6 +4910,7 @@
     state.unlockedHearths = !!data.unlockedHearths || N.cmp(state.hearths, 1) >= 0 || N.cmp(state.urns, UNLOCK_HEARTHS) >= 0;
     state.unlockedBeacons = !!data.unlockedBeacons || N.cmp(state.beacons, 1) >= 0 || N.cmp(state.hearths, UNLOCK_BEACONS) >= 0;
     state.unlockedSpires = !!data.unlockedSpires || N.cmp(state.spires, 1) >= 0 || N.cmp(state.beacons, UNLOCK_SPIRES) >= 0;
+    state.unlockedObelisks = !!data.unlockedObelisks || N.cmp(state.obelisks, 1) >= 0 || N.cmp(state.spires, UNLOCK_OBELISKS) >= 0;
     state.unlockedFetters = !!data.unlockedFetters;
     state.unlockedAutobind = !!data.unlockedAutobind;
     state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
@@ -4901,6 +5014,7 @@
     state.peakHearths = N.max(N.load(data.peakHearths), N.load(data.hearths));
     state.peakBeacons = N.max(N.load(data.peakBeacons), N.load(data.beacons));
     state.peakSpires = N.max(N.load(data.peakSpires), N.load(data.spires));
+    state.peakObelisks = N.max(N.load(data.peakObelisks), N.load(data.obelisks));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
     state.bonusFirstVessel = !!data.bonusFirstVessel;
@@ -5055,6 +5169,14 @@
         (spireEdictStartsSpires(data.spireEdictLevel) > 0 && N.cmp(state.spires, 1) >= 0);
     } else {
       state.giftFirstSpire = !!data.giftFirstSpire;
+    }
+    if (data.giftFirstObelisk == null) {
+      state.giftFirstObelisk =
+        hasChronicle("obelisk") ||
+        hasChronicle("giftFirstObelisk") ||
+        (obeliskEdictStartsObelisks(data.obeliskEdictLevel) > 0 && N.cmp(state.obelisks, 1) >= 0);
+    } else {
+      state.giftFirstObelisk = !!data.giftFirstObelisk;
     }
     if (data.giftPeakPyres == null) {
       state.giftPeakPyres = false;
@@ -5277,6 +5399,7 @@
     state.hearthEdictLevel = Math.max(0, Math.floor(Number(data.hearthEdictLevel) || 0));
     state.beaconEdictLevel = Math.max(0, Math.floor(Number(data.beaconEdictLevel) || 0));
     state.spireEdictLevel = Math.max(0, Math.floor(Number(data.spireEdictLevel) || 0));
+    state.obeliskEdictLevel = Math.max(0, Math.floor(Number(data.obeliskEdictLevel) || 0));
     state.cinderEdictLevel = Math.max(0, Math.floor(Number(data.cinderEdictLevel) || 0));
     state.cutEdictLevel = Math.max(0, Math.floor(Number(data.cutEdictLevel) || 0));
     var tendingLoaded = data.tendingEdictLevel;
@@ -5340,6 +5463,7 @@
     if (state.unlockedHearths) revealHearths(false);
     if (state.unlockedBeacons) revealBeacons(false);
     if (state.unlockedSpires) revealSpires(false);
+    if (state.unlockedObelisks) revealObelisks(false);
     if (state.unlockedChalices) revealChalices(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
@@ -5478,6 +5602,7 @@
     hideCard(els.hearthCard);
     hideCard(els.beaconCard);
     hideCard(els.spireCard);
+    hideCard(els.obeliskCard);
     hideCard(els.fetterCard);
     hideCard(els.chaliceCard);
     hideTribute();
@@ -5545,6 +5670,7 @@
     var keptPeakHearths = N.max(num(state.peakHearths), num(state.hearths));
     var keptPeakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
     var keptPeakSpires = N.max(num(state.peakSpires), num(state.spires));
+    var keptPeakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
     var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
     var keptBonusPeakShades = !!state.bonusPeakShades;
     var keptBonusFirstVessel = !!state.bonusFirstVessel;
@@ -5569,6 +5695,7 @@
     var keptGiftFirstHearth = !!state.giftFirstHearth;
     var keptGiftFirstBeacon = !!state.giftFirstBeacon;
     var keptGiftFirstSpire = !!state.giftFirstSpire;
+    var keptGiftFirstObelisk = !!state.giftFirstObelisk;
     var keptGiftEightTributes = !!state.giftEightTributes;
     var keptGiftPeakPyres = !!state.giftPeakPyres;
     var keptGiftPeakUrns = !!state.giftPeakUrns;
@@ -5619,6 +5746,7 @@
     var keptHearthEdict = Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0));
     var keptBeaconEdict = Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0));
     var keptSpireEdict = Math.max(0, Math.floor(Number(state.spireEdictLevel) || 0));
+    var keptObeliskEdict = Math.max(0, Math.floor(Number(state.obeliskEdictLevel) || 0));
     var keptCinderEdict = Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0));
     var keptCutEdict = Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0));
     var keptTendingEdict = Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0));
@@ -5672,6 +5800,7 @@
     state.peakHearths = keptPeakHearths;
     state.peakBeacons = keptPeakBeacons;
     state.peakSpires = keptPeakSpires;
+    state.peakObelisks = keptPeakObelisks;
     state.bonusLifetimeSouls = keptBonusLifetimeSouls;
     state.bonusPeakShades = keptBonusPeakShades;
     state.bonusFirstVessel = keptBonusFirstVessel;
@@ -5696,6 +5825,7 @@
     state.giftFirstHearth = keptGiftFirstHearth;
     state.giftFirstBeacon = keptGiftFirstBeacon;
     state.giftFirstSpire = keptGiftFirstSpire;
+    state.giftFirstObelisk = keptGiftFirstObelisk;
     state.giftEightTributes = keptGiftEightTributes;
     state.giftPeakPyres = keptGiftPeakPyres;
     state.giftPeakUrns = keptGiftPeakUrns;
@@ -5746,6 +5876,7 @@
     state.hearthEdictLevel = keptHearthEdict;
     state.beaconEdictLevel = keptBeaconEdict;
     state.spireEdictLevel = keptSpireEdict;
+    state.obeliskEdictLevel = keptObeliskEdict;
     state.cinderEdictLevel = keptCinderEdict;
     state.cutEdictLevel = keptCutEdict;
     state.tendingEdictLevel = keptTendingEdict;
@@ -5923,6 +6054,11 @@
       state.spires = N.fromNumber(startSpires);
       state.unlockedSpires = true;
     }
+    var startObelisks = obeliskEdictStartsObelisks(keptObeliskEdict);
+    if (startObelisks > 0) {
+      state.obelisks = N.fromNumber(startObelisks);
+      state.unlockedObelisks = true;
+    }
     if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
       state.autobindUrns = true;
       if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
@@ -6008,6 +6144,7 @@
     if (state.unlockedHearths) revealHearths(false);
     if (state.unlockedBeacons) revealBeacons(false);
     if (state.unlockedSpires) revealSpires(false);
+    if (state.unlockedObelisks) revealObelisks(false);
     if (state.unlockedChalices) revealChalices(false);
     save();
     render();
@@ -6152,6 +6289,10 @@
 
   function revealSpires(withToast) {
     revealCard(els.spireCard);
+  }
+
+  function revealObelisks(withToast) {
+    revealCard(els.obeliskCard);
   }
 
   function revealChalices(withToast) {
@@ -6716,6 +6857,31 @@
         els.spireBuy.textContent = bindLabel("Raise a Spire", "Raise", spirePlan.k, "Spire", "Spires");
       }
       if (els.spireCard) els.spireCard.classList.toggle("can-buy", spirePlan.can);
+    }
+
+    if (state.unlockedObelisks) {
+      if (els.obeliskCard && els.obeliskCard.classList.contains("is-hidden")) {
+        revealObelisks(false);
+      }
+      var obeliskPlan = purchasePlan(state.obelisks, state.spires, OBELISK_COST_BASE, OBELISK_COST_MULT);
+      var obeliskRate = N.mul(
+        N.mul(
+          N.mul(
+            N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rateMult()),
+            nightMult(nightActive())
+          ),
+          hymnMult(hymnActive())
+        ),
+        wakeMult(wakeActive())
+      );
+      if (els.obeliskOwned) els.obeliskOwned.textContent = F.formatNumber(state.obelisks);
+      if (els.obeliskProd) els.obeliskProd.textContent = F.formatNumber(obeliskRate) + " ash / sec";
+      if (els.obeliskCost) els.obeliskCost.textContent = F.formatNumber(obeliskPlan.cost) + " Spires";
+      if (els.obeliskBuy) {
+        els.obeliskBuy.disabled = !obeliskPlan.can;
+        els.obeliskBuy.textContent = bindLabel("Raise an Obelisk", "Raise", obeliskPlan.k, "Obelisk", "Obelisks");
+      }
+      if (els.obeliskCard) els.obeliskCard.classList.toggle("can-buy", obeliskPlan.can);
     }
 
     if (state.unlockedThrones) {
@@ -7567,6 +7733,19 @@
         els.spireEdictBuy.disabled = !isFinite(spireECost) || state.favor < spireECost;
       }
 
+      var obeliskECost = obeliskEdictCost(state.obeliskEdictLevel);
+      var obelisksN = obeliskEdictStartsObelisks(state.obeliskEdictLevel);
+      if (els.obeliskEdictEffect) {
+        els.obeliskEdictEffect.textContent =
+          "+" +
+          F.formatNumber(obelisksN) +
+          (obelisksN === 1 ? " Obelisk at tribute" : " Obelisks at tribute");
+      }
+      if (els.obeliskEdictCost) els.obeliskEdictCost.textContent = F.formatNumber(obeliskECost) + " Favor";
+      if (els.obeliskEdictBuy) {
+        els.obeliskEdictBuy.disabled = !isFinite(obeliskECost) || state.favor < obeliskECost;
+      }
+
       var cinECost = cinderEdictCost(state.cinderEdictLevel);
       if (els.cinderEdictEffect) {
         els.cinderEdictEffect.textContent = "Autobind Pyres at tribute";
@@ -8118,6 +8297,11 @@
     els.spireProd = document.getElementById("spire-prod");
     els.spireCost = document.getElementById("spire-cost");
     els.spireBuy = document.getElementById("spire-buy");
+    els.obeliskCard = document.getElementById("obelisk-card");
+    els.obeliskOwned = document.getElementById("obelisk-owned");
+    els.obeliskProd = document.getElementById("obelisk-prod");
+    els.obeliskCost = document.getElementById("obelisk-cost");
+    els.obeliskBuy = document.getElementById("obelisk-buy");
     els.throneCard = document.getElementById("throne-card");
     els.throneOwned = document.getElementById("throne-owned");
     els.throneProd = document.getElementById("throne-prod");
@@ -8182,6 +8366,9 @@
     els.spireEdictEffect = document.getElementById("spire-edict-effect");
     els.spireEdictCost = document.getElementById("spire-edict-cost");
     els.spireEdictBuy = document.getElementById("spire-edict-buy");
+    els.obeliskEdictEffect = document.getElementById("obelisk-edict-effect");
+    els.obeliskEdictCost = document.getElementById("obelisk-edict-cost");
+    els.obeliskEdictBuy = document.getElementById("obelisk-edict-buy");
     els.cinderEdictEffect = document.getElementById("cinder-edict-effect");
     els.cinderEdictCost = document.getElementById("cinder-edict-cost");
     els.cinderEdictBuy = document.getElementById("cinder-edict-buy");
@@ -8436,6 +8623,7 @@
     if (els.hearthBuy) els.hearthBuy.addEventListener("click", buyHearth);
     if (els.beaconBuy) els.beaconBuy.addEventListener("click", buyBeacon);
     if (els.spireBuy) els.spireBuy.addEventListener("click", buySpire);
+    if (els.obeliskBuy) els.obeliskBuy.addEventListener("click", buyObelisk);
     els.throneBuy.addEventListener("click", buyThrone);
     if (els.chaliceBuy) els.chaliceBuy.addEventListener("click", buyChalice);
     els.tributeBtn.addEventListener("click", layTribute);
@@ -8455,6 +8643,7 @@
     if (els.hearthEdictBuy) els.hearthEdictBuy.addEventListener("click", buyHearthEdict);
     if (els.beaconEdictBuy) els.beaconEdictBuy.addEventListener("click", buyBeaconEdict);
     if (els.spireEdictBuy) els.spireEdictBuy.addEventListener("click", buySpireEdict);
+    if (els.obeliskEdictBuy) els.obeliskEdictBuy.addEventListener("click", buyObeliskEdict);
     if (els.cinderEdictBuy) els.cinderEdictBuy.addEventListener("click", buyCinderEdict);
     if (els.cutEdictBuy) els.cutEdictBuy.addEventListener("click", buyCutEdict);
     if (els.tendingEdictBuy) els.tendingEdictBuy.addEventListener("click", buyTendingEdict);
@@ -8790,6 +8979,7 @@
     hearthCost: hearthCost,
     beaconCost: beaconCost,
     spireCost: spireCost,
+    obeliskCost: obeliskCost,
     chaliceCost: chaliceCost,
     markCost: markCost,
     favorGain: favorGain,
@@ -8829,6 +9019,8 @@
     beaconEdictStartsBeacons: beaconEdictStartsBeacons,
     spireEdictCost: spireEdictCost,
     spireEdictStartsSpires: spireEdictStartsSpires,
+    obeliskEdictCost: obeliskEdictCost,
+    obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
     cinderEdictCost: cinderEdictCost,
     cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
     cutEdictCost: cutEdictCost,
