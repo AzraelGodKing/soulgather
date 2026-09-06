@@ -748,9 +748,49 @@ function hollowHungerActive(view) {
   return (Number(view.favorEarned) || 0) >= 2 && !!view.unlockedPyres;
 }
 
-function noteHollowManualSpend(target) {
-  target.hollowStacks = 0;
-  target.hollowIdle = 0;
+const HOLLOW_SOUL_CLEAR_CAP = 500;
+const HOLLOW_SOUL_CLEAR_FLOOR = 25;
+const HOLLOW_ASH_CLEAR_FLOOR = 5;
+const HOLLOW_SHADE_CLEAR_FLOOR = 3;
+const HOLLOW_CLEAR_FRAC = 0.02;
+
+function hollowClearNeed(kind, stock) {
+  let fracPart = 0;
+  const n = N.toNumber(stock);
+  if (isFinite(n)) {
+    fracPart = Math.floor(HOLLOW_CLEAR_FRAC * Math.max(0, n));
+  } else {
+    const raw = N.floor(N.mul(N.max(N.from(stock), 0), HOLLOW_CLEAR_FRAC));
+    const rawN = N.toNumber(raw);
+    if (!isFinite(rawN)) {
+      fracPart = kind === "souls" ? HOLLOW_SOUL_CLEAR_CAP : 1e15;
+    } else {
+      fracPart = Math.floor(rawN);
+    }
+  }
+  if (kind === "souls") {
+    return Math.min(HOLLOW_SOUL_CLEAR_CAP, Math.max(HOLLOW_SOUL_CLEAR_FLOOR, fracPart));
+  }
+  if (kind === "ash") {
+    return Math.max(HOLLOW_ASH_CLEAR_FLOOR, fracPart);
+  }
+  if (kind === "shades") {
+    return Math.max(HOLLOW_SHADE_CLEAR_FLOOR, fracPart);
+  }
+  return 0;
+}
+
+function hollowSpendClears(kind, spent, stockBefore) {
+  if (kind !== "souls" && kind !== "ash" && kind !== "shades") return true;
+  const need = hollowClearNeed(kind, stockBefore);
+  return N.cmp(spent, need) >= 0;
+}
+
+function noteHollowManualSpend(kind, spent, stockBefore, target) {
+  const s = target;
+  if (kind && !hollowSpendClears(kind, spent, stockBefore)) return;
+  s.hollowStacks = 0;
+  s.hollowIdle = 0;
 }
 
 
@@ -2350,16 +2390,81 @@ assertEqual(
 );
 {
   const bag = { hollowStacks: 3, hollowIdle: 200, hollowWarned: true };
-  noteHollowManualSpend(bag);
+  noteHollowManualSpend("favor", 1, 10, bag);
   assertEqual("noteHollowManualSpend clears stacks", bag.hollowStacks, 0);
   assertEqual("noteHollowManualSpend clears idle", bag.hollowIdle, 0);
   assertEqual("noteHollowManualSpend keeps warned", bag.hollowWarned, true);
 }
+
+assertEqual("hollowClearNeed souls tiny", hollowClearNeed("souls", 0), 25);
+assertEqual("hollowClearNeed souls 10", hollowClearNeed("souls", 10), 25);
+assertEqual("hollowClearNeed souls 1000", hollowClearNeed("souls", 1000), 25);
+assertEqual("hollowClearNeed souls 20000", hollowClearNeed("souls", 20000), 400);
+assertEqual("hollowClearNeed souls 100000 cap", hollowClearNeed("souls", 100000), 500);
+assertEqual("hollowClearNeed ash 100", hollowClearNeed("ash", 100), 5);
+assertEqual("hollowClearNeed ash 1000", hollowClearNeed("ash", 1000), 20);
+assertEqual("hollowClearNeed shades 100", hollowClearNeed("shades", 100), 3);
+assertEqual("hollowClearNeed shades 500", hollowClearNeed("shades", 500), 10);
+
+assertEqual(
+  "hollowSpendClears souls 10 vs need 25",
+  hollowSpendClears("souls", 10, 1000),
+  false
+);
+assertEqual(
+  "hollowSpendClears souls 25 vs need 25",
+  hollowSpendClears("souls", 25, 1000),
+  true
+);
+assertEqual(
+  "hollowSpendClears souls 100 vs need 500 huge stock",
+  hollowSpendClears("souls", 100, 100000),
+  false
+);
+assertEqual(
+  "hollowSpendClears souls 500 vs need 500 huge stock",
+  hollowSpendClears("souls", 500, 100000),
+  true
+);
+assertEqual(
+  "hollowSpendClears favor always",
+  hollowSpendClears("favor", 1, 1),
+  true
+);
+
+{
+  const bag = { hollowStacks: 4, hollowIdle: 180, hollowWarned: true };
+  noteHollowManualSpend("souls", 10, 1000, bag);
+  assertEqual("sub-threshold keeps stacks", bag.hollowStacks, 4);
+  assertEqual("sub-threshold keeps idle", bag.hollowIdle, 180);
+}
+{
+  const bag = { hollowStacks: 4, hollowIdle: 180, hollowWarned: true };
+  noteHollowManualSpend("souls", 25, 1000, bag);
+  assertEqual("threshold clears stacks", bag.hollowStacks, 0);
+  assertEqual("threshold clears idle", bag.hollowIdle, 0);
+}
+{
+  // Mode-1 Shade poke: ~COST_BASE 10 souls with large stock must not clear
+  const stock = 10000;
+  const shadeCostApprox = 10;
+  assertEqual(
+    "Mode-1 Shade poke does not clear",
+    hollowSpendClears("souls", shadeCostApprox, stock),
+    false
+  );
+  const bag = { hollowStacks: 2, hollowIdle: 120, hollowWarned: true };
+  noteHollowManualSpend("souls", shadeCostApprox, stock, bag);
+  assertEqual("Mode-1 Shade poke keeps stacks", bag.hollowStacks, 2);
+  assertEqual("Mode-1 Shade poke keeps idle", bag.hollowIdle, 120);
+}
+
 {
   const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
   assertTrue("game has HOLLOW_GRACE", gameSrc.includes("HOLLOW_GRACE = 90"));
   assertTrue("game has HOLLOW_INTERVAL", gameSrc.includes("HOLLOW_INTERVAL = 45"));
   assertTrue("game has HOLLOW_MAX", gameSrc.includes("HOLLOW_MAX = 5"));
+  assertTrue("game has HOLLOW_SOUL_CLEAR_CAP", gameSrc.includes("HOLLOW_SOUL_CLEAR_CAP = 500"));
   assertTrue("game has hollowStacks in freshState", /hollowStacks:\s*0/.test(gameSrc));
   assertTrue(
     "rateMult multiplies hollowMult(stacks)",
@@ -2393,10 +2498,13 @@ assertEqual(
     );
   }
   assertTrue(
-    "buyShade calls noteHollowManualSpend",
-    /function buyShade\([\s\S]*?noteHollowManualSpend\(\)/.test(gameSrc)
+    "buyShade calls noteHollowManualSpend with souls args",
+    /function buyShade\([\s\S]*?noteHollowManualSpend\("souls",\s*plan\.cost,\s*hollowBefore\)/.test(gameSrc)
   );
+  const bare = (gameSrc.match(/noteHollowManualSpend\(\)/g) || []).length;
+  assertEqual("no bare noteHollowManualSpend() calls", bare, 0);
 }
+
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
