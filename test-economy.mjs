@@ -665,12 +665,18 @@ function vowsKnownCount(known) {
   return n;
 }
 
+const SIPHON_COST_BASE = 65;
+const LEVY_COST_BASE = 22;
+const RITE_MULT_BASE = 1.55;
+const CINDER_COST = 22;
+const URN_RITE_COST = 18;
+
 function siphonCost(level) {
-  return N.cost(50, 3, level);
+  return N.cost(SIPHON_COST_BASE, 3, level);
 }
 
 function levyCost(level) {
-  return N.cost(15, 3, level);
+  return N.cost(LEVY_COST_BASE, 3, level);
 }
 
 const BINDING_TOLL_COST_BASE = 40;
@@ -721,32 +727,32 @@ function tributeWipesBindingToll(levelBefore) {
 }
 
 function siphonMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return Math.pow(RITE_MULT_BASE, Math.max(0, Math.floor(Number(level) || 0)));
 }
 
 function cinderMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return siphonMult(level);
 }
 
 function urnRiteMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return siphonMult(level);
 }
 
 function hearthRiteMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return siphonMult(level);
 }
 
 function beaconRiteMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return siphonMult(level);
 }
 
 function spireRiteMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
+  return siphonMult(level);
 }
 
-const HEARTH_RITE_COST = 14;
-const BEACON_RITE_COST = 16;
-const SPIRE_RITE_COST = 18;
+const HEARTH_RITE_COST = 20;
+const BEACON_RITE_COST = 24;
+const SPIRE_RITE_COST = 26;
 
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
@@ -1026,29 +1032,37 @@ assertEqual("seatCost(0)", seatCost(0), 5);
 assertEqual("seatCost(1)", seatCost(1), 10);
 assertEqual("seatCost(2)", seatCost(2), 20);
 
-assertEqual("siphonCost(0)", siphonCost(0), 50);
-assertEqual("siphonCost(1)", siphonCost(1), 150);
-assertEqual("levyCost(0)", levyCost(0), 15);
-assertEqual("levyCost(1)", levyCost(1), 45);
-assertEqual("siphonMult(3)", siphonMult(3), 8);
+assertEqual("siphonCost(0)", siphonCost(0), 65);
+assertEqual("siphonCost(1)", siphonCost(1), 195);
+assertEqual("levyCost(0)", levyCost(0), 22);
+assertEqual("levyCost(1)", levyCost(1), 66);
+assertEqual("siphonMult(0)", siphonMult(0), 1);
+assertEqual("siphonMult(1)", siphonMult(1), Math.pow(1.55, 1));
+assertEqual("siphonMult(2)", siphonMult(2), Math.pow(1.55, 2));
+assertEqual("siphonMult(3)", siphonMult(3), Math.pow(1.55, 3));
 assertEqual("cinderMult(0)", cinderMult(0), 1);
-assertEqual("cinderMult(1)", cinderMult(1), 2);
-assertEqual("cinderMult(2)", cinderMult(2), 4);
+assertEqual("cinderMult(1)", cinderMult(1), Math.pow(1.55, 1));
+assertEqual("cinderMult(2)", cinderMult(2), Math.pow(1.55, 2));
 assertEqual("urnRiteMult(0)", urnRiteMult(0), 1);
-assertEqual("urnRiteMult(1)", urnRiteMult(1), 2);
-assertEqual("urnRiteMult(2)", urnRiteMult(2), 4);
+assertEqual("urnRiteMult(1)", urnRiteMult(1), Math.pow(1.55, 1));
+assertEqual("urnRiteMult(2)", urnRiteMult(2), Math.pow(1.55, 2));
 assertEqual("hearthRiteMult(0)", hearthRiteMult(0), 1);
-assertEqual("hearthRiteMult(1)", hearthRiteMult(1), 2);
-assertEqual("hearthRiteMult(2)", hearthRiteMult(2), 4);
-assertEqual("HEARTH_RITE_COST", HEARTH_RITE_COST, 14);
+assertEqual("hearthRiteMult(1)", hearthRiteMult(1), Math.pow(1.55, 1));
+assertEqual("hearthRiteMult(2)", hearthRiteMult(2), Math.pow(1.55, 2));
+assertEqual("HEARTH_RITE_COST", HEARTH_RITE_COST, 20);
 assertEqual("beaconRiteMult(0)", beaconRiteMult(0), 1);
-assertEqual("beaconRiteMult(1)", beaconRiteMult(1), 2);
-assertEqual("beaconRiteMult(2)", beaconRiteMult(2), 4);
-assertEqual("BEACON_RITE_COST", BEACON_RITE_COST, 16);
+assertEqual("beaconRiteMult(1)", beaconRiteMult(1), Math.pow(1.55, 1));
+assertEqual("beaconRiteMult(2)", beaconRiteMult(2), Math.pow(1.55, 2));
+assertEqual("BEACON_RITE_COST", BEACON_RITE_COST, 24);
 assertEqual("spireRiteMult(0)", spireRiteMult(0), 1);
-assertEqual("spireRiteMult(1)", spireRiteMult(1), 2);
-assertEqual("spireRiteMult(2)", spireRiteMult(2), 4);
-assertEqual("SPIRE_RITE_COST", SPIRE_RITE_COST, 18);
+assertEqual("spireRiteMult(1)", spireRiteMult(1), Math.pow(1.55, 1));
+assertEqual("spireRiteMult(2)", spireRiteMult(2), Math.pow(1.55, 2));
+assertEqual("SPIRE_RITE_COST", SPIRE_RITE_COST, 26);
+assertEqual("CINDER_COST", CINDER_COST, 22);
+assertEqual("URN_RITE_COST", URN_RITE_COST, 18);
+assertEqual("RITE_MULT_BASE", RITE_MULT_BASE, 1.55);
+assertTrue("siphonMult(5) finite", isFinite(siphonMult(5)) && siphonMult(5) === Math.pow(1.55, 5));
+assertTrue("siphonMult(20) finite no NaN", isFinite(siphonMult(20)) && !Number.isNaN(siphonMult(20)));
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
 assertTrue("cinderEdictStartsPyreAutobind(0) is false", !cinderEdictStartsPyreAutobind(0));
 assertTrue("cinderEdictStartsPyreAutobind(1) is true", cinderEdictStartsPyreAutobind(1));
