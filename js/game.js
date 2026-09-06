@@ -86,11 +86,14 @@
   var UNLOCK_AUTOBIND_BEACONS = 3;
   var UNLOCK_AUTOBIND_SPIRES = 3;
   var UNLOCK_AUTOBIND_OBELISKS = 3;
-  var CINDER_COST = 15;
-  var URN_RITE_COST = 12;
-  var HEARTH_RITE_COST = 14;
-  var BEACON_RITE_COST = 16;
-  var SPIRE_RITE_COST = 18;
+  var CINDER_COST = 22;
+  var URN_RITE_COST = 18;
+  var HEARTH_RITE_COST = 20;
+  var BEACON_RITE_COST = 24;
+  var SPIRE_RITE_COST = 26;
+  var RITE_MULT_BASE = 1.55;
+  var SIPHON_COST_BASE = 65;
+  var LEVY_COST_BASE = 22;
   var BINDING_TOLL_COST_BASE = 40;
   var BINDING_TOLL_COST_MULT = 1.45;
   var BINDING_TOLL_MAX = 4;
@@ -930,11 +933,11 @@
   }
 
   function siphonCost(level) {
-    return N.cost(50, 3, level);
+    return N.cost(SIPHON_COST_BASE, 3, level);
   }
 
   function levyCost(level) {
-    return N.cost(15, 3, level);
+    return N.cost(LEVY_COST_BASE, 3, level);
   }
 
   function bindingTollCost(level) {
@@ -961,8 +964,8 @@
 
   function siphonMult(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n < 40) return N.fromNumber(Math.pow(2, n));
-    return N.pow(N.fromNumber(2), n);
+    if (n < 40) return N.fromNumber(Math.pow(RITE_MULT_BASE, n));
+    return N.pow(N.fromNumber(RITE_MULT_BASE), n);
   }
 
   function levyMult(level) {
@@ -9488,6 +9491,11 @@
     HEARTH_RITE_COST: HEARTH_RITE_COST,
     BEACON_RITE_COST: BEACON_RITE_COST,
     SPIRE_RITE_COST: SPIRE_RITE_COST,
+    RITE_MULT_BASE: RITE_MULT_BASE,
+    SIPHON_COST_BASE: SIPHON_COST_BASE,
+    LEVY_COST_BASE: LEVY_COST_BASE,
+    CINDER_COST: CINDER_COST,
+    URN_RITE_COST: URN_RITE_COST,
     harvestMult: harvestMult,
     bindingMult: bindingMult,
     throneWeight: throneWeight,
