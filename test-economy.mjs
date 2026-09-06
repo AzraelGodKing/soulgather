@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.8 economy smoke test.
+ * Soulgather v6.9 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -725,6 +725,34 @@ function tributeWipesBindingToll(levelBefore) {
   void levelBefore;
   return 0;
 }
+
+// AZR-121 Hollow Hunger
+const HOLLOW_GRACE = 90;
+const HOLLOW_INTERVAL = 45;
+const HOLLOW_MAX = 5;
+const HOLLOW_PENALTY = 0.04;
+
+function hollowMult(stacks) {
+  let n = Math.max(0, Math.floor(Number(stacks) || 0));
+  if (n > HOLLOW_MAX) n = HOLLOW_MAX;
+  return 1 - HOLLOW_PENALTY * n;
+}
+
+function stacksWantedFromIdle(idle) {
+  const t = Number(idle) || 0;
+  if (!(t >= HOLLOW_GRACE)) return 0;
+  return Math.min(HOLLOW_MAX, 1 + Math.floor((t - HOLLOW_GRACE) / HOLLOW_INTERVAL));
+}
+
+function hollowHungerActive(view) {
+  return (Number(view.favorEarned) || 0) >= 2 && !!view.unlockedPyres;
+}
+
+function noteHollowManualSpend(target) {
+  target.hollowStacks = 0;
+  target.hollowIdle = 0;
+}
+
 
 function siphonMult(level) {
   return Math.pow(RITE_MULT_BASE, Math.max(0, Math.floor(Number(level) || 0)));
@@ -2292,6 +2320,82 @@ assertEqual("tribute wipes bindingTollLevel", tributeWipesBindingToll(3), 0);
   assertTrue("game has bindingTollLevel in freshState", /bindingTollLevel:\s*0/.test(gameSrc));
   assertTrue("layTribute does not restore bindingTollLevel", !/keptBindingToll/.test(gameSrc));
   assertTrue("buyBindingToll ignores buyMode", /function buyBindingToll\(/.test(gameSrc) && !/function buyBindingToll\([\s\S]*?buyMode/.test(gameSrc.split("function buyBindingToll(")[1].slice(0, 500)));
+}
+
+
+
+// AZR-121 Hollow Hunger
+assertEqual("hollowMult(0)", hollowMult(0), 1);
+assertEqual("hollowMult(1)", hollowMult(1), 0.96);
+assertEqual("hollowMult(5)", hollowMult(5), 0.8);
+assertEqual("stacksWantedFromIdle(89)", stacksWantedFromIdle(89), 0);
+assertEqual("stacksWantedFromIdle(90)", stacksWantedFromIdle(90), 1);
+assertEqual("stacksWantedFromIdle(90+45)", stacksWantedFromIdle(90 + 45), 2);
+assertEqual("stacksWantedFromIdle(90+45*4)", stacksWantedFromIdle(90 + 45 * 4), 5);
+assertEqual("stacksWantedFromIdle(90+45*10)", stacksWantedFromIdle(90 + 45 * 10), 5);
+assertEqual(
+  "hollow gate favor1 + pyres inactive",
+  hollowHungerActive({ favorEarned: 1, unlockedPyres: true }),
+  false
+);
+assertEqual(
+  "hollow gate favor2 + pyres active",
+  hollowHungerActive({ favorEarned: 2, unlockedPyres: true }),
+  true
+);
+assertEqual(
+  "hollow gate favor2 without pyres inactive",
+  hollowHungerActive({ favorEarned: 2, unlockedPyres: false }),
+  false
+);
+{
+  const bag = { hollowStacks: 3, hollowIdle: 200, hollowWarned: true };
+  noteHollowManualSpend(bag);
+  assertEqual("noteHollowManualSpend clears stacks", bag.hollowStacks, 0);
+  assertEqual("noteHollowManualSpend clears idle", bag.hollowIdle, 0);
+  assertEqual("noteHollowManualSpend keeps warned", bag.hollowWarned, true);
+}
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  assertTrue("game has HOLLOW_GRACE", gameSrc.includes("HOLLOW_GRACE = 90"));
+  assertTrue("game has HOLLOW_INTERVAL", gameSrc.includes("HOLLOW_INTERVAL = 45"));
+  assertTrue("game has HOLLOW_MAX", gameSrc.includes("HOLLOW_MAX = 5"));
+  assertTrue("game has hollowStacks in freshState", /hollowStacks:\s*0/.test(gameSrc));
+  assertTrue(
+    "rateMult multiplies hollowMult(stacks)",
+    /function rateMult\(\) \{[\s\S]*?hollowMult\(state\.hollowStacks\)/.test(gameSrc)
+  );
+  assertTrue(
+    "tickHollowHunger only in live applyDt path",
+    /if \(live\) \{[\s\S]*?tickHollowHunger\(dt\)/.test(gameSrc)
+  );
+  const re = /function (tryAutobind\w*)\(/g;
+  let m;
+  while ((m = re.exec(gameSrc)) !== null) {
+    const name = m[1];
+    const start = m.index;
+    let depth = 0;
+    let i = gameSrc.indexOf("{", start);
+    for (; i < gameSrc.length; i++) {
+      if (gameSrc[i] === "{") depth++;
+      else if (gameSrc[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          i++;
+          break;
+        }
+      }
+    }
+    const body = gameSrc.slice(start, i);
+    assertTrue(
+      "AZR-121 " + name + " does not call noteHollowManualSpend",
+      !body.includes("noteHollowManualSpend")
+    );
+  }
+  assertTrue(
+    "buyShade calls noteHollowManualSpend",
+    /function buyShade\([\s\S]*?noteHollowManualSpend\(\)/.test(gameSrc)
+  );
 }
 
 if (failed > 0) {
