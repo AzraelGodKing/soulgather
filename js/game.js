@@ -67,6 +67,11 @@
   var HOLLOW_INTERVAL = 45;
   var HOLLOW_MAX = 5;
   var HOLLOW_PENALTY = 0.04;
+  var HOLLOW_SOUL_CLEAR_CAP = 500;
+  var HOLLOW_SOUL_CLEAR_FLOOR = 25;
+  var HOLLOW_ASH_CLEAR_FLOOR = 5;
+  var HOLLOW_SHADE_CLEAR_FLOOR = 3;
+  var HOLLOW_CLEAR_FRAC = 0.02;
   var TOAST_MS = 5200;
   var AWAY_MIN_DT = 2;
   var AWAY_SUMMARY_DT = 60;
@@ -1043,8 +1048,41 @@
     return (Number(s.favorEarned) || 0) >= 2 && !!s.unlockedPyres;
   }
 
-  function noteHollowManualSpend(target) {
+  function hollowClearNeed(kind, stock) {
+    var fracPart = 0;
+    var n = N.toNumber(stock);
+    if (isFinite(n)) {
+      fracPart = Math.floor(HOLLOW_CLEAR_FRAC * Math.max(0, n));
+    } else {
+      var raw = N.floor(N.mul(N.max(N.from(stock), 0), HOLLOW_CLEAR_FRAC));
+      var rawN = N.toNumber(raw);
+      if (!isFinite(rawN)) {
+        fracPart = kind === "souls" ? HOLLOW_SOUL_CLEAR_CAP : 1e15;
+      } else {
+        fracPart = Math.floor(rawN);
+      }
+    }
+    if (kind === "souls") {
+      return Math.min(HOLLOW_SOUL_CLEAR_CAP, Math.max(HOLLOW_SOUL_CLEAR_FLOOR, fracPart));
+    }
+    if (kind === "ash") {
+      return Math.max(HOLLOW_ASH_CLEAR_FLOOR, fracPart);
+    }
+    if (kind === "shades") {
+      return Math.max(HOLLOW_SHADE_CLEAR_FLOOR, fracPart);
+    }
+    return 0;
+  }
+
+  function hollowSpendClears(kind, spent, stockBefore) {
+    if (kind !== "souls" && kind !== "ash" && kind !== "shades") return true;
+    var need = hollowClearNeed(kind, stockBefore);
+    return N.cmp(spent, need) >= 0;
+  }
+
+  function noteHollowManualSpend(kind, spent, stockBefore, target) {
     var s = target || state;
+    if (kind && !hollowSpendClears(kind, spent, stockBefore)) return;
     s.hollowStacks = 0;
     s.hollowIdle = 0;
   }
@@ -2730,8 +2768,9 @@
     if (!state.unlockedWell) return;
     var plan = wellPurchasePlan(state.wellDepth, state.souls);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", plan.cost, hollowBefore);
     state.wellDepth += plan.k;
     toastBulk(plan.k, "Deepened " + plan.k + " levels");
     syncChronicle();
@@ -2748,8 +2787,9 @@
       bindingTollCostMult(state.bindingTollLevel)
     );
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", plan.cost, hollowBefore);
     state.shades = N.add(state.shades, plan.k);
     state.lifetimeShades = N.add(state.lifetimeShades, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Shades");
@@ -2768,8 +2808,9 @@
       bindingTollCostMult(state.bindingTollLevel)
     );
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.shades;
     state.shades = N.sub(state.shades, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("shades", plan.cost, hollowBefore);
     state.spirits = N.add(state.spirits, plan.k);
     state.lifetimeSpirits = N.add(state.lifetimeSpirits, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Spirits");
@@ -2782,8 +2823,9 @@
     if (!state.unlockedVessels) return;
     var plan = purchasePlan(state.vessels, state.spirits);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.spirits;
     state.spirits = N.sub(state.spirits, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("spirits", plan.cost, hollowBefore);
     state.vessels = N.add(state.vessels, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Vessels");
     checkUnlock();
@@ -2796,8 +2838,9 @@
     if (normalizeVow(state.vow) === "poverty") return;
     var plan = purchasePlan(state.thrones, state.vessels);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.vessels;
     state.vessels = N.sub(state.vessels, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("vessels", plan.cost, hollowBefore);
     state.thrones += plan.k;
     toastBulk(plan.k, "Raised " + plan.k + " Thrones");
     checkUnlock();
@@ -2809,8 +2852,9 @@
     if (!state.unlockedLanterns) return;
     var plan = purchasePlan(state.lanterns, state.souls, LANTERN_COST_BASE, LANTERN_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", plan.cost, hollowBefore);
     state.lanterns = N.add(state.lanterns, plan.k);
     toastBulk(plan.k, "Kindled " + plan.k + " Lanterns");
     if (!state.lanternToastShown) {
@@ -2827,8 +2871,9 @@
     if (!state.unlockedFetters) return;
     var plan = purchasePlan(state.fetters, state.shades, FETTER_COST_BASE, FETTER_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.shades;
     state.shades = N.sub(state.shades, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("shades", plan.cost, hollowBefore);
     state.fetters = N.add(state.fetters, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Fetters");
     markChronicle("fetter");
@@ -2841,8 +2886,9 @@
     if (!state.unlockedCensers) return;
     var plan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.vessels;
     state.vessels = N.sub(state.vessels, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("vessels", plan.cost, hollowBefore);
     state.censers = N.add(state.censers, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Censers");
     markChronicle("censer");
@@ -2855,8 +2901,9 @@
     if (!state.unlockedPyres) return;
     var plan = purchasePlan(state.pyres, state.censers, PYRE_COST_BASE, PYRE_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.censers;
     state.censers = N.sub(state.censers, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("censers", plan.cost, hollowBefore);
     state.pyres = N.add(state.pyres, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Pyres");
     markChronicle("pyre");
@@ -2869,8 +2916,9 @@
     if (!state.unlockedUrns) return;
     var plan = purchasePlan(state.urns, state.pyres, URN_COST_BASE, URN_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.pyres;
     state.pyres = N.sub(state.pyres, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("pyres", plan.cost, hollowBefore);
     state.urns = N.add(state.urns, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Urns");
     markChronicle("urn");
@@ -2883,8 +2931,9 @@
     if (!state.unlockedHearths) return;
     var plan = purchasePlan(state.hearths, state.urns, HEARTH_COST_BASE, HEARTH_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.urns;
     state.urns = N.sub(state.urns, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("urns", plan.cost, hollowBefore);
     state.hearths = N.add(state.hearths, plan.k);
     toastBulk(plan.k, "Kindled " + plan.k + " Hearths");
     markChronicle("hearth");
@@ -2897,8 +2946,9 @@
     if (!state.unlockedBeacons) return;
     var plan = purchasePlan(state.beacons, state.hearths, BEACON_COST_BASE, BEACON_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.hearths;
     state.hearths = N.sub(state.hearths, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("hearths", plan.cost, hollowBefore);
     state.beacons = N.add(state.beacons, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Beacons");
     markChronicle("beacon");
@@ -2911,8 +2961,9 @@
     if (!state.unlockedSpires) return;
     var plan = purchasePlan(state.spires, state.beacons, SPIRE_COST_BASE, SPIRE_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.beacons;
     state.beacons = N.sub(state.beacons, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("beacons", plan.cost, hollowBefore);
     state.spires = N.add(state.spires, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Spires");
     markChronicle("spire");
@@ -2925,8 +2976,9 @@
     if (!state.unlockedObelisks) return;
     var plan = purchasePlan(state.obelisks, state.spires, OBELISK_COST_BASE, OBELISK_COST_MULT);
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.spires;
     state.spires = N.sub(state.spires, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("spires", plan.cost, hollowBefore);
     state.obelisks = N.add(state.obelisks, plan.k);
     toastBulk(plan.k, "Raised " + plan.k + " Obelisks");
     markChronicle("obelisk");
@@ -2956,8 +3008,9 @@
     if (!state.unlockedChalices) return;
     var plan = chalicePlan();
     if (!plan.can || plan.k < 1) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, plan.cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", plan.cost, hollowBefore);
     state.chalices = plan.owned + plan.k;
     if (state.chalices > CHALICE_MAX) state.chalices = CHALICE_MAX;
     toastBulk(plan.k, "Raised " + plan.k + " Chalices");
@@ -2980,8 +3033,9 @@
     } else return;
     var cost = markCost(state[levelKey]);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state[levelKey] += 1;
     markChronicle("mark");
     save();
@@ -2991,8 +3045,9 @@
   function buyEdict() {
     var cost = edictCost(state.edictLevel);
     if (state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.edictLevel += 1;
     save();
     render();
@@ -3001,8 +3056,9 @@
   function buyMemory() {
     var cost = memoryCost(state.memoryLevel);
     if (state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.memoryLevel += 1;
     save();
     render();
@@ -3012,8 +3068,9 @@
     if ((Number(state.echoLevel) || 0) >= 1) return;
     var cost = echoCost(state.echoLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.echoLevel = 1;
     markChronicle("echo");
     save();
@@ -3023,8 +3080,9 @@
   function buySeat() {
     var cost = seatCost(state.seatLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.seatLevel += 1;
     markChronicle("seat");
     save();
@@ -3034,8 +3092,9 @@
   function buyKindle() {
     var cost = kindleCost(state.kindleLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.kindleLevel += 1;
     save();
     render();
@@ -3044,8 +3103,9 @@
   function buyAshen() {
     var cost = ashenCost(state.ashenLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.ashenLevel += 1;
     save();
     render();
@@ -3054,8 +3114,9 @@
   function buyDepth() {
     var cost = depthCost(state.depthLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.depthLevel += 1;
     save();
     render();
@@ -3064,8 +3125,9 @@
   function buyChoirEdict() {
     var cost = choirEdictCost(state.choirEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.choirEdictLevel += 1;
     markChronicle("choirEdict");
     save();
@@ -3075,8 +3137,9 @@
   function buyHymnEdict() {
     var cost = hymnEdictCost(state.hymnEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.hymnEdictLevel += 1;
     markChronicle("hymnEdict");
     save();
@@ -3086,8 +3149,9 @@
   function buySmokeEdict() {
     var cost = smokeEdictCost(state.smokeEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.smokeEdictLevel += 1;
     markChronicle("smokeEdict");
     save();
@@ -3097,8 +3161,9 @@
   function buyEmbersEdict() {
     var cost = embersEdictCost(state.embersEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.embersEdictLevel += 1;
     markChronicle("embersEdict");
     save();
@@ -3108,8 +3173,9 @@
   function buyUrnEdict() {
     var cost = urnEdictCost(state.urnEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.urnEdictLevel += 1;
     markChronicle("urnEdict");
     save();
@@ -3119,8 +3185,9 @@
   function buyHearthEdict() {
     var cost = hearthEdictCost(state.hearthEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.hearthEdictLevel += 1;
     markChronicle("hearthEdict");
     save();
@@ -3130,8 +3197,9 @@
   function buyBeaconEdict() {
     var cost = beaconEdictCost(state.beaconEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.beaconEdictLevel += 1;
     markChronicle("beaconEdict");
     save();
@@ -3141,8 +3209,9 @@
   function buySpireEdict() {
     var cost = spireEdictCost(state.spireEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.spireEdictLevel += 1;
     markChronicle("spireEdict");
     save();
@@ -3152,8 +3221,9 @@
   function buyObeliskEdict() {
     var cost = obeliskEdictCost(state.obeliskEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.obeliskEdictLevel += 1;
     markChronicle("obeliskEdict");
     save();
@@ -3163,8 +3233,9 @@
   function buyCinderEdict() {
     var cost = cinderEdictCost(state.cinderEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.cinderEdictLevel += 1;
     markChronicle("cinderEdict");
     save();
@@ -3174,8 +3245,9 @@
   function buyCutEdict() {
     var cost = cutEdictCost(state.cutEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.cutEdictLevel += 1;
     markChronicle("cutEdict");
     save();
@@ -3185,8 +3257,9 @@
   function buyTendingEdict() {
     var cost = tendingEdictCost(state.tendingEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.tendingEdictLevel += 1;
     markChronicle("tendingEdict");
     save();
@@ -3196,8 +3269,9 @@
   function buyGleamEdict() {
     var cost = gleamEdictCost(state.gleamEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.gleamEdictLevel += 1;
     markChronicle("gleamEdict");
     save();
@@ -3207,8 +3281,9 @@
   function buyRiseEdict() {
     var cost = riseEdictCost(state.riseEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.riseEdictLevel += 1;
     markChronicle("riseEdict");
     save();
@@ -3218,8 +3293,9 @@
   function buyCupEdict() {
     var cost = cupEdictCost(state.cupEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.cupEdictLevel += 1;
     markChronicle("cupEdict");
     save();
@@ -3229,8 +3305,9 @@
   function buyDraughtEdict() {
     var cost = draughtEdictCost(state.draughtEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.draughtEdictLevel += 1;
     markChronicle("draughtEdict");
     save();
@@ -3240,8 +3317,9 @@
   function buyWakeEdict() {
     var cost = wakeEdictCost(state.wakeEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.wakeEdictLevel += 1;
     markChronicle("wakeEdict");
     save();
@@ -3251,8 +3329,9 @@
   function buyProcessionEdict() {
     var cost = processionEdictCost(state.processionEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.processionEdictLevel += 1;
     markChronicle("processionEdict");
     save();
@@ -3262,8 +3341,9 @@
   function buyTollEdict() {
     var cost = tollEdictCost(state.tollEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.tollEdictLevel += 1;
     markChronicle("tollEdict");
     save();
@@ -3273,8 +3353,9 @@
   function buyVeilEdict() {
     var cost = veilEdictCost(state.veilEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.veilEdictLevel += 1;
     markChronicle("veilEdict");
     save();
@@ -3284,8 +3365,9 @@
   function buyKnellEdict() {
     var cost = knellEdictCost(state.knellEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.knellEdictLevel += 1;
     markChronicle("knellEdict");
     save();
@@ -3295,8 +3377,9 @@
   function buyNightEdict() {
     var cost = nightEdictCost(state.nightEdictLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.nightEdictLevel += 1;
     markChronicle("nightEdict");
     save();
@@ -3306,8 +3389,9 @@
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
     if (N.cmp(state.souls, cost) < 0) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", cost, hollowBefore);
     state.siphonLevel += 1;
     syncChronicle();
     save();
@@ -3318,8 +3402,9 @@
     if (!state.unlockedSpirits) return;
     var cost = levyCost(state.levyLevel);
     if (N.cmp(state.shades, cost) < 0) return;
+    var hollowBefore = state.shades;
     state.shades = N.sub(state.shades, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("shades", cost, hollowBefore);
     state.levyLevel += 1;
     syncChronicle();
     save();
@@ -3332,8 +3417,9 @@
     if (level >= BINDING_TOLL_MAX) return;
     var cost = bindingTollCost(level);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.bindingTollLevel = level + 1;
     state.unlockedBindingToll = true;
     markChronicle("bindingToll");
@@ -3347,8 +3433,9 @@
     if (!state.unlockedPyres) return;
     var cost = N.fromNumber(CINDER_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.cinderLevel += 1;
     markChronicle("cinders");
     syncChronicle();
@@ -3361,8 +3448,9 @@
     if (!state.unlockedUrns) return;
     var cost = N.fromNumber(URN_RITE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.urnRiteLevel += 1;
     markChronicle("urnRite");
     syncChronicle();
@@ -3375,8 +3463,9 @@
     if (!state.unlockedHearths) return;
     var cost = N.fromNumber(HEARTH_RITE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.hearthRiteLevel += 1;
     markChronicle("hearthRite");
     syncChronicle();
@@ -3389,8 +3478,9 @@
     if (!state.unlockedBeacons) return;
     var cost = N.fromNumber(BEACON_RITE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.beaconRiteLevel += 1;
     markChronicle("beaconRite");
     syncChronicle();
@@ -3403,8 +3493,9 @@
     if (!state.unlockedSpires) return;
     var cost = N.fromNumber(SPIRE_RITE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.spireRiteLevel += 1;
     markChronicle("spireRite");
     syncChronicle();
@@ -3417,8 +3508,9 @@
     if (state.wellDraws) return;
     if (!state.unlockedWellDraws && N.cmp(state.shades, UNLOCK_WELL_DRAWS_SHADES) < 0) return;
     if (N.cmp(state.souls, WELL_DRAWS_COST) < 0) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, WELL_DRAWS_COST);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", WELL_DRAWS_COST, hollowBefore);
     state.wellDraws = true;
     state.unlockedWellDraws = true;
     syncChronicle();
@@ -3439,8 +3531,9 @@
     if (titheActive()) return;
     var cost = currentTitheCost();
     if (N.cmp(state.souls, cost) < 0) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", cost, hollowBefore);
     state.titheLeft = paidTitheSecs(state.longerTitheLevel);
     state.tithePaid = true;
     if (normalizeVow(state.vow) === "hunger") {
@@ -3459,8 +3552,9 @@
     if (N.cmp(state.ash, NIGHT_TITHE_MIN) < 0) return;
     var cost = nightTitheCost(state.ash);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.nightLeft = nightSecs(state.deeperNightLevel);
     showToast("The GodKing hungers at midnight.");
     save();
@@ -3473,8 +3567,9 @@
     if (wakeActive()) return;
     var cost = N.fromNumber(WAKE_COST);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.wakeLeft = paidWakeSecs(state.longerWakeLevel);
     markChronicle("wake");
     if (!state.giftFirstWake) {
@@ -3728,8 +3823,9 @@
     if (tollActive()) return;
     var cost = N.fromNumber(TOLL_COST);
     if (N.cmp(state.souls, cost) < 0) return;
+    var hollowBefore = state.souls;
     state.souls = N.sub(state.souls, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("souls", cost, hollowBefore);
     state.tollLeft = paidTollSecs(state.deeperTollLevel);
     markChronicle("toll");
     if (!state.giftFirstToll) {
@@ -3749,8 +3845,9 @@
     if (N.cmp(state.ash, VEIL_MIN) < 0) return;
     var cost = veilCost(state.ash);
     if (N.cmp(state.ash, cost) < 0) return;
+    var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
-    noteHollowManualSpend();
+    noteHollowManualSpend("ash", cost, hollowBefore);
     state.veilLeft = paidVeilSecs(state.longerVeilLevel);
     markChronicle("veil");
     if (!state.giftFirstVeil) {
@@ -4431,8 +4528,9 @@
     if (!crownUnlocked()) return;
     var cost = crownCost(state.crownWeight);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.crownWeight += 1;
     if (!state.giftCrown) {
       state.giftCrown = true;
@@ -4448,8 +4546,9 @@
     if (!crownUnlocked()) return;
     var cost = longMemCost(state.longMemoryLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.longMemoryLevel += 1;
     save();
     render();
@@ -4459,8 +4558,9 @@
     if (!crownUnlocked()) return;
     var cost = quietCourtCost(state.quietCourtLevel);
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.quietCourtLevel += 1;
     markChronicle("quietCourt");
     save();
@@ -4479,8 +4579,9 @@
     if (!remembranceUnlocked()) return;
     var cost = remembranceFavorCost();
     if (!isFinite(cost) || state.favor < cost) return;
+    var hollowBefore = state.favor;
     state.favor -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("favor", cost, hollowBefore);
     state.remembrance = (Number(state.remembrance) || 0) + 1;
     showToast("The GodKing keeps a remembrance.");
     save();
@@ -4491,8 +4592,9 @@
     if (!remembranceUnlocked()) return;
     var cost = deeperNightCost(state.deeperNightLevel);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.deeperNightLevel += 1;
     save();
     render();
@@ -4504,8 +4606,9 @@
     if (level >= LONGER_PROCESSION_MAX) return;
     var cost = longerProcessionCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerProcessionLevel = level + 1;
     markChronicle("longerProcession");
     checkUnlock();
@@ -4519,8 +4622,9 @@
     if (level >= DEEPER_TOLL_MAX) return;
     var cost = deeperTollCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.deeperTollLevel = level + 1;
     markChronicle("deeperToll");
     checkUnlock();
@@ -4534,8 +4638,9 @@
     if (level >= LONGER_WAKE_MAX) return;
     var cost = longerWakeCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerWakeLevel = level + 1;
     markChronicle("longerWake");
     checkUnlock();
@@ -4549,8 +4654,9 @@
     if (level >= LONGER_TITHE_MAX) return;
     var cost = longerTitheCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerTitheLevel = level + 1;
     markChronicle("longerTithe");
     checkUnlock();
@@ -4564,8 +4670,9 @@
     if (level >= LONGER_VEIL_MAX) return;
     var cost = longerVeilCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerVeilLevel = level + 1;
     markChronicle("longerVeil");
     checkUnlock();
@@ -4579,8 +4686,9 @@
     if (level >= LONGER_HYMN_MAX) return;
     var cost = longerHymnCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerHymnLevel = level + 1;
     markChronicle("longerHymn");
     checkUnlock();
@@ -4594,8 +4702,9 @@
     if (level >= LONGER_KNELL_MAX) return;
     var cost = longerKnellCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.longerKnellLevel = level + 1;
     markChronicle("longerKnell");
     checkUnlock();
@@ -4609,8 +4718,9 @@
     if (level >= ASHEN_TIDE_MAX) return;
     var cost = ashenTideCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.ashenTideLevel = level + 1;
     save();
     render();
@@ -4622,8 +4732,9 @@
     if (level >= OSSUARY_MAX) return;
     var cost = ossuaryCost(level);
     if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.ossuaryLevel = level + 1;
     markChronicle("ossuary");
     checkUnlock();
@@ -4636,8 +4747,9 @@
     if (processionActive()) return;
     var cost = PROCESSION_COST;
     if ((Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.processionLeft = paidProcessionSecs(state.longerProcessionLevel);
     markChronicle("procession");
     if (!state.giftFirstProcession) {
@@ -4656,8 +4768,9 @@
     if (knellActive()) return;
     var cost = KNELL_COST;
     if ((Number(state.remembrance) || 0) < cost) return;
+    var hollowBefore = state.remembrance;
     state.remembrance -= cost;
-    noteHollowManualSpend();
+    noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.knellLeft = paidKnellSecs(state.longerKnellLevel);
     markChronicle("knell");
     if (!state.giftFirstKnell) {
@@ -4680,8 +4793,9 @@
     var level = Math.max(0, Math.floor(Number(state.choirLevel) || 0));
     if (level >= CHOIR_MAX) return;
     if (N.cmp(state.lanterns, CHOIR_LANTERN_COST) < 0) return;
+    var hollowBefore = state.lanterns;
     state.lanterns = N.sub(state.lanterns, CHOIR_LANTERN_COST);
-    noteHollowManualSpend();
+    noteHollowManualSpend("lanterns", CHOIR_LANTERN_COST, hollowBefore);
     state.unlockedLanterns = true;
     state.choirLevel = level + 1;
     if (markChronicle("choir")) {
@@ -9646,10 +9760,17 @@
     stacksWantedFromIdle: stacksWantedFromIdle,
     hollowHungerActive: hollowHungerActive,
     noteHollowManualSpend: noteHollowManualSpend,
+    hollowClearNeed: hollowClearNeed,
+    hollowSpendClears: hollowSpendClears,
     HOLLOW_GRACE: HOLLOW_GRACE,
     HOLLOW_INTERVAL: HOLLOW_INTERVAL,
     HOLLOW_MAX: HOLLOW_MAX,
     HOLLOW_PENALTY: HOLLOW_PENALTY,
+    HOLLOW_SOUL_CLEAR_CAP: HOLLOW_SOUL_CLEAR_CAP,
+    HOLLOW_SOUL_CLEAR_FLOOR: HOLLOW_SOUL_CLEAR_FLOOR,
+    HOLLOW_ASH_CLEAR_FLOOR: HOLLOW_ASH_CLEAR_FLOOR,
+    HOLLOW_SHADE_CLEAR_FLOOR: HOLLOW_SHADE_CLEAR_FLOOR,
+    HOLLOW_CLEAR_FRAC: HOLLOW_CLEAR_FRAC,
     normalizeAspect: normalizeAspect,
     nextGoal: nextGoal,
     titheCost: titheCost,
