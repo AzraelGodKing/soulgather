@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -3343,6 +3343,231 @@ assertEqual(
     assertTrue("AZR-171 QC+urnEdict1 does not unlock AutobindUrns", !s.unlockedAutobindUrns);
     assertEqual("AZR-171 QC+urnEdict1 urn stock", unwrap(s.urns), 1);
   }
+}
+
+
+
+// AZR-172: buy-mode hotkeys 1/2/3 honor otherButton; HOTKEYS table; hint only on accepted switch.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+
+  assertTrue("AZR-172 HOTKEYS table exists", /var HOTKEYS\s*=\s*\[/.test(gameSrc));
+  assertTrue("AZR-172 hotkeyDefaultGuard exists", /function hotkeyDefaultGuard\s*\(/.test(gameSrc));
+  assertTrue("AZR-172 resolveHotkey exists", /function resolveHotkey\s*\(/.test(gameSrc));
+  assertTrue("AZR-172 exports HOTKEYS", /HOTKEYS:\s*HOTKEYS/.test(gameSrc));
+  assertTrue("AZR-172 exports hotkeyDefaultGuard", /hotkeyDefaultGuard:\s*hotkeyDefaultGuard/.test(gameSrc));
+  assertTrue("AZR-172 exports resolveHotkey", /resolveHotkey:\s*resolveHotkey/.test(gameSrc));
+
+  assertTrue(
+    "AZR-172 hotkeyDefaultGuard is !otherButton",
+    /function hotkeyDefaultGuard\s*\(\s*ctx\s*\)\s*\{\s*return\s*!ctx\.otherButton\s*;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-172 keydown normalizes ev.key.toLowerCase once",
+    /var key = String\(ev\.key \|\| ""\)\.toLowerCase\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-172 keydown loops HOTKEYS with default guard fallback",
+    /for \(hi = 0; hi < HOTKEYS\.length; hi\+\+\)[\s\S]*?var guard = entry\.guard \|\| hotkeyDefaultGuard/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-172 isTypingTarget gates all hotkeys before HOTKEYS loop",
+    /if \(isTypingTarget\(target\) \|\| isTypingTarget\(active\)\) return;[\s\S]*?for \(hi = 0; hi < HOTKEYS\.length/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-172 no bare unguarded if (ev.key === \"1\") setBuyMode",
+    !/if \(ev\.key === "1"\)\s*\{\s*setBuyMode/.test(gameSrc)
+  );
+
+  function extractFn(src, name) {
+    const start = src.indexOf("function " + name);
+    if (start < 0) throw new Error("missing " + name);
+    let i = src.indexOf("{", start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}") {
+        depth--;
+        if (depth === 0) return src.slice(start, i + 1);
+      }
+    }
+    throw new Error("unclosed " + name);
+  }
+
+  function extractVarArray(src, name) {
+    const start = src.indexOf("var " + name + " = [");
+    if (start < 0) throw new Error("missing " + name);
+    let i = src.indexOf("[", start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "[") depth++;
+      else if (src[i] === "]") {
+        depth--;
+        if (depth === 0) return src.slice(start, i + 1) + ";";
+      }
+    }
+    throw new Error("unclosed " + name);
+  }
+
+  let buyMode = "1";
+  let hintDismissed = false;
+  let setBuyModeCalls = 0;
+  let prevented = false;
+  const sandbox = {
+    setBuyMode: function (mode) {
+      setBuyModeCalls += 1;
+      if (buyMode === mode) return;
+      buyMode = mode;
+      if (!hintDismissed) hintDismissed = true;
+    },
+    // Letter-action free vars (unused if we only invoke 1/2/3).
+    state: {},
+    N: { cmp: function () { return -1; }, fromNumber: function (n) { return n; } },
+    titheActive: function () { return true; },
+    nightActive: function () { return true; },
+    wakeActive: function () { return true; },
+    veilActive: function () { return true; },
+    tollActive: function () { return true; },
+    processionActive: function () { return true; },
+    knellActive: function () { return true; },
+    normalizeVow: function () { return ""; },
+    currentTitheCost: function () { return 0; },
+    cinderCost: function () { return 0; },
+    urnRiteCost: function () { return 0; },
+    hearthRiteCost: function () { return 0; },
+    beaconRiteCost: function () { return 0; },
+    spireRiteCost: function () { return 0; },
+    remembranceUnlocked: function () { return false; },
+    payTithe: function () {},
+    payNightTithe: function () {},
+    keepWake: function () {},
+    thinVeil: function () {},
+    soundToll: function () {},
+    buyCinders: function () {},
+    buyUrnRite: function () {},
+    buyHearthRite: function () {},
+    buyBeaconRite: function () {},
+    buySpireRite: function () {},
+    buyOssuary: function () {},
+    beginProcession: function () {},
+    soundKnell: function () {},
+    NIGHT_TITHE_MIN: 0,
+    VEIL_MIN: 0,
+    TOLL_COST: 0,
+    WAKE_COST: 0,
+    OSSUARY_MAX: 8,
+    OSSUARY_COST: 1,
+    PROCESSION_COST: 1,
+    KNELL_COST: 1
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(
+    extractFn(gameSrc, "hotkeyDefaultGuard") +
+      "\n" +
+      extractVarArray(gameSrc, "HOTKEYS") +
+      "\n" +
+      extractFn(gameSrc, "resolveHotkey") +
+      "\nthis.hotkeyDefaultGuard = hotkeyDefaultGuard;\nthis.HOTKEYS = HOTKEYS;\nthis.resolveHotkey = resolveHotkey;",
+    sandbox
+  );
+
+  assertEqual("AZR-172 HOTKEYS length", sandbox.HOTKEYS.length, 16);
+  const byKey = {};
+  for (const hk of sandbox.HOTKEYS) {
+    assertTrue("AZR-172 entry has keys", Array.isArray(hk.keys) && hk.keys.length > 0);
+    assertTrue("AZR-172 entry has guard", typeof hk.guard === "function");
+    assertTrue("AZR-172 entry has action", typeof hk.action === "function");
+    assertTrue(
+      "AZR-172 entry guard is default (shared !otherButton)",
+      hk.guard === sandbox.hotkeyDefaultGuard
+    );
+    for (const k of hk.keys) byKey[k] = hk;
+  }
+  assertTrue("AZR-172 has key 1", !!byKey["1"]);
+  assertTrue("AZR-172 has key 2", !!byKey["2"]);
+  assertTrue("AZR-172 has key 3", !!byKey["3"]);
+  assertTrue("AZR-172 has key t", !!byKey["t"]);
+  assertTrue(
+    "AZR-172 1/2/3 share otherButton guard with letters",
+    byKey["1"].guard === byKey["t"].guard &&
+      byKey["2"].guard === byKey["t"].guard &&
+      byKey["3"].guard === byKey["t"].guard
+  );
+
+  assertTrue(
+    "AZR-172 default guard blocks otherButton",
+    sandbox.hotkeyDefaultGuard({ otherButton: true }) === false
+  );
+  assertTrue(
+    "AZR-172 default guard allows no otherButton",
+    sandbox.hotkeyDefaultGuard({ otherButton: false }) === true
+  );
+
+  // otherButton true + key 3 → setBuyMode NOT called, buyMode unchanged
+  buyMode = "1";
+  hintDismissed = false;
+  setBuyModeCalls = 0;
+  prevented = false;
+  assertEqual(
+    "AZR-172 resolveHotkey 3 + otherButton is null",
+    sandbox.resolveHotkey("3", { otherButton: true }),
+    null
+  );
+  {
+    const hk = sandbox.resolveHotkey("3", { otherButton: true });
+    if (hk) hk.action({ ev: { preventDefault: function () { prevented = true; } } });
+  }
+  assertEqual("AZR-172 suppressed 3 does not call setBuyMode", setBuyModeCalls, 0);
+  assertEqual("AZR-172 suppressed 3 buyMode unchanged", buyMode, "1");
+  assertTrue("AZR-172 suppressed 3 does not dismiss hint", hintDismissed === false);
+  assertTrue("AZR-172 suppressed 3 no preventDefault", prevented === false);
+
+  // Draw focused or no button (otherButton false) + 1/2/3 → modes 1 / 10 / max
+  function fireBuy(key) {
+    prevented = false;
+    const hk = sandbox.resolveHotkey(key, { otherButton: false });
+    assertTrue("AZR-172 resolveHotkey " + key + " when free", !!hk);
+    hk.action({ ev: { preventDefault: function () { prevented = true; } } });
+    assertTrue("AZR-172 preventDefault on handled " + key, prevented === true);
+  }
+  buyMode = "max";
+  hintDismissed = false;
+  setBuyModeCalls = 0;
+  fireBuy("1");
+  assertEqual("AZR-172 key 1 → mode 1", buyMode, "1");
+  assertTrue("AZR-172 accepted 1 dismisses hint", hintDismissed === true);
+  fireBuy("2");
+  assertEqual("AZR-172 key 2 → mode 10", buyMode, "10");
+  fireBuy("3");
+  assertEqual("AZR-172 key 3 → mode max", buyMode, "max");
+
+  // Source: 1/2/3 actions call preventDefault then setBuyMode
+  assertTrue(
+    "AZR-172 key 1 action preventDefault + setBuyMode",
+    /keys:\s*\["1"\][\s\S]*?action:\s*function\s*\(ctx\)\s*\{\s*ctx\.ev\.preventDefault\(\);\s*setBuyMode\("1"\)/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-172 key 2 action preventDefault + setBuyMode",
+    /keys:\s*\["2"\][\s\S]*?action:\s*function\s*\(ctx\)\s*\{\s*ctx\.ev\.preventDefault\(\);\s*setBuyMode\("10"\)/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-172 key 3 action preventDefault + setBuyMode",
+    /keys:\s*\["3"\][\s\S]*?action:\s*function\s*\(ctx\)\s*\{\s*ctx\.ev\.preventDefault\(\);\s*setBuyMode\("max"\)/.test(
+      gameSrc
+    )
+  );
+
+  // setBuyMode itself only dismisses on actual mode change (AZR-116 / AZR-172)
+  assertTrue(
+    "AZR-172 setBuyMode early-returns when mode unchanged before hint dismiss",
+    /function setBuyMode\(mode\)\s*\{[\s\S]*?if \(state\.buyMode === mode\) return;[\s\S]*?buyModeHintDismissed/.test(
+      gameSrc
+    )
+  );
 }
 
 

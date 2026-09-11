@@ -9179,6 +9179,202 @@
     window.requestAnimationFrame(tick);
   }
 
+
+  function hotkeyDefaultGuard(ctx) {
+    return !ctx.otherButton;
+  }
+
+  /** Table-driven hotkeys (AZR-172). Shared default guard is !otherButton. */
+  var HOTKEYS = [
+    {
+      keys: ["1"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        ctx.ev.preventDefault();
+        setBuyMode("1");
+      }
+    },
+    {
+      keys: ["2"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        ctx.ev.preventDefault();
+        setBuyMode("10");
+      }
+    },
+    {
+      keys: ["3"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        ctx.ev.preventDefault();
+        setBuyMode("max");
+      }
+    },
+    {
+      keys: ["t"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, currentTitheCost()) >= 0) {
+          ctx.ev.preventDefault();
+          payTithe();
+        }
+      }
+    },
+    {
+      keys: ["n"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (normalizeVow(state.vow) === "ember") return;
+        if (state.unlockedNightTithe && !nightActive() && N.cmp(state.ash, NIGHT_TITHE_MIN) >= 0) {
+          ctx.ev.preventDefault();
+          payNightTithe();
+        }
+      }
+    },
+    {
+      keys: ["w"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (normalizeVow(state.vow) === "ember") return;
+        if (state.unlockedWake && !wakeActive() && N.cmp(state.ash, N.fromNumber(WAKE_COST)) >= 0) {
+          ctx.ev.preventDefault();
+          keepWake();
+        }
+      }
+    },
+    {
+      keys: ["v"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (state.unlockedVeil && !veilActive() && N.cmp(state.ash, VEIL_MIN) >= 0) {
+          ctx.ev.preventDefault();
+          thinVeil();
+        }
+      }
+    },
+    {
+      keys: ["g"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (state.unlockedToll && !tollActive() && N.cmp(state.souls, N.fromNumber(TOLL_COST)) >= 0) {
+          ctx.ev.preventDefault();
+          soundToll();
+        }
+      }
+    },
+    {
+      keys: ["c"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        var cHotCost = cinderCost(state.cinderLevel);
+        if (state.unlockedPyres && N.cmp(state.ash, cHotCost) >= 0) {
+          ctx.ev.preventDefault();
+          buyCinders();
+        }
+      }
+    },
+    {
+      keys: ["u"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        var uHotCost = urnRiteCost(state.urnRiteLevel);
+        if (state.unlockedUrns && N.cmp(state.ash, uHotCost) >= 0) {
+          ctx.ev.preventDefault();
+          buyUrnRite();
+        }
+      }
+    },
+    {
+      keys: ["h"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        var hHotCost = hearthRiteCost(state.hearthRiteLevel);
+        if (state.unlockedHearths && N.cmp(state.ash, hHotCost) >= 0) {
+          ctx.ev.preventDefault();
+          buyHearthRite();
+        }
+      }
+    },
+    {
+      keys: ["l"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        var bHotCost = beaconRiteCost(state.beaconRiteLevel);
+        if (state.unlockedBeacons && N.cmp(state.ash, bHotCost) >= 0) {
+          ctx.ev.preventDefault();
+          buyBeaconRite();
+        }
+      }
+    },
+    {
+      keys: ["s"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        var sHotCost = spireRiteCost(state.spireRiteLevel);
+        if (state.unlockedSpires && N.cmp(state.ash, sHotCost) >= 0) {
+          ctx.ev.preventDefault();
+          buySpireRite();
+        }
+      }
+    },
+    {
+      keys: ["b"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (
+          remembranceUnlocked() &&
+          (Number(state.ossuaryLevel) || 0) < OSSUARY_MAX &&
+          (Number(state.remembrance) || 0) >= OSSUARY_COST
+        ) {
+          ctx.ev.preventDefault();
+          buyOssuary();
+        }
+      }
+    },
+    {
+      keys: ["p"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (
+          remembranceUnlocked() &&
+          !processionActive() &&
+          (Number(state.remembrance) || 0) >= PROCESSION_COST
+        ) {
+          ctx.ev.preventDefault();
+          beginProcession();
+        }
+      }
+    },
+    {
+      keys: ["k"],
+      guard: hotkeyDefaultGuard,
+      action: function (ctx) {
+        if (
+          remembranceUnlocked() &&
+          !knellActive() &&
+          (Number(state.remembrance) || 0) >= KNELL_COST
+        ) {
+          ctx.ev.preventDefault();
+          soundKnell();
+        }
+      }
+    }
+  ];
+
+  /** Pure: return matching HOTKEYS entry when key+guard pass; else null (AZR-172). */
+  function resolveHotkey(key, ctx) {
+    var k = String(key == null ? "" : key).toLowerCase();
+    var i;
+    for (i = 0; i < HOTKEYS.length; i++) {
+      var hk = HOTKEYS[i];
+      if (hk.keys.indexOf(k) < 0) continue;
+      var guard = hk.guard || hotkeyDefaultGuard;
+      if (!guard(ctx || {})) return null;
+      return hk;
+    }
+    return null;
+  }
+
   function bind() {
     els.soulsCount = document.getElementById("souls-count");
     els.soulsRate = document.getElementById("souls-rate");
@@ -9798,136 +9994,30 @@
         target === els.gatherBtn ||
         buttonEl === els.gatherBtn;
       var otherButton = !!(buttonEl && !isGather);
+      var key = String(ev.key || "").toLowerCase();
+      var ctx = {
+        ev: ev,
+        otherButton: otherButton,
+        isGather: isGather,
+        buttonEl: buttonEl,
+        tag: tag
+      };
 
-      if (ev.key === "1") {
-        setBuyMode("1");
-        return;
-      }
-      if (ev.key === "2") {
-        setBuyMode("10");
-        return;
-      }
-      if (ev.key === "3") {
-        setBuyMode("max");
-        return;
-      }
-
-      if ((ev.key === "t" || ev.key === "T") && !otherButton) {
-        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, currentTitheCost()) >= 0) {
-          ev.preventDefault();
-          payTithe();
-        }
-        return;
-      }
-      if ((ev.key === "n" || ev.key === "N") && !otherButton) {
-        if (normalizeVow(state.vow) === "ember") return;
-        if (state.unlockedNightTithe && !nightActive() && N.cmp(state.ash, NIGHT_TITHE_MIN) >= 0) {
-          ev.preventDefault();
-          payNightTithe();
-        }
-        return;
-      }
-      if ((ev.key === "w" || ev.key === "W") && !otherButton) {
-        if (normalizeVow(state.vow) === "ember") return;
-        if (state.unlockedWake && !wakeActive() && N.cmp(state.ash, N.fromNumber(WAKE_COST)) >= 0) {
-          ev.preventDefault();
-          keepWake();
-        }
-        return;
-      }
-      if ((ev.key === "v" || ev.key === "V") && !otherButton) {
-        if (state.unlockedVeil && !veilActive() && N.cmp(state.ash, VEIL_MIN) >= 0) {
-          ev.preventDefault();
-          thinVeil();
-        }
-        return;
-      }
-      if ((ev.key === "g" || ev.key === "G") && !otherButton) {
-        if (state.unlockedToll && !tollActive() && N.cmp(state.souls, N.fromNumber(TOLL_COST)) >= 0) {
-          ev.preventDefault();
-          soundToll();
-        }
-        return;
-      }
-      if ((ev.key === "c" || ev.key === "C") && !otherButton) {
-        var cHotCost = cinderCost(state.cinderLevel);
-        if (state.unlockedPyres && N.cmp(state.ash, cHotCost) >= 0) {
-          ev.preventDefault();
-          buyCinders();
-        }
-        return;
-      }
-      if ((ev.key === "u" || ev.key === "U") && !otherButton) {
-        var uHotCost = urnRiteCost(state.urnRiteLevel);
-        if (state.unlockedUrns && N.cmp(state.ash, uHotCost) >= 0) {
-          ev.preventDefault();
-          buyUrnRite();
-        }
-        return;
-      }
-      if ((ev.key === "h" || ev.key === "H") && !otherButton) {
-        var hHotCost = hearthRiteCost(state.hearthRiteLevel);
-        if (state.unlockedHearths && N.cmp(state.ash, hHotCost) >= 0) {
-          ev.preventDefault();
-          buyHearthRite();
-        }
-        return;
-      }
-      if ((ev.key === "l" || ev.key === "L") && !otherButton) {
-        var bHotCost = beaconRiteCost(state.beaconRiteLevel);
-        if (state.unlockedBeacons && N.cmp(state.ash, bHotCost) >= 0) {
-          ev.preventDefault();
-          buyBeaconRite();
-        }
-        return;
-      }
-      if ((ev.key === "s" || ev.key === "S") && !otherButton) {
-        var sHotCost = spireRiteCost(state.spireRiteLevel);
-        if (state.unlockedSpires && N.cmp(state.ash, sHotCost) >= 0) {
-          ev.preventDefault();
-          buySpireRite();
-        }
-        return;
-      }
-      if ((ev.key === "b" || ev.key === "B") && !otherButton) {
-        if (
-          remembranceUnlocked() &&
-          (Number(state.ossuaryLevel) || 0) < OSSUARY_MAX &&
-          (Number(state.remembrance) || 0) >= OSSUARY_COST
-        ) {
-          ev.preventDefault();
-          buyOssuary();
-        }
-        return;
-      }
-      if ((ev.key === "p" || ev.key === "P") && !otherButton) {
-        if (
-          remembranceUnlocked() &&
-          !processionActive() &&
-          (Number(state.remembrance) || 0) >= PROCESSION_COST
-        ) {
-          ev.preventDefault();
-          beginProcession();
-        }
-        return;
-      }
-      if ((ev.key === "k" || ev.key === "K") && !otherButton) {
-        if (
-          remembranceUnlocked() &&
-          !knellActive() &&
-          (Number(state.remembrance) || 0) >= KNELL_COST
-        ) {
-          ev.preventDefault();
-          soundKnell();
-        }
+      var hi;
+      for (hi = 0; hi < HOTKEYS.length; hi++) {
+        var entry = HOTKEYS[hi];
+        if (entry.keys.indexOf(key) < 0) continue;
+        var guard = entry.guard || hotkeyDefaultGuard;
+        if (!guard(ctx)) return;
+        entry.action(ctx);
         return;
       }
 
-      if (ev.key === " " || ev.key === "Enter") {
+      if (key === " " || key === "enter") {
         if (tag === "summary" || tag === "a" || tag === "details") return;
         if (buttonEl && !isGather) return;
-        if (isGather && ev.key === "Enter") return;
-        if (ev.key === " ") ev.preventDefault();
+        if (isGather && key === "enter") return;
+        if (key === " ") ev.preventDefault();
         if (normalizeVow(state.vow) === "stillness") return;
         harvest();
       }
@@ -10009,6 +10099,9 @@
     applyEdictStartingStock: applyEdictStartingStock,
     applyAutobindStarts: applyAutobindStarts,
     TRIBUTE_AUTOBIND_STARTS: TRIBUTE_AUTOBIND_STARTS,
+    hotkeyDefaultGuard: hotkeyDefaultGuard,
+    HOTKEYS: HOTKEYS,
+    resolveHotkey: resolveHotkey,
     UNLOCK_AUTOBIND_URNS: UNLOCK_AUTOBIND_URNS,
     UNLOCK_AUTOBIND_HEARTHS: UNLOCK_AUTOBIND_HEARTHS,
     UNLOCK_AUTOBIND_BEACONS: UNLOCK_AUTOBIND_BEACONS,
