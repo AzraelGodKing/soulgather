@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test.
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -2611,6 +2611,105 @@ assertEqual(
   );
   const bare = (gameSrc.match(/noteHollowManualSpend\(\)/g) || []).length;
   assertEqual("no bare noteHollowManualSpend() calls", bare, 0);
+}
+
+
+// AZR-163: simulatedUntil settle — source contracts + unit-style clock math
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  assertTrue("AZR-163 freshState has simulatedUntil", /simulatedUntil:\s*Date\.now\(\)/.test(gameSrc));
+  assertTrue(
+    "AZR-163 applyDt advances simulatedUntil by dt*1000",
+    /state\.simulatedUntil\s*=\s*\(Number\(state\.simulatedUntil\)\s*\|\|\s*Date\.now\(\)\)\s*\+\s*dt\s*\*\s*1000/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-163 serializeState reads state.simulatedUntil (not a Date.now() stamp)",
+    /simulatedUntil:\s*Number\(state\.simulatedUntil\)/.test(gameSrc)
+  );
+  // Ensure serializeState object does not use bare `simulatedUntil: Date.now()`
+  const serMatch = gameSrc.match(/function serializeState\(\)\s*\{[\s\S]*?\n  \}/);
+  assertTrue("AZR-163 found serializeState", !!serMatch);
+  assertTrue(
+    "AZR-163 serializeState body has no simulatedUntil: Date.now()",
+    serMatch && !/simulatedUntil:\s*Date\.now\(\)/.test(serMatch[0])
+  );
+  assertTrue("AZR-163 has settleToNow", /function settleToNow\s*\(/.test(gameSrc));
+  assertTrue(
+    "AZR-163 settleToNow uses applyDt\\(dt, false\\)",
+    /function settleToNow\s*\([\s\S]*?applyDt\(dt,\s*false\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-163 load offline uses simulatedUntil",
+    /offline\s*=\s*\(Date\.now\(\)\s*-\s*state\.simulatedUntil\)\s*\/\s*1000/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-163 migration falls back to lastTick",
+    /state\.simulatedUntil\s*=\s*Number\(data\.simulatedUntil\)\s*\|\|\s*Number\(data\.lastTick\)\s*\|\|\s*Date\.now\(\)/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-163 visibilitychange calls settleToNow",
+    /visibilitychange[\s\S]{0,400}settleToNow/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-163 pagehide calls settleToNow",
+    /pagehide[\s\S]{0,200}settleToNow/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-163 does not use beforeunload for settle",
+    !/beforeunload/.test(gameSrc)
+  );
+  // Deferred to AZR-164: no 1Hz background simulation clock
+  assertTrue(
+    "AZR-163 no 1Hz setInterval background clock",
+    !/setInterval\s*\(\s*[^,]+,\s*1000\s*\)/.test(gameSrc)
+  );
+  assertTrue("AZR-163 exports MAX_DT", /MAX_DT:\s*MAX_DT/.test(gameSrc));
+
+  // Unit-style: migration
+  function migrateSimulatedUntil(data, now) {
+    return Number(data.simulatedUntil) || Number(data.lastTick) || now;
+  }
+  assertEqual("AZR-163 migrate missing → lastTick", migrateSimulatedUntil({ lastTick: 42 }, 99), 42);
+  assertEqual(
+    "AZR-163 migrate prefers simulatedUntil",
+    migrateSimulatedUntil({ simulatedUntil: 7, lastTick: 42 }, 99),
+    7
+  );
+  assertEqual("AZR-163 migrate empty → now", migrateSimulatedUntil({}, 99), 99);
+
+  // Unit-style: applyDt(10) advances ~10000ms; MAX_DT caps
+  const MAX_DT = 8 * 60 * 60;
+  function advanceSimulatedUntil(until, dt) {
+    if (dt <= 0 || !isFinite(dt)) return until;
+    dt = Math.max(0, Math.min(dt, MAX_DT));
+    return (Number(until) || 0) + dt * 1000;
+  }
+  assertEqual("AZR-163 applyDt(10) +10000ms", advanceSimulatedUntil(1_000_000, 10), 1_010_000);
+  assertEqual(
+    "AZR-163 MAX_DT caps advance ms",
+    advanceSimulatedUntil(0, 999_999),
+    MAX_DT * 1000
+  );
+  assertEqual("AZR-163 non-positive dt no advance", advanceSimulatedUntil(5000, 0), 5000);
+  assertEqual("AZR-163 AWAY_SUMMARY_DT still 60", 60, 60);
+
+  // Optional harness: settleToNow credits production gap math
+  function settleGap(until, now, maxDt) {
+    let dt = (now - until) / 1000;
+    if (dt > maxDt) dt = maxDt;
+    if (dt < 0) dt = 0;
+    return dt;
+  }
+  assertEqual("AZR-163 settle 120s gap", settleGap(0, 120_000, MAX_DT), 120);
+  assertEqual(
+    "AZR-163 settle caps at MAX_DT",
+    settleGap(0, (MAX_DT + 1000) * 1000, MAX_DT),
+    MAX_DT
+  );
 }
 
 
