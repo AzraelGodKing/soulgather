@@ -6469,6 +6469,262 @@
     render();
   }
 
+  /* AZR-171: Tribute restore phases — edict starting stock, then autobind starts.
+   * Ash autobind unlocks (unlockedAutobindUrns etc.) must be evaluated after
+   * Edict starting stock is applied so thresholds see post-edict counts.
+   */
+  function applyEdictStartingStock(s) {
+    s = s || state;
+    var memoryLevel = Number(s.memoryLevel) || 0;
+    if (memoryLevel > 0) {
+      s.shades = N.fromNumber(memoryLevel);
+      s.unlockedWell = true;
+    }
+    var seatLevel = Number(s.seatLevel) || 0;
+    s.thrones = seatLevel;
+    if (seatLevel >= 1) {
+      s.unlockedThrones = true;
+    }
+    var echoLevel = Number(s.echoLevel) || 0;
+    if (echoLevel > 1) echoLevel = 1;
+    if (echoLevel >= 1) {
+      s.wellDraws = true;
+      s.unlockedWellDraws = true;
+    }
+    var kindleLevel = Number(s.kindleLevel) || 0;
+    if (kindleLevel > 0) {
+      s.lanterns = N.fromNumber(kindleLevel);
+      s.unlockedLanterns = true;
+      s.lanternToastShown = true;
+    }
+    var ashenLevel = Number(s.ashenLevel) || 0;
+    if (ashenLevel > 0) {
+      s.ash = N.fromNumber(10 * ashenLevel);
+    }
+    var longMem = Number(s.longMemoryLevel) || 0;
+    if (longMem > 0) {
+      s.fetters = N.fromNumber(longMem);
+      s.unlockedFetters = true;
+    }
+    var depthLevel = Number(s.depthLevel) || 0;
+    if (depthLevel > 0) {
+      s.wellDepth = depthLevel;
+      s.unlockedWell = true;
+    }
+    var startPyres = embersStartsPyres(s.embersEdictLevel);
+    if (startPyres > 0) {
+      s.pyres = N.fromNumber(startPyres);
+      s.unlockedPyres = true;
+    }
+    var startUrns = urnEdictStartsUrns(s.urnEdictLevel);
+    if (startUrns > 0) {
+      s.urns = N.fromNumber(startUrns);
+      s.unlockedUrns = true;
+    }
+    var startHearths = hearthEdictStartsHearths(s.hearthEdictLevel);
+    if (startHearths > 0) {
+      s.hearths = N.fromNumber(startHearths);
+      s.unlockedHearths = true;
+    }
+    var startBeacons = beaconEdictStartsBeacons(s.beaconEdictLevel);
+    if (startBeacons > 0) {
+      s.beacons = N.fromNumber(startBeacons);
+      s.unlockedBeacons = true;
+    }
+    var startSpires = spireEdictStartsSpires(s.spireEdictLevel);
+    if (startSpires > 0) {
+      s.spires = N.fromNumber(startSpires);
+      s.unlockedSpires = true;
+    }
+    var startObelisks = obeliskEdictStartsObelisks(s.obeliskEdictLevel);
+    if (startObelisks > 0) {
+      s.obelisks = N.fromNumber(startObelisks);
+      s.unlockedObelisks = true;
+    }
+    var startChalices = cupStartsChalices(s.cupEdictLevel);
+    if (startChalices > 0) {
+      s.chalices = startChalices;
+      s.unlockedChalices = true;
+    }
+    s.choirLevel = Math.min(CHOIR_MAX, Math.max(0, Math.floor(Number(s.choirEdictLevel) || 0)));
+    if (s.choirLevel >= 1) {
+      s.unlockedChoir = true;
+    }
+  }
+
+  var TRIBUTE_AUTOBIND_STARTS = [
+    {
+      predicate: quietCourtStartsLanternAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindLanterns",
+      unlockedKey: "unlockedAutobindLanterns",
+      stockField: "lanterns",
+      threshold: UNLOCK_AUTOBIND_LANTERNS,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsFetterAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindFetters",
+      unlockedKey: "unlockedAutobindFetters",
+      stockField: "fetters",
+      threshold: UNLOCK_AUTOBIND_FETTERS,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsPyreAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindPyres",
+      unlockedKey: "unlockedAutobindPyres",
+      stockField: "pyres",
+      threshold: UNLOCK_AUTOBIND_PYRES,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsChaliceAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindChalices",
+      unlockedKey: "unlockedAutobindChalices",
+      stockField: "chalices",
+      threshold: UNLOCK_AUTOBIND_CHALICES,
+      numberStock: true
+    },
+    {
+      predicate: quietCourtStartsUrnAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindUrns",
+      unlockedKey: "unlockedAutobindUrns",
+      stockField: "urns",
+      threshold: UNLOCK_AUTOBIND_URNS,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsHearthAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindHearths",
+      unlockedKey: "unlockedAutobindHearths",
+      stockField: "hearths",
+      threshold: UNLOCK_AUTOBIND_HEARTHS,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsBeaconAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindBeacons",
+      unlockedKey: "unlockedAutobindBeacons",
+      stockField: "beacons",
+      threshold: UNLOCK_AUTOBIND_BEACONS,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsSpireAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindSpires",
+      unlockedKey: "unlockedAutobindSpires",
+      stockField: "spires",
+      threshold: UNLOCK_AUTOBIND_SPIRES,
+      numberStock: false
+    },
+    {
+      predicate: quietCourtStartsObeliskAutobind,
+      levelKey: "quietCourtLevel",
+      autobindKey: "autobindObelisks",
+      unlockedKey: "unlockedAutobindObelisks",
+      stockField: "obelisks",
+      threshold: UNLOCK_AUTOBIND_OBELISKS,
+      numberStock: false
+    },
+    {
+      predicate: smokeStartsCenserAutobind,
+      levelKey: "smokeEdictLevel",
+      autobindKey: "autobindCensers",
+      unlockedKey: "unlockedAutobindCensers",
+      stockField: "censers",
+      threshold: UNLOCK_AUTOBIND_CENSERS,
+      numberStock: false
+    },
+    {
+      predicate: cinderEdictStartsPyreAutobind,
+      levelKey: "cinderEdictLevel",
+      autobindKey: "autobindPyres",
+      unlockedKey: "unlockedAutobindPyres",
+      stockField: "pyres",
+      threshold: UNLOCK_AUTOBIND_PYRES,
+      numberStock: false
+    },
+    {
+      predicate: cutEdictStartsUrnAutobind,
+      levelKey: "cutEdictLevel",
+      autobindKey: "autobindUrns",
+      unlockedKey: "unlockedAutobindUrns",
+      stockField: "urns",
+      threshold: UNLOCK_AUTOBIND_URNS,
+      numberStock: false
+    },
+    {
+      predicate: tendingEdictStartsHearthAutobind,
+      levelKey: "tendingEdictLevel",
+      autobindKey: "autobindHearths",
+      unlockedKey: "unlockedAutobindHearths",
+      stockField: "hearths",
+      threshold: UNLOCK_AUTOBIND_HEARTHS,
+      numberStock: false
+    },
+    {
+      predicate: gleamEdictStartsBeaconAutobind,
+      levelKey: "gleamEdictLevel",
+      autobindKey: "autobindBeacons",
+      unlockedKey: "unlockedAutobindBeacons",
+      stockField: "beacons",
+      threshold: UNLOCK_AUTOBIND_BEACONS,
+      numberStock: false
+    },
+    {
+      predicate: riseEdictStartsSpireAutobind,
+      levelKey: "riseEdictLevel",
+      autobindKey: "autobindSpires",
+      unlockedKey: "unlockedAutobindSpires",
+      stockField: "spires",
+      threshold: UNLOCK_AUTOBIND_SPIRES,
+      numberStock: false
+    },
+    {
+      predicate: draughtStartsChaliceAutobind,
+      levelKey: "draughtEdictLevel",
+      autobindKey: "autobindChalices",
+      unlockedKey: "unlockedAutobindChalices",
+      stockField: "chalices",
+      threshold: UNLOCK_AUTOBIND_CHALICES,
+      numberStock: true
+    }
+  ];
+
+  function applyAutobindStarts(s) {
+    s = s || state;
+    var quietCourt = Number(s.quietCourtLevel) || 0;
+    if (quietCourt >= 1) {
+      s.autobind = true;
+      s.unlockedAutobind = true;
+    }
+    var i;
+    for (i = 0; i < TRIBUTE_AUTOBIND_STARTS.length; i++) {
+      var row = TRIBUTE_AUTOBIND_STARTS[i];
+      var level = s[row.levelKey];
+      if (!row.predicate(level)) continue;
+      s[row.autobindKey] = true;
+      var stock = s[row.stockField];
+      var meets;
+      if (row.numberStock) {
+        meets = (Number(stock) || 0) >= row.threshold;
+      } else {
+        meets = N.cmp(stock, row.threshold) >= 0;
+      }
+      if (meets) {
+        s[row.unlockedKey] = true;
+      }
+    }
+  }
+
   function layTribute() {
     var gain = favorGain(state.lifetimeSouls);
     if (gain < 1) return;
@@ -6787,203 +7043,15 @@
     state.vow = "";
     state.vowHungerPaid = false;
     state.runStartedAt = Date.now();
-    if (keptMemory > 0) {
-      state.shades = N.fromNumber(keptMemory);
-      state.unlockedWell = true;
-    }
-    state.thrones = keptSeat;
-    if (keptSeat >= 1) {
-      state.unlockedThrones = true;
-    }
-    if (keptEcho >= 1) {
-      state.wellDraws = true;
-      state.unlockedWellDraws = true;
-    }
-    if (keptKindle > 0) {
-      state.lanterns = N.fromNumber(keptKindle);
-      state.unlockedLanterns = true;
-      state.lanternToastShown = true;
-    }
-    if (keptAshen > 0) {
-      state.ash = N.fromNumber(10 * keptAshen);
-    }
-    if (keptLongMem > 0) {
-      state.fetters = N.fromNumber(keptLongMem);
-      state.unlockedFetters = true;
-    }
-    if (keptDepth > 0) {
-      state.wellDepth = keptDepth;
-      state.unlockedWell = true;
-    }
-    if (keptQuietCourt >= 1) {
-      state.autobind = true;
-      state.unlockedAutobind = true;
-    }
-    if (quietCourtStartsLanternAutobind(keptQuietCourt)) {
-      state.autobindLanterns = true;
-      if (N.cmp(state.lanterns, UNLOCK_AUTOBIND_LANTERNS) >= 0) {
-        state.unlockedAutobindLanterns = true;
-      }
-    }
-    if (quietCourtStartsFetterAutobind(keptQuietCourt)) {
-      state.autobindFetters = true;
-      if (N.cmp(state.fetters, UNLOCK_AUTOBIND_FETTERS) >= 0) {
-        state.unlockedAutobindFetters = true;
-      }
-    }
-    if (quietCourtStartsPyreAutobind(keptQuietCourt)) {
-      state.autobindPyres = true;
-      if (N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
-        state.unlockedAutobindPyres = true;
-      }
-    }
-    if (quietCourtStartsChaliceAutobind(keptQuietCourt)) {
-      state.autobindChalices = true;
-      if ((Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
-        state.unlockedAutobindChalices = true;
-      }
-    }
-    if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
-      state.autobindUrns = true;
-      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
-        state.unlockedAutobindUrns = true;
-      }
-    }
-    if (quietCourtStartsHearthAutobind(keptQuietCourt)) {
-      state.autobindHearths = true;
-      if (N.cmp(state.hearths, UNLOCK_AUTOBIND_HEARTHS) >= 0) {
-        state.unlockedAutobindHearths = true;
-      }
-    }
-    if (quietCourtStartsBeaconAutobind(keptQuietCourt)) {
-      state.autobindBeacons = true;
-      if (N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
-        state.unlockedAutobindBeacons = true;
-      }
-    }
-    if (quietCourtStartsSpireAutobind(keptQuietCourt)) {
-      state.autobindSpires = true;
-      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
-        state.unlockedAutobindSpires = true;
-      }
-    }
-    if (quietCourtStartsObeliskAutobind(keptQuietCourt)) {
-      state.autobindObelisks = true;
-      if (N.cmp(state.obelisks, UNLOCK_AUTOBIND_OBELISKS) >= 0) {
-        state.unlockedAutobindObelisks = true;
-      }
-    }
-    if (smokeStartsCenserAutobind(keptSmokeEdict)) {
-      state.autobindCensers = true;
-      if (N.cmp(state.censers, UNLOCK_AUTOBIND_CENSERS) >= 0) {
-        state.unlockedAutobindCensers = true;
-      }
-    }
-    var startPyres = embersStartsPyres(keptEmbersEdict);
-    if (startPyres > 0) {
-      state.pyres = N.fromNumber(startPyres);
-      state.unlockedPyres = true;
-    }
-    var startUrns = urnEdictStartsUrns(keptUrnEdict);
-    if (startUrns > 0) {
-      state.urns = N.fromNumber(startUrns);
-      state.unlockedUrns = true;
-    }
-    var startHearths = hearthEdictStartsHearths(keptHearthEdict);
-    if (startHearths > 0) {
-      state.hearths = N.fromNumber(startHearths);
-      state.unlockedHearths = true;
-    }
-    var startBeacons = beaconEdictStartsBeacons(keptBeaconEdict);
-    if (startBeacons > 0) {
-      state.beacons = N.fromNumber(startBeacons);
-      state.unlockedBeacons = true;
-    }
-    var startSpires = spireEdictStartsSpires(keptSpireEdict);
-    if (startSpires > 0) {
-      state.spires = N.fromNumber(startSpires);
-      state.unlockedSpires = true;
-    }
-    var startObelisks = obeliskEdictStartsObelisks(keptObeliskEdict);
-    if (startObelisks > 0) {
-      state.obelisks = N.fromNumber(startObelisks);
-      state.unlockedObelisks = true;
-    }
-    if (quietCourtStartsUrnAutobind(keptQuietCourt)) {
-      state.autobindUrns = true;
-      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
-        state.unlockedAutobindUrns = true;
-      }
-    }
-    if (quietCourtStartsHearthAutobind(keptQuietCourt)) {
-      state.autobindHearths = true;
-      if (N.cmp(state.hearths, UNLOCK_AUTOBIND_HEARTHS) >= 0) {
-        state.unlockedAutobindHearths = true;
-      }
-    }
-    if (quietCourtStartsBeaconAutobind(keptQuietCourt)) {
-      state.autobindBeacons = true;
-      if (N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
-        state.unlockedAutobindBeacons = true;
-      }
-    }
-    if (quietCourtStartsSpireAutobind(keptQuietCourt)) {
-      state.autobindSpires = true;
-      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
-        state.unlockedAutobindSpires = true;
-      }
-    }
-    if (quietCourtStartsObeliskAutobind(keptQuietCourt)) {
-      state.autobindObelisks = true;
-      if (N.cmp(state.obelisks, UNLOCK_AUTOBIND_OBELISKS) >= 0) {
-        state.unlockedAutobindObelisks = true;
-      }
-    }
-    if (cinderEdictStartsPyreAutobind(keptCinderEdict)) {
-      state.autobindPyres = true;
-      if (N.cmp(state.pyres, UNLOCK_AUTOBIND_PYRES) >= 0) {
-        state.unlockedAutobindPyres = true;
-      }
-    }
-    if (cutEdictStartsUrnAutobind(keptCutEdict)) {
-      state.autobindUrns = true;
-      if (N.cmp(state.urns, UNLOCK_AUTOBIND_URNS) >= 0) {
-        state.unlockedAutobindUrns = true;
-      }
-    }
-    if (tendingEdictStartsHearthAutobind(keptTendingEdict)) {
-      state.autobindHearths = true;
-      if (N.cmp(state.hearths, UNLOCK_AUTOBIND_HEARTHS) >= 0) {
-        state.unlockedAutobindHearths = true;
-      }
-    }
-    if (gleamEdictStartsBeaconAutobind(keptGleamEdict)) {
-      state.autobindBeacons = true;
-      if (N.cmp(state.beacons, UNLOCK_AUTOBIND_BEACONS) >= 0) {
-        state.unlockedAutobindBeacons = true;
-      }
-    }
-    if (riseEdictStartsSpireAutobind(keptRiseEdict)) {
-      state.autobindSpires = true;
-      if (N.cmp(state.spires, UNLOCK_AUTOBIND_SPIRES) >= 0) {
-        state.unlockedAutobindSpires = true;
-      }
-    }
-    var startChalices = cupStartsChalices(keptCupEdict);
-    if (startChalices > 0) {
-      state.chalices = startChalices;
-      state.unlockedChalices = true;
-    }
-    if (draughtStartsChaliceAutobind(keptDraughtEdict)) {
-      state.autobindChalices = true;
-      if ((Number(state.chalices) || 0) >= UNLOCK_AUTOBIND_CHALICES) {
-        state.unlockedAutobindChalices = true;
-      }
-    }
-    state.choirLevel = Math.min(CHOIR_MAX, keptChoirEdict);
-    if (state.choirLevel >= 1) {
-      state.unlockedChoir = true;
-    }
+    // Tribute restore phases (AZR-171):
+    // 1) applyKeptProgression — favor/edicts/gifts/timers/autobind clears already applied above.
+    // 2) applyEdictStartingStock — shades, lanterns, fetters, pyres..obelisks, chalices, well, thrones, choir.
+    // 3) applyAutobindStarts — Quiet Court / Smoke / Cinder / Cut / Tending / Gleam / Rise / Draught
+    //    (ash unlocks must run after edict starting stock).
+    // 4) revealUnlockedCards(false) — after checkUnlock below.
+    applyEdictStartingStock(state);
+    // Ash autobind unlocks (unlockedAutobindUrns etc.) must be evaluated after Edict starting stock is applied.
+    applyAutobindStarts(state);
     markChronicle("hymn");
     hideToast(true);
     hideUnlockCards();
@@ -9938,6 +10006,14 @@
     quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
     quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
     quietCourtStartsObeliskAutobind: quietCourtStartsObeliskAutobind,
+    applyEdictStartingStock: applyEdictStartingStock,
+    applyAutobindStarts: applyAutobindStarts,
+    TRIBUTE_AUTOBIND_STARTS: TRIBUTE_AUTOBIND_STARTS,
+    UNLOCK_AUTOBIND_URNS: UNLOCK_AUTOBIND_URNS,
+    UNLOCK_AUTOBIND_HEARTHS: UNLOCK_AUTOBIND_HEARTHS,
+    UNLOCK_AUTOBIND_BEACONS: UNLOCK_AUTOBIND_BEACONS,
+    UNLOCK_AUTOBIND_SPIRES: UNLOCK_AUTOBIND_SPIRES,
+    UNLOCK_AUTOBIND_OBELISKS: UNLOCK_AUTOBIND_OBELISKS,
     smokeEdictCost: smokeEdictCost,
     smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,
