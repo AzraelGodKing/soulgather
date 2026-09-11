@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -2921,6 +2921,157 @@ assertEqual(
   );
   assertTrue("AZR-169 hideNames does not write a stale sig", !/dataset\.sig/.test(hideBody));
 }
+
+
+// AZR-170: single REVEALABLE table for producer unlock cards; boot/adoptSave/layTribute
+// share revealUnlockedCards; hideUnlockCards iterates the same table; render has no
+// classList.contains("is-hidden") re-reveal bandage for those cards.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+
+  const tableStart = gameSrc.indexOf("var REVEALABLE = [");
+  assertTrue("AZR-170 REVEALABLE table exists", tableStart >= 0);
+  const tableEnd = gameSrc.indexOf("];", tableStart);
+  const tableBody = tableStart >= 0 && tableEnd > tableStart ? gameSrc.slice(tableStart, tableEnd + 2) : "";
+
+  const producerFlags = [
+    "unlockedWell",
+    "unlockedLanterns",
+    "unlockedSpirits",
+    "unlockedFetters",
+    "unlockedVessels",
+    "unlockedThrones",
+    "unlockedCensers",
+    "unlockedPyres",
+    "unlockedUrns",
+    "unlockedHearths",
+    "unlockedBeacons",
+    "unlockedSpires",
+    "unlockedObelisks",
+    "unlockedChalices"
+  ];
+  for (const flag of producerFlags) {
+    assertTrue(
+      "AZR-170 REVEALABLE covers " + flag,
+      new RegExp('flag:\\s*"' + flag + '"').test(tableBody)
+    );
+  }
+  assertTrue("AZR-170 REVEALABLE includes Spires", /flag:\s*"unlockedSpires"/.test(tableBody));
+  assertTrue("AZR-170 REVEALABLE includes Obelisks", /flag:\s*"unlockedObelisks"/.test(tableBody));
+
+  // freshState producer unlocked* flags must all appear in REVEALABLE (exclude rites/meta).
+  const freshStart = gameSrc.indexOf("function freshState");
+  const freshNext = gameSrc.indexOf("\n  function ", freshStart + 1);
+  const freshBody = freshStart >= 0 ? gameSrc.slice(freshStart, freshNext > freshStart ? freshNext : undefined) : "";
+  const freshUnlocks = [];
+  const unlockRe = /unlocked([A-Za-z]+):\s*false/g;
+  let um;
+  while ((um = unlockRe.exec(freshBody)) !== null) {
+    freshUnlocks.push("unlocked" + um[1]);
+  }
+  const nonProducer = /^(unlockedMarks|unlockedAutobind|unlockedAutobind|unlockedNightTithe|unlockedVeil|unlockedWake|unlockedToll|unlockedBindingToll|unlockedWellDraws|unlockedChoir)/;
+  const freshProducers = freshUnlocks.filter(function (f) {
+    return (
+      f === "unlockedWell" ||
+      f === "unlockedLanterns" ||
+      f === "unlockedSpirits" ||
+      f === "unlockedFetters" ||
+      f === "unlockedVessels" ||
+      f === "unlockedThrones" ||
+      f === "unlockedCensers" ||
+      f === "unlockedPyres" ||
+      f === "unlockedUrns" ||
+      f === "unlockedHearths" ||
+      f === "unlockedBeacons" ||
+      f === "unlockedSpires" ||
+      f === "unlockedObelisks" ||
+      f === "unlockedChalices"
+    );
+  });
+  for (const flag of freshProducers) {
+    assertTrue(
+      "AZR-170 freshState producer " + flag + " in REVEALABLE",
+      new RegExp('flag:\\s*"' + flag + '"').test(tableBody)
+    );
+  }
+  assertEqual("AZR-170 freshState producer unlock count", freshProducers.length, 14);
+
+  function fnBody(name) {
+    const start = gameSrc.indexOf("function " + name);
+    if (start < 0) return "";
+    const next = gameSrc.indexOf("\n  function ", start + 1);
+    // boot may be followed by non-function code; also try var / if
+    let end = next;
+    if (name === "boot") {
+      const alt = gameSrc.indexOf("\n  if (document.readyState", start);
+      if (alt > start && (end < 0 || alt < end)) end = alt;
+    }
+    if (name === "layTribute") {
+      // layTribute is long; find revealUnlockedCards call region via next top-level after it is fmt
+      const fmt = gameSrc.indexOf("\n  function fmt(", start);
+      if (fmt > start) end = fmt;
+    }
+    return end > start ? gameSrc.slice(start, end) : gameSrc.slice(start);
+  }
+
+  assertTrue(
+    "AZR-170 revealUnlockedCards loops REVEALABLE",
+    /function revealUnlockedCards\s*\(\s*withToast\s*\)\s*\{[\s\S]*?REVEALABLE\.length[\s\S]*?entry\.reveal\(withToast\)/.test(gameSrc)
+  );
+  assertTrue("AZR-170 adoptSave calls revealUnlockedCards(false)", /revealUnlockedCards\(\s*false\s*\)/.test(fnBody("adoptSave")));
+  assertTrue("AZR-170 layTribute calls revealUnlockedCards(false)", /revealUnlockedCards\(\s*false\s*\)/.test(fnBody("layTribute")));
+  assertTrue("AZR-170 boot calls revealUnlockedCards(false)", /revealUnlockedCards\(\s*false\s*\)/.test(fnBody("boot")));
+
+  // No drifted hand-copied reveal lists left at those three sites.
+  assertTrue(
+    "AZR-170 adoptSave has no hand-copied revealWell list",
+    !/if\s*\(\s*state\.unlockedWell\s*\)\s*revealWell/.test(fnBody("adoptSave"))
+  );
+  assertTrue(
+    "AZR-170 boot has no hand-copied revealWell list",
+    !/if\s*\(\s*state\.unlockedWell\s*\)\s*revealWell/.test(fnBody("boot"))
+  );
+  assertTrue(
+    "AZR-170 layTribute has no hand-copied revealWell list",
+    !/if\s*\(\s*state\.unlockedWell\s*\)\s*revealWell/.test(fnBody("layTribute"))
+  );
+
+  const hideBody = fnBody("hideUnlockCards");
+  assertTrue(
+    "AZR-170 hideUnlockCards iterates REVEALABLE",
+    /REVEALABLE\.length/.test(hideBody) && /hideCard\(\s*REVEALABLE\[i\]\.el\(\)\s*\)/.test(hideBody)
+  );
+  assertTrue(
+    "AZR-170 hideUnlockCards has no hand-copied hideCard(els.wellCard)",
+    !/hideCard\(\s*els\.wellCard\s*\)/.test(hideBody)
+  );
+
+  // render: no classList.contains("is-hidden") re-reveal for producer cards
+  const renderStart = gameSrc.indexOf("function render(");
+  const renderNext = gameSrc.indexOf("\n  function ", renderStart + 1);
+  // render is huge; find a later landmark — bind is after, but many functions inside? render is top-level.
+  // Use from function render to function bind (approx) or tick
+  let renderEnd = gameSrc.indexOf("\n  function bind(", renderStart);
+  if (renderEnd < 0) renderEnd = renderNext;
+  const renderBody = renderStart >= 0 ? gameSrc.slice(renderStart, renderEnd > renderStart ? renderEnd : undefined) : "";
+  assertTrue(
+    "AZR-170 render has no classList.contains is-hidden re-reveal",
+    !/classList\.contains\(\s*"is-hidden"\s*\)\s*\)\s*\{\s*reveal/.test(renderBody)
+  );
+  assertTrue(
+    "AZR-170 render does not call revealSpires as bandage",
+    !/revealSpires\s*\(/.test(renderBody)
+  );
+  assertTrue(
+    "AZR-170 render does not call revealObelisks as bandage",
+    !/revealObelisks\s*\(/.test(renderBody)
+  );
+  assertTrue(
+    "AZR-170 render does not call revealWell as bandage",
+    !/revealWell\s*\(/.test(renderBody)
+  );
+}
+
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
