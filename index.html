@@ -1321,6 +1321,20 @@
 
   <div class="toast is-hidden" id="toast" role="status"></div>
 
+  <div class="load-fail-notice is-hidden" id="load-fail-notice" role="alertdialog" aria-modal="true" aria-labelledby="load-fail-title" aria-describedby="load-fail-body" aria-hidden="true">
+    <div class="load-fail-panel">
+      <h2 class="load-fail-title" id="load-fail-title">The well's memory could not be read.</h2>
+      <p class="load-fail-body" id="load-fail-body">Your save has not been overwritten. Export the raw memory below, restore a backup, or choose Start Fresh.</p>
+      <label class="load-fail-raw-label" for="load-fail-raw">Raw memory</label>
+      <textarea id="load-fail-raw" class="load-fail-raw" rows="6" spellcheck="false" readonly aria-label="Raw failed memory"></textarea>
+      <div class="load-fail-actions">
+        <button type="button" class="load-fail-btn" id="load-fail-export">Export raw memory</button>
+        <button type="button" class="load-fail-btn" id="load-fail-restore" disabled>Restore backup</button>
+        <button type="button" class="load-fail-btn load-fail-btn-danger" id="load-fail-fresh">Start Fresh</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/num.js"></script>
   <script src="js/format.js"></script>
   <script src="js/game.js"></script>

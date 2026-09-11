@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -2773,6 +2773,28 @@ assertEqual(
   );
 }
 
+
+// AZR-165: load-failure keep raw — source contracts (unit suite in test-load-safety.mjs)
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  assertTrue(
+    "AZR-165 save early-return if loadFailed",
+    /function save\s*\(\s*\)\s*\{[\s\S]*?if\s*\(\s*loadFailed\s*\)\s*return\s*;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-165 bak1/bak2 keys",
+    /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(gameSrc) &&
+      /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-165 load catch uses beginLoadFailure",
+    /catch\s*\(\s*err\s*\)\s*\{\s*beginLoadFailure\s*\(\s*raw\s*\)\s*;\s*\}/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-165 exports isSaveShape",
+    /isSaveShape:\s*isSaveShape/.test(gameSrc)
+  );
+}
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
