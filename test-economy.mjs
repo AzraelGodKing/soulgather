@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9 economy smoke test.
+ * Soulgather v6.9.1 economy smoke test.
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -668,8 +668,22 @@ function vowsKnownCount(known) {
 const SIPHON_COST_BASE = 65;
 const LEVY_COST_BASE = 22;
 const RITE_MULT_BASE = 1.55;
-const CINDER_COST = 22;
-const URN_RITE_COST = 18;
+const CINDER_COST_BASE = 22;
+const CINDER_COST_MULT = 2.6;
+const URN_RITE_COST_BASE = 18;
+const URN_RITE_COST_MULT = 2.6;
+const HEARTH_RITE_COST_BASE = 20;
+const HEARTH_RITE_COST_MULT = 2.6;
+const BEACON_RITE_COST_BASE = 24;
+const BEACON_RITE_COST_MULT = 2.6;
+const SPIRE_RITE_COST_BASE = 26;
+const SPIRE_RITE_COST_MULT = 2.6;
+/* Compat aliases = BASE (live costs use *Cost(level)). */
+const CINDER_COST = CINDER_COST_BASE;
+const URN_RITE_COST = URN_RITE_COST_BASE;
+const HEARTH_RITE_COST = HEARTH_RITE_COST_BASE;
+const BEACON_RITE_COST = BEACON_RITE_COST_BASE;
+const SPIRE_RITE_COST = SPIRE_RITE_COST_BASE;
 
 function siphonCost(level) {
   return N.cost(SIPHON_COST_BASE, 3, level);
@@ -677,6 +691,26 @@ function siphonCost(level) {
 
 function levyCost(level) {
   return N.cost(LEVY_COST_BASE, 3, level);
+}
+
+function cinderCost(level) {
+  return N.cost(CINDER_COST_BASE, CINDER_COST_MULT, level);
+}
+
+function urnRiteCost(level) {
+  return N.cost(URN_RITE_COST_BASE, URN_RITE_COST_MULT, level);
+}
+
+function hearthRiteCost(level) {
+  return N.cost(HEARTH_RITE_COST_BASE, HEARTH_RITE_COST_MULT, level);
+}
+
+function beaconRiteCost(level) {
+  return N.cost(BEACON_RITE_COST_BASE, BEACON_RITE_COST_MULT, level);
+}
+
+function spireRiteCost(level) {
+  return N.cost(SPIRE_RITE_COST_BASE, SPIRE_RITE_COST_MULT, level);
 }
 
 const BINDING_TOLL_COST_BASE = 40;
@@ -817,10 +851,6 @@ function beaconRiteMult(level) {
 function spireRiteMult(level) {
   return siphonMult(level);
 }
-
-const HEARTH_RITE_COST = 20;
-const BEACON_RITE_COST = 24;
-const SPIRE_RITE_COST = 26;
 
 function titheCost(souls) {
   const n = N.max(N.from(souls), 0);
@@ -1117,18 +1147,96 @@ assertEqual("urnRiteMult(2)", urnRiteMult(2), Math.pow(1.55, 2));
 assertEqual("hearthRiteMult(0)", hearthRiteMult(0), 1);
 assertEqual("hearthRiteMult(1)", hearthRiteMult(1), Math.pow(1.55, 1));
 assertEqual("hearthRiteMult(2)", hearthRiteMult(2), Math.pow(1.55, 2));
-assertEqual("HEARTH_RITE_COST", HEARTH_RITE_COST, 20);
+assertEqual("HEARTH_RITE_COST_BASE", HEARTH_RITE_COST_BASE, 20);
+assertEqual("HEARTH_RITE_COST alias", HEARTH_RITE_COST, 20);
 assertEqual("beaconRiteMult(0)", beaconRiteMult(0), 1);
 assertEqual("beaconRiteMult(1)", beaconRiteMult(1), Math.pow(1.55, 1));
 assertEqual("beaconRiteMult(2)", beaconRiteMult(2), Math.pow(1.55, 2));
-assertEqual("BEACON_RITE_COST", BEACON_RITE_COST, 24);
+assertEqual("BEACON_RITE_COST_BASE", BEACON_RITE_COST_BASE, 24);
+assertEqual("BEACON_RITE_COST alias", BEACON_RITE_COST, 24);
 assertEqual("spireRiteMult(0)", spireRiteMult(0), 1);
 assertEqual("spireRiteMult(1)", spireRiteMult(1), Math.pow(1.55, 1));
 assertEqual("spireRiteMult(2)", spireRiteMult(2), Math.pow(1.55, 2));
-assertEqual("SPIRE_RITE_COST", SPIRE_RITE_COST, 26);
-assertEqual("CINDER_COST", CINDER_COST, 22);
-assertEqual("URN_RITE_COST", URN_RITE_COST, 18);
+assertEqual("SPIRE_RITE_COST_BASE", SPIRE_RITE_COST_BASE, 26);
+assertEqual("SPIRE_RITE_COST alias", SPIRE_RITE_COST, 26);
+assertEqual("CINDER_COST_BASE", CINDER_COST_BASE, 22);
+assertEqual("CINDER_COST alias", CINDER_COST, 22);
+assertEqual("URN_RITE_COST_BASE", URN_RITE_COST_BASE, 18);
+assertEqual("URN_RITE_COST alias", URN_RITE_COST, 18);
 assertEqual("RITE_MULT_BASE", RITE_MULT_BASE, 1.55);
+assertEqual("CINDER_COST_MULT", CINDER_COST_MULT, 2.6);
+assertEqual("URN_RITE_COST_MULT", URN_RITE_COST_MULT, 2.6);
+assertEqual("HEARTH_RITE_COST_MULT", HEARTH_RITE_COST_MULT, 2.6);
+assertEqual("BEACON_RITE_COST_MULT", BEACON_RITE_COST_MULT, 2.6);
+assertEqual("SPIRE_RITE_COST_MULT", SPIRE_RITE_COST_MULT, 2.6);
+
+// AZR-162: geometric ash-rite costs (mult 2.6) — bases, monotonic, cost grows faster than 1.55^n
+assertEqual("cinderCost(0)", cinderCost(0), 22);
+assertEqual("urnRiteCost(0)", urnRiteCost(0), 18);
+assertEqual("hearthRiteCost(0)", hearthRiteCost(0), 20);
+assertEqual("beaconRiteCost(0)", beaconRiteCost(0), 24);
+assertEqual("spireRiteCost(0)", spireRiteCost(0), 26);
+
+const ashRiteCostFns = [
+  ["cinderCost", cinderCost, cinderMult],
+  ["urnRiteCost", urnRiteCost, urnRiteMult],
+  ["hearthRiteCost", hearthRiteCost, hearthRiteMult],
+  ["beaconRiteCost", beaconRiteCost, beaconRiteMult],
+  ["spireRiteCost", spireRiteCost, spireRiteMult],
+];
+for (const [name, costFn, multFn] of ashRiteCostFns) {
+  let prev = costFn(0);
+  for (let n = 0; n <= 50; n++) {
+    const cur = costFn(n);
+    const nxt = costFn(n + 1);
+    assertTrue(name + "(" + (n + 1) + ") > " + name + "(" + n + ")", N.cmp(nxt, cur) > 0);
+    if (n >= 1) {
+      const cNum = N.toNumber(cur);
+      const mNum = N.toNumber(multFn(n));
+      const pNum = N.toNumber(prev);
+      const pm = N.toNumber(multFn(n - 1));
+      if (isFinite(cNum) && isFinite(mNum) && isFinite(pNum) && isFinite(pm) && mNum > 0 && pm > 0) {
+        assertTrue(
+          name + "/" + "mult ratio increases at n=" + n,
+          cNum / mNum > pNum / pm - 1e-9
+        );
+      } else {
+        // Num-safe: cost/mult via N when values leave JS float range
+        const ratio = N.div(cur, multFn(n));
+        const prevRatio = N.div(prev, multFn(n - 1));
+        assertTrue(name + "/" + "mult Num ratio increases at n=" + n, N.cmp(ratio, prevRatio) > 0);
+      }
+    }
+    prev = cur;
+  }
+}
+
+// Greedy sim: capped ash income; flat costs would explode levels; geo 2.6 keeps levels < 30 and ash finite
+(function azr162GreedyAshRiteSim() {
+  const incomePerStep = N.fromNumber(50); // generous but capped ash income per buy attempt
+  const rites = [
+    ["cinder", cinderCost],
+    ["urn", urnRiteCost],
+    ["hearth", hearthRiteCost],
+    ["beacon", beaconRiteCost],
+    ["spire", spireRiteCost],
+  ];
+  for (const [label, costFn] of rites) {
+    let ash = N.fromNumber(100);
+    let level = 0;
+    for (let step = 0; step < 500; step++) {
+      ash = N.add(ash, incomePerStep);
+      const cost = costFn(level);
+      if (N.cmp(ash, cost) >= 0) {
+        ash = N.sub(ash, cost);
+        level += 1;
+      }
+    }
+    assertTrue("AZR-162 " + label + " ash finite end", N.isFinite(ash));
+    assertTrue("AZR-162 " + label + " level < 30 (got " + level + ")", level < 30);
+    assertTrue("AZR-162 " + label + " bought at least once", level >= 1);
+  }
+})();
 assertTrue("siphonMult(5) finite", isFinite(siphonMult(5)) && siphonMult(5) === Math.pow(1.55, 5));
 assertTrue("siphonMult(20) finite no NaN", isFinite(siphonMult(20)) && !Number.isNaN(siphonMult(20)));
 assertEqual("cinderEdictCost(0)", cinderEdictCost(0), 8);
