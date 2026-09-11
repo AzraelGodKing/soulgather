@@ -4,6 +4,10 @@
   var N = globalThis.SoulgatherNum;
 
   var SAVE_KEY = "soulgather-v0";
+  var SAVE_BAK1_KEY = "soulgather-v0.bak1";
+  var SAVE_BAK2_KEY = "soulgather-v0.bak2";
+  var BAK1_MS = 60 * 1000;
+  var BAK2_MS = 60 * 60 * 1000;
   var COST_BASE = 10;
   var COST_MULT = 1.15;
   var WELL_COST_BASE = 25;
@@ -2192,6 +2196,8 @@
       vow: "",
       vowHungerPaid: false,
       vowsKnown: emptyVowsKnown(),
+      bak1At: 0,
+      bak2At: 0,
       runStartedAt: Date.now(),
       allTimeSouls: N.fromNumber(0),
       tributesLaid: 0
@@ -2207,6 +2213,8 @@
   var toastActive = false;
   var toastHold = false;
   var pendingAwayToast = null;
+  var loadFailed = false;
+  var loadFailedRaw = null;
   var els = {};
 
   function clamp(n, lo, hi) {
@@ -5133,6 +5141,8 @@
     "vow",
     "vowHungerPaid",
     "vowsKnown",
+    "bak1At",
+    "bak2At",
     "runStartedAt",
     "allTimeSouls",
     "tributesLaid"
@@ -5378,19 +5388,35 @@
       vow: normalizeVow(state.vow),
       vowHungerPaid: !!state.vowHungerPaid,
       vowsKnown: normalizeVowsKnown(state.vowsKnown),
+      bak1At: Number(state.bak1At) || 0,
+      bak2At: Number(state.bak2At) || 0,
       runStartedAt: Number(state.runStartedAt) || Date.now(),
       allTimeSouls: dumpNum(state.allTimeSouls),
       tributesLaid: Number(state.tributesLaid) || 0
     };
   }
 
-  function isSaveShape(data) {
-    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
-    var i;
-    for (i = 0; i < SAVE_FIELDS.length; i++) {
-      if (Object.prototype.hasOwnProperty.call(data, SAVE_FIELDS[i])) return true;
+  function isFiniteStock(v) {
+    if (typeof v === "number") return isFinite(v);
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      if (typeof v.m !== "number" || typeof v.e !== "number") return false;
+      if (!isFinite(v.m) || !isFinite(v.e)) return false;
+      return N.isFinite(N.load(v));
     }
     return false;
+  }
+
+  function isSaveShape(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+    if (!Object.prototype.hasOwnProperty.call(data, "souls")) return false;
+    if (!Object.prototype.hasOwnProperty.call(data, "lifetimeSouls")) return false;
+    if (!isFiniteStock(data.souls)) return false;
+    if (!isFiniteStock(data.lifetimeSouls)) return false;
+    if (data.favorEarned != null && data.favorEarned !== undefined) {
+      var fe = Number(data.favorEarned);
+      if (!isFinite(fe)) return false;
+    }
+    return true;
   }
 
   function applySaveData(data) {
@@ -5977,6 +6003,8 @@
     }
     if (N.cmp(state.allTimeSouls, 0) < 0) state.allTimeSouls = N.fromNumber(0);
     state.tributesLaid = Math.max(0, Math.floor(Number(data.tributesLaid) || 0));
+    state.bak1At = Math.max(0, Number(data.bak1At) || 0);
+    state.bak2At = Math.max(0, Number(data.bak2At) || 0);
   }
 
   function adoptSave(data) {
@@ -6076,20 +6104,192 @@
     return dt;
   }
 
-  function save() {
+  function rotateBackups(json) {
+    if (loadFailed) return;
+    var now = Date.now();
+    var bak1At = Number(state.bak1At) || 0;
+    var bak2At = Number(state.bak2At) || 0;
+    var hasBak1 = false;
+    var hasBak2 = false;
+    var prevBak1 = null;
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState()));
+      prevBak1 = localStorage.getItem(SAVE_BAK1_KEY);
+      hasBak1 = !!prevBak1;
+    } catch (err) {
+      /* private / blocked */
+    }
+    try {
+      hasBak2 = !!localStorage.getItem(SAVE_BAK2_KEY);
+    } catch (err2) {
+      /* private / blocked */
+    }
+    var needBak1 = !hasBak1 || now - bak1At >= BAK1_MS;
+    var needBak2 = !hasBak2 || now - bak2At >= BAK2_MS;
+    try {
+      if (needBak2) {
+        localStorage.setItem(SAVE_BAK2_KEY, prevBak1 || json);
+        state.bak2At = now;
+      }
+      if (needBak1) {
+        localStorage.setItem(SAVE_BAK1_KEY, json);
+        state.bak1At = now;
+      }
+    } catch (err3) {
+      /* private mode / quota */
+    }
+  }
+
+  function save() {
+    if (loadFailed) return;
+    try {
+      var json = JSON.stringify(serializeState());
+      localStorage.setItem(SAVE_KEY, json);
+      rotateBackups(json);
     } catch (err) {
       /* private mode / quota — game still runs */
     }
   }
 
-  function load() {
+  function newestParseableBackup() {
+    var bak1 = null;
+    var bak2 = null;
     try {
-      var raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
+      bak1 = localStorage.getItem(SAVE_BAK1_KEY);
+    } catch (err) {
+      bak1 = null;
+    }
+    try {
+      bak2 = localStorage.getItem(SAVE_BAK2_KEY);
+    } catch (err2) {
+      bak2 = null;
+    }
+    if (bak1) {
+      try {
+        var d1 = JSON.parse(bak1);
+        if (isSaveShape(d1)) return { raw: bak1, data: d1, which: "bak1" };
+      } catch (err3) {
+        /* unreadable bak1 */
+      }
+    }
+    if (bak2) {
+      try {
+        var d2 = JSON.parse(bak2);
+        if (isSaveShape(d2)) return { raw: bak2, data: d2, which: "bak2" };
+      } catch (err4) {
+        /* unreadable bak2 */
+      }
+    }
+    return null;
+  }
+
+  function showLoadFailNotice() {
+    if (!els.loadFailNotice) return;
+    if (els.loadFailRaw) {
+      els.loadFailRaw.value = loadFailedRaw == null ? "" : String(loadFailedRaw);
+    }
+    var offer = newestParseableBackup();
+    if (els.loadFailRestore) {
+      els.loadFailRestore.disabled = !offer;
+    }
+    els.loadFailNotice.classList.remove("is-hidden");
+    els.loadFailNotice.setAttribute("aria-hidden", "false");
+  }
+
+  function hideLoadFailNotice() {
+    if (!els.loadFailNotice) return;
+    els.loadFailNotice.classList.add("is-hidden");
+    els.loadFailNotice.setAttribute("aria-hidden", "true");
+  }
+
+  function beginLoadFailure(raw) {
+    loadFailed = true;
+    loadFailedRaw = raw == null ? "" : String(raw);
+    state = freshState();
+    showLoadFailNotice();
+  }
+
+  function exportRawFailedMemory() {
+    var json = loadFailedRaw == null ? "" : String(loadFailedRaw);
+    function fillFallback() {
+      if (els.loadFailRaw) {
+        els.loadFailRaw.value = json;
+        els.loadFailRaw.focus();
+        els.loadFailRaw.select();
+        try {
+          document.execCommand("copy");
+        } catch (err2) {
+          /* textarea still holds the memory */
+        }
+      }
+      if (els.memoryPanel) els.memoryPanel.open = true;
+      if (els.memoryText) {
+        els.memoryText.value = json;
+      }
+      showToast("The well's memory is copied.");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(json).then(function () {
+        if (els.loadFailRaw) els.loadFailRaw.value = json;
+        if (els.memoryText) els.memoryText.value = json;
+        showToast("The well's memory is copied.");
+      }, fillFallback);
+    } else {
+      fillFallback();
+    }
+  }
+
+  function restoreLoadBackup() {
+    var offer = newestParseableBackup();
+    if (!offer) {
+      showToast("The memory would not bind.");
+      return;
+    }
+    adoptSave(offer.data);
+    loadFailed = false;
+    loadFailedRaw = null;
+    hideLoadFailNotice();
+    state.lastTick = Date.now();
+    state.simulatedUntil = Date.now();
+    syncChronicle();
+    save();
+    render();
+    showToast("The well's memory is bound.");
+  }
+
+  function startFreshAfterLoadFail() {
+    var ok = window.confirm(
+      "Abandon the well's broken memory? This cannot be undone."
+    );
+    if (!ok) return;
+    loadFailed = false;
+    loadFailedRaw = null;
+    state = freshState();
+    hideLoadFailNotice();
+    hideToast(true);
+    hideUnlockCards();
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState()));
+    } catch (err) {
+      /* private / quota */
+    }
+    save();
+    render();
+  }
+
+  function load() {
+    var raw = null;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+    } catch (err) {
+      raw = null;
+    }
+    if (!raw) return;
+    try {
       var data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return;
+      if (!isSaveShape(data)) {
+        beginLoadFailure(raw);
+        return;
+      }
       applySaveData(data);
 
       var offline = (Date.now() - state.simulatedUntil) / 1000;
@@ -6106,23 +6306,28 @@
       state.simulatedUntil = Date.now();
       state.lastTick = Date.now();
       syncChronicle();
+      // Known-good only: no mid-load save(); one save after successful restore/catchup.
       save();
 
       var awayMsg = maybeAwayToast(offline, soulsGained, ashGained, shadesGained);
       if (awayMsg) pendingAwayToast = awayMsg;
     } catch (err) {
-      state = freshState();
+      beginLoadFailure(raw);
     }
   }
 
   function exportMemory() {
-    save();
     var json;
-    try {
-      json = JSON.stringify(serializeState());
-    } catch (err) {
-      showToast("The memory would not bind.");
-      return;
+    if (loadFailed) {
+      json = loadFailedRaw == null ? "" : String(loadFailedRaw);
+    } else {
+      save();
+      try {
+        json = JSON.stringify(serializeState());
+      } catch (err) {
+        showToast("The memory would not bind.");
+        return;
+      }
     }
     function fillFallback() {
       if (els.memoryPanel) els.memoryPanel.open = true;
@@ -6181,6 +6386,9 @@
     }
 
     adoptSave(data);
+    loadFailed = false;
+    loadFailedRaw = null;
+    hideLoadFailNotice();
     state.lastTick = Date.now();
     state.simulatedUntil = Date.now();
     syncChronicle();
@@ -6218,6 +6426,9 @@
       "Abandon the well?\n\nEvery soul, shade, bound will, Favor, and Reliquary scatter. This cannot be undone."
     );
     if (!ok) return;
+    loadFailed = false;
+    loadFailedRaw = null;
+    hideLoadFailNotice();
     try {
       localStorage.removeItem(SAVE_KEY);
     } catch (err) {
@@ -9469,6 +9680,15 @@
     if (els.memoryExport) els.memoryExport.addEventListener("click", exportMemory);
     if (els.memoryImport) els.memoryImport.addEventListener("click", importMemory);
 
+    els.loadFailNotice = document.getElementById("load-fail-notice");
+    els.loadFailRaw = document.getElementById("load-fail-raw");
+    els.loadFailExport = document.getElementById("load-fail-export");
+    els.loadFailRestore = document.getElementById("load-fail-restore");
+    els.loadFailFresh = document.getElementById("load-fail-fresh");
+    if (els.loadFailExport) els.loadFailExport.addEventListener("click", exportRawFailedMemory);
+    if (els.loadFailRestore) els.loadFailRestore.addEventListener("click", restoreLoadBackup);
+    if (els.loadFailFresh) els.loadFailFresh.addEventListener("click", startFreshAfterLoadFail);
+
     if (els.buyMode) {
       els.buyMode.addEventListener("click", function (ev) {
         var t = ev.target;
@@ -9930,6 +10150,19 @@
     knellMult: knellMult,
     KNELL_COST: KNELL_COST,
     KNELL_SECS: KNELL_SECS,
-    ashPerSec: ashPerSec
+    ashPerSec: ashPerSec,
+    isSaveShape: isSaveShape,
+    isFiniteStock: isFiniteStock,
+    SAVE_KEY: SAVE_KEY,
+    SAVE_BAK1_KEY: SAVE_BAK1_KEY,
+    SAVE_BAK2_KEY: SAVE_BAK2_KEY,
+    BAK1_MS: BAK1_MS,
+    BAK2_MS: BAK2_MS,
+    save: save,
+    beginLoadFailure: beginLoadFailure,
+    getLoadFailed: function () { return loadFailed; },
+    setLoadFailed: function (v) { loadFailed = !!v; },
+    getLoadFailedRaw: function () { return loadFailedRaw; },
+    setLoadFailedRaw: function (v) { loadFailedRaw = v == null ? null : String(v); }
   };
 })();

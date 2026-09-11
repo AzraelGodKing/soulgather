@@ -1908,6 +1908,119 @@ body::before {
   animation: toast-in 0.4s ease;
 }
 
+
+/* ----- Load-failure recovery notice (AZR-165) ----- */
+.load-fail-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 2, 6, 0.88);
+}
+
+.load-fail-notice.is-hidden {
+  display: none;
+}
+
+.load-fail-panel {
+  width: min(560px, 100%);
+  padding: 28px 26px 24px;
+  background: #12080c;
+  border: 1px solid var(--gold);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.7), 0 0 28px var(--crimson-glow);
+  color: var(--bone);
+}
+
+.load-fail-title {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+  color: var(--gold-bright);
+  text-align: center;
+}
+
+.load-fail-body {
+  margin: 0 0 16px;
+  color: var(--bone-dim);
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.load-fail-raw-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+
+.load-fail-raw {
+  display: block;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 7em;
+  background: var(--void-deep);
+  border: 1px solid var(--panel-edge);
+  color: var(--bone);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.load-fail-raw:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+.load-fail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.load-fail-btn {
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  padding: 10px 16px;
+  background: #1a0e14;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold-bright);
+  cursor: pointer;
+}
+
+.load-fail-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.25);
+}
+
+.load-fail-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--ash);
+  border-color: var(--disabled);
+}
+
+.load-fail-btn-danger {
+  border-color: var(--crimson);
+  color: var(--crimson-hot);
+}
+
+.load-fail-btn-danger:hover:not(:disabled) {
+  border-color: var(--crimson-hot);
+  color: #f0c8d0;
+  box-shadow: 0 0 14px var(--crimson-glow);
+}
+
+
 @keyframes toast-in {
   from {
     opacity: 0;
