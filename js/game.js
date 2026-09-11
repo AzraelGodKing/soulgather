@@ -6064,20 +6064,7 @@
     hideToast(true);
     hideUnlockCards();
     checkUnlock();
-    if (state.unlockedWell) revealWell();
-    if (state.unlockedLanterns) revealLanterns(false);
-    if (state.unlockedSpirits) revealSpirits(false);
-    if (state.unlockedFetters) revealFetters(false);
-    if (state.unlockedVessels) revealVessels(false);
-    if (state.unlockedThrones) revealThrones(false);
-    if (state.unlockedCensers) revealCensers(false);
-    if (state.unlockedPyres) revealPyres(false);
-    if (state.unlockedUrns) revealUrns(false);
-    if (state.unlockedHearths) revealHearths(false);
-    if (state.unlockedBeacons) revealBeacons(false);
-    if (state.unlockedSpires) revealSpires(false);
-    if (state.unlockedObelisks) revealObelisks(false);
-    if (state.unlockedChalices) revealChalices(false);
+    revealUnlockedCards(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
     }
@@ -6451,20 +6438,9 @@
   }
 
   function hideUnlockCards() {
-    hideCard(els.wellCard);
-    hideCard(els.spiritCard);
-    hideCard(els.vesselCard);
-    hideCard(els.throneCard);
-    hideCard(els.lanternCard);
-    hideCard(els.censerCard);
-    hideCard(els.pyreCard);
-    hideCard(els.urnCard);
-    hideCard(els.hearthCard);
-    hideCard(els.beaconCard);
-    hideCard(els.spireCard);
-    hideCard(els.obeliskCard);
-    hideCard(els.fetterCard);
-    hideCard(els.chaliceCard);
+    for (var i = 0; i < REVEALABLE.length; i++) {
+      hideCard(REVEALABLE[i].el());
+    }
     hideTribute();
     hideRites();
     hideMarks();
@@ -7012,20 +6988,7 @@
     hideToast(true);
     hideUnlockCards();
     checkUnlock();
-    if (state.unlockedWell) revealWell();
-    if (state.unlockedLanterns) revealLanterns(false);
-    if (state.unlockedSpirits) revealSpirits(false);
-    if (state.unlockedFetters) revealFetters(false);
-    if (state.unlockedVessels) revealVessels(false);
-    if (state.unlockedThrones) revealThrones(false);
-    if (state.unlockedCensers) revealCensers(false);
-    if (state.unlockedPyres) revealPyres(false);
-    if (state.unlockedUrns) revealUrns(false);
-    if (state.unlockedHearths) revealHearths(false);
-    if (state.unlockedBeacons) revealBeacons(false);
-    if (state.unlockedSpires) revealSpires(false);
-    if (state.unlockedObelisks) revealObelisks(false);
-    if (state.unlockedChalices) revealChalices(false);
+    revealUnlockedCards(false);
     save();
     render();
     if (firstTributeBonus > 0) {
@@ -7181,6 +7144,30 @@
 
   function revealFetters(withToast) {
     revealCard(els.fetterCard);
+  }
+
+  var REVEALABLE = [
+    { flag: "unlockedWell", reveal: revealWell, el: function () { return els.wellCard; } },
+    { flag: "unlockedLanterns", reveal: revealLanterns, el: function () { return els.lanternCard; } },
+    { flag: "unlockedSpirits", reveal: revealSpirits, el: function () { return els.spiritCard; } },
+    { flag: "unlockedFetters", reveal: revealFetters, el: function () { return els.fetterCard; } },
+    { flag: "unlockedVessels", reveal: revealVessels, el: function () { return els.vesselCard; } },
+    { flag: "unlockedThrones", reveal: revealThrones, el: function () { return els.throneCard; } },
+    { flag: "unlockedCensers", reveal: revealCensers, el: function () { return els.censerCard; } },
+    { flag: "unlockedPyres", reveal: revealPyres, el: function () { return els.pyreCard; } },
+    { flag: "unlockedUrns", reveal: revealUrns, el: function () { return els.urnCard; } },
+    { flag: "unlockedHearths", reveal: revealHearths, el: function () { return els.hearthCard; } },
+    { flag: "unlockedBeacons", reveal: revealBeacons, el: function () { return els.beaconCard; } },
+    { flag: "unlockedSpires", reveal: revealSpires, el: function () { return els.spireCard; } },
+    { flag: "unlockedObelisks", reveal: revealObelisks, el: function () { return els.obeliskCard; } },
+    { flag: "unlockedChalices", reveal: revealChalices, el: function () { return els.chaliceCard; } }
+  ];
+
+  function revealUnlockedCards(withToast) {
+    for (var i = 0; i < REVEALABLE.length; i++) {
+      var entry = REVEALABLE[i];
+      if (state[entry.flag]) entry.reveal(withToast);
+    }
   }
 
   function hideTribute() {
@@ -7490,9 +7477,6 @@
     }
 
     if (state.unlockedWell) {
-      if (els.wellCard && els.wellCard.classList.contains("is-hidden")) {
-        revealWell();
-      }
       var wellPlan = wellPurchasePlan(state.wellDepth, state.souls);
       var canWell = wellPlan.can;
       var power = clickPower();
@@ -7523,9 +7507,6 @@
     els.shadeCard.classList.toggle("is-dormant", N.cmp(state.lifetimeSouls, 1) < 0);
 
     if (state.unlockedLanterns) {
-      if (els.lanternCard && els.lanternCard.classList.contains("is-hidden")) {
-        revealLanterns(false);
-      }
       var lanternPlan = purchasePlan(state.lanterns, state.souls, LANTERN_COST_BASE, LANTERN_COST_MULT);
       var lMult = lanternMult(state.lanterns);
       var canLantern = lanternPlan.can;
@@ -7538,9 +7519,6 @@
     }
 
     if (state.unlockedSpirits) {
-      if (els.spiritCard.classList.contains("is-hidden")) {
-        revealSpirits(false);
-      }
       var spiritPlan = purchasePlan(
         state.spirits,
         state.shades,
@@ -7558,9 +7536,6 @@
     }
 
     if (state.unlockedFetters) {
-      if (els.fetterCard && els.fetterCard.classList.contains("is-hidden")) {
-        revealFetters(false);
-      }
       var fetterPlan = purchasePlan(state.fetters, state.shades, FETTER_COST_BASE, FETTER_COST_MULT);
       var fMult = fetterMult(state.fetters);
       var canFetter = fetterPlan.can;
@@ -7575,9 +7550,6 @@
     }
 
     if (state.unlockedVessels) {
-      if (els.vesselCard.classList.contains("is-hidden")) {
-        revealVessels(false);
-      }
       var vesselPlan = purchasePlan(state.vessels, state.spirits);
       els.vesselOwned.textContent = F.formatNumber(state.vessels);
       els.vesselProd.textContent =
@@ -7589,9 +7561,6 @@
     }
 
     if (state.unlockedCensers) {
-      if (els.censerCard && els.censerCard.classList.contains("is-hidden")) {
-        revealCensers(false);
-      }
       var censerPlan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
       var censerRate = N.mul(
         N.mul(
@@ -7613,9 +7582,6 @@
     }
 
     if (state.unlockedPyres) {
-      if (els.pyreCard && els.pyreCard.classList.contains("is-hidden")) {
-        revealPyres(false);
-      }
       var pyrePlan = purchasePlan(state.pyres, state.censers, PYRE_COST_BASE, PYRE_COST_MULT);
       var pyreRate = N.mul(
         N.mul(
@@ -7641,9 +7607,6 @@
     }
 
     if (state.unlockedUrns) {
-      if (els.urnCard && els.urnCard.classList.contains("is-hidden")) {
-        revealUrns(false);
-      }
       var urnPlan = purchasePlan(state.urns, state.pyres, URN_COST_BASE, URN_COST_MULT);
       var urnRate = N.mul(
         N.mul(
@@ -7669,9 +7632,6 @@
     }
 
     if (state.unlockedHearths) {
-      if (els.hearthCard && els.hearthCard.classList.contains("is-hidden")) {
-        revealHearths(false);
-      }
       var hearthPlan = purchasePlan(state.hearths, state.urns, HEARTH_COST_BASE, HEARTH_COST_MULT);
       var hearthRate = N.mul(
         N.mul(
@@ -7697,9 +7657,6 @@
     }
 
     if (state.unlockedBeacons) {
-      if (els.beaconCard && els.beaconCard.classList.contains("is-hidden")) {
-        revealBeacons(false);
-      }
       var beaconPlan = purchasePlan(state.beacons, state.hearths, BEACON_COST_BASE, BEACON_COST_MULT);
       var beaconRate = N.mul(
         N.mul(
@@ -7725,9 +7682,6 @@
     }
 
     if (state.unlockedSpires) {
-      if (els.spireCard && els.spireCard.classList.contains("is-hidden")) {
-        revealSpires(false);
-      }
       var spirePlan = purchasePlan(state.spires, state.beacons, SPIRE_COST_BASE, SPIRE_COST_MULT);
       var spireRate = N.mul(
         N.mul(
@@ -7753,9 +7707,6 @@
     }
 
     if (state.unlockedObelisks) {
-      if (els.obeliskCard && els.obeliskCard.classList.contains("is-hidden")) {
-        revealObelisks(false);
-      }
       var obeliskPlan = purchasePlan(state.obelisks, state.spires, OBELISK_COST_BASE, OBELISK_COST_MULT);
       var obeliskRate = N.mul(
         N.mul(
@@ -7778,9 +7729,6 @@
     }
 
     if (state.unlockedThrones) {
-      if (els.throneCard.classList.contains("is-hidden")) {
-        revealThrones(false);
-      }
       var thronePlan = purchasePlan(state.thrones, state.vessels);
       var thronePct = Math.round(
         (normalizeAspect(state.aspect) === "dominion" ? 15 : 10) * state.thrones
@@ -7795,9 +7743,6 @@
     }
 
     if (state.unlockedChalices) {
-      if (els.chaliceCard && els.chaliceCard.classList.contains("is-hidden")) {
-        revealChalices(false);
-      }
       var cupPlan = chalicePlan();
       var chalicePct = Math.round(8 * (Number(state.chalices) || 0));
       if (els.chaliceOwned) els.chaliceOwned.textContent = F.formatNumber(state.chalices);
@@ -9927,18 +9872,7 @@
     load();
     if (!state.runStartedAt) state.runStartedAt = Date.now();
     checkUnlock();
-    if (state.unlockedWell) revealWell();
-    if (state.unlockedLanterns) revealLanterns(false);
-    if (state.unlockedSpirits) revealSpirits(false);
-    if (state.unlockedFetters) revealFetters(false);
-    if (state.unlockedVessels) revealVessels(false);
-    if (state.unlockedThrones) revealThrones(false);
-    if (state.unlockedCensers) revealCensers(false);
-    if (state.unlockedPyres) revealPyres(false);
-    if (state.unlockedUrns) revealUrns(false);
-    if (state.unlockedHearths) revealHearths(false);
-    if (state.unlockedBeacons) revealBeacons(false);
-    if (state.unlockedChalices) revealChalices(false);
+    revealUnlockedCards(false);
     render();
     if (pendingAwayToast) {
       toastQueue.unshift(pendingAwayToast);
