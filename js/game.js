@@ -62,6 +62,7 @@
   var AUTOSAVE_MS = 5000;
   var MAX_DT = 8 * 60 * 60;
   var AUTOBIND_INTERVAL = 1;
+  var LIVE_FRAME_MAX = 1.0;
   var autobindAcc = 0;
   var HOLLOW_GRACE = 90;
   var HOLLOW_INTERVAL = 45;
@@ -1119,6 +1120,8 @@
   }
 
   function tickHollowHunger(dt) {
+    // AZR-164: do not accrue Hollow while the tab is hidden (heartbeat may still call live applyDt).
+    if (typeof document !== "undefined" && document.hidden) return;
     if (!hollowHungerActive()) return;
     state.hollowIdle = (Number(state.hollowIdle) || 0) + dt;
     var want = stacksWantedFromIdle(state.hollowIdle);
@@ -2197,6 +2200,8 @@
 
   var state = freshState();
   var lastFrame = 0;
+  var hiddenHeartbeatId = 0;
+  var hiddenHeartbeatAt = 0;
   var toastTimer = 0;
   var toastQueue = [];
   var toastActive = false;
@@ -2530,8 +2535,10 @@
     }
 
     if (live) {
-      tickHollowHunger(dt);
-      autobindAcc += dt;
+      // AZR-164: production already used full clamped dt above; Hollow/Autobind use liveSpan only.
+      var liveSpan = Math.min(dt, LIVE_FRAME_MAX);
+      tickHollowHunger(liveSpan); // also no-ops if document.hidden
+      autobindAcc += liveSpan;
       if (autobindAcc >= AUTOBIND_INTERVAL) {
         autobindAcc -= AUTOBIND_INTERVAL;
         if (autobindAcc > AUTOBIND_INTERVAL) autobindAcc = 0; // no multi-pulse same call from lag
@@ -6032,6 +6039,31 @@
     return null;
   }
 
+  // AZR-164: 1Hz best-effort clock while hidden (browsers may throttle intervals).
+  function clearHiddenHeartbeat() {
+    if (hiddenHeartbeatId) {
+      clearInterval(hiddenHeartbeatId);
+      hiddenHeartbeatId = 0;
+    }
+    hiddenHeartbeatAt = 0;
+  }
+
+  function startHiddenHeartbeat() {
+    clearHiddenHeartbeat();
+    if (typeof document === "undefined" || !document.hidden) return;
+    hiddenHeartbeatAt = Date.now();
+    hiddenHeartbeatId = setInterval(function () {
+      if (typeof document !== "undefined" && !document.hidden) {
+        clearHiddenHeartbeat();
+        return;
+      }
+      var now = Date.now();
+      var span = (now - (hiddenHeartbeatAt || now)) / 1000;
+      hiddenHeartbeatAt = now;
+      if (span > 0) applyDt(span, true); // production full span; Hollow/Autobind capped via LIVE_FRAME_MAX; Hollow frozen while hidden
+    }, 1000);
+  }
+
   // AZR-163: credit production through wall-now via offline applyDt (no Hollow / live Autobind).
   // Advances simulatedUntil inside applyDt; then syncs to now so MAX_DT excess is not re-credited.
   function settleToNow() {
@@ -9454,9 +9486,12 @@
 
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) {
+        // AZR-163 settle first, then AZR-164 heartbeat from now (no double-credit).
         settleToNow();
         save();
+        startHiddenHeartbeat();
       } else {
+        clearHiddenHeartbeat();
         var until = Number(state.simulatedUntil) || Date.now();
         var gap = (Date.now() - until) / 1000;
         var soulsBefore = N.clone(state.souls);
@@ -9473,8 +9508,13 @@
     });
 
     window.addEventListener("pagehide", function () {
+      clearHiddenHeartbeat();
       settleToNow();
       save();
+    });
+
+    window.addEventListener("unload", function () {
+      clearHiddenHeartbeat();
     });
 
     document.addEventListener("keydown", function (ev) {
@@ -9868,6 +9908,7 @@
     HOLLOW_SHADE_CLEAR_FLOOR: HOLLOW_SHADE_CLEAR_FLOOR,
     HOLLOW_CLEAR_FRAC: HOLLOW_CLEAR_FRAC,
     MAX_DT: MAX_DT,
+    LIVE_FRAME_MAX: LIVE_FRAME_MAX,
     AWAY_SUMMARY_DT: AWAY_SUMMARY_DT,
     normalizeAspect: normalizeAspect,
     nextGoal: nextGoal,
