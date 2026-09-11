@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -2842,6 +2842,84 @@ assertEqual(
     "AZR-168 tripwire reuses beginLoadFailure",
     /function tripwireSanity[\s\S]*?beginLoadFailure\s*\(/.test(gameSrc)
   );
+}
+
+// AZR-169: scan js/game.js for duplicate top-level function declarations matching
+// `^  function (\w+)\(` (two-space indent IIFE style). Fail the build on any
+// name collision. Pre-fix main failed this assert on `renderNames`.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const re = /^  function (\w+)\(/gm;
+  const seen = Object.create(null);
+  const collisions = [];
+  let m;
+  while ((m = re.exec(gameSrc)) !== null) {
+    const name = m[1];
+    if (seen[name]) {
+      if (collisions.indexOf(name) < 0) collisions.push(name);
+    } else {
+      seen[name] = 1;
+    }
+  }
+  assertTrue(
+    "AZR-169 no duplicate top-level functions (pre-fix main failed on renderNames)",
+    collisions.length === 0
+  );
+  if (collisions.length) {
+    console.error("AZR-169 collisions:", collisions.join(", "));
+  }
+  const renderNamesHits = gameSrc.match(/function renderNames\s*\(/g) || [];
+  assertEqual("AZR-169 exactly one function renderNames", renderNamesHits.length, 1);
+
+  const start = gameSrc.indexOf("function renderNames(");
+  const nextFn = gameSrc.indexOf("\n  function ", start + 1);
+  const body = start >= 0 ? (nextFn > start ? gameSrc.slice(start, nextFn) : gameSrc.slice(start)) : "";
+  assertTrue(
+    "AZR-169 live early-return needs namesPanel + namesList",
+    /if\s*\(\s*!els\.namesPanel\s*\|\|\s*!els\.namesList\s*\)\s*return/.test(body)
+  );
+  assertTrue(
+    "AZR-169 live visibility n >= 1 || namesComplete",
+    /n\s*>=\s*1\s*\|\|\s*!!state\.namesComplete/.test(body)
+  );
+  assertTrue(
+    "AZR-169 live dataset.sig n + \":\" + (namesComplete ? \"1\" : \"0\")",
+    /n\s*\+\s*":"\s*\+\s*\(\s*state\.namesComplete\s*\?\s*"1"\s*:\s*"0"\s*\)/.test(body)
+  );
+
+  function namesPanelVisible(namesBound, namesComplete) {
+    const n = Math.max(0, Math.min(12, Math.floor(Number(namesBound) || 0)));
+    return n >= 1 || !!namesComplete;
+  }
+  function namesListSig(namesBound, namesComplete) {
+    const n = Math.max(0, Math.min(12, Math.floor(Number(namesBound) || 0)));
+    return n + ":" + (namesComplete ? "1" : "0");
+  }
+  assertEqual("AZR-169 panel hidden n=0 incomplete", namesPanelVisible(0, false), false);
+  assertEqual("AZR-169 panel shown n=1", namesPanelVisible(1, false), true);
+  assertEqual("AZR-169 panel shown namesComplete n=0", namesPanelVisible(0, true), true);
+  assertEqual("AZR-169 panel shown namesComplete clamped 99", namesPanelVisible(99, true), true);
+  assertEqual("AZR-169 sig n=3 incomplete", namesListSig(3, false), "3:0");
+  assertEqual("AZR-169 sig complete n=12", namesListSig(12, true), "12:1");
+  assertEqual("AZR-169 sig clamps 99", namesListSig(99, true), "12:1");
+  assertTrue("AZR-169 adoptSave empty sig !== live encoding", namesListSig(0, false) !== "");
+  assertTrue("AZR-169 adoptSave empty sig !== complete encoding", namesListSig(12, true) !== "");
+
+  const adoptStart = gameSrc.indexOf("function adoptSave");
+  const adoptNext = gameSrc.indexOf("\n  function ", adoptStart + 1);
+  const adoptBody = adoptStart >= 0 ? gameSrc.slice(adoptStart, adoptNext > adoptStart ? adoptNext : undefined) : "";
+  assertTrue(
+    "AZR-169 adoptSave clears namesList dataset.sig",
+    /els\.namesList\.dataset\.sig\s*=\s*""/.test(adoptBody)
+  );
+  const hideStart = gameSrc.indexOf("function hideNames");
+  const hideNext = gameSrc.indexOf("\n  function ", hideStart + 1);
+  const hideBody = hideStart >= 0 ? gameSrc.slice(hideStart, hideNext > hideStart ? hideNext : undefined) : "";
+  assertTrue(
+    "AZR-169 hideNames hides namesPanel",
+    /namesPanel\.classList\.add\(\s*"is-hidden"\s*\)/.test(hideBody)
+  );
+  assertTrue("AZR-169 hideNames does not write a stale sig", !/dataset\.sig/.test(hideBody));
 }
 
 if (failed > 0) {
