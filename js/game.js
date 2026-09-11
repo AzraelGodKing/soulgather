@@ -95,11 +95,22 @@
   var UNLOCK_AUTOBIND_BEACONS = 3;
   var UNLOCK_AUTOBIND_SPIRES = 3;
   var UNLOCK_AUTOBIND_OBELISKS = 3;
-  var CINDER_COST = 22;
-  var URN_RITE_COST = 18;
-  var HEARTH_RITE_COST = 20;
-  var BEACON_RITE_COST = 24;
-  var SPIRE_RITE_COST = 26;
+  var CINDER_COST_BASE = 22;
+  var CINDER_COST_MULT = 2.6;
+  var URN_RITE_COST_BASE = 18;
+  var URN_RITE_COST_MULT = 2.6;
+  var HEARTH_RITE_COST_BASE = 20;
+  var HEARTH_RITE_COST_MULT = 2.6;
+  var BEACON_RITE_COST_BASE = 24;
+  var BEACON_RITE_COST_MULT = 2.6;
+  var SPIRE_RITE_COST_BASE = 26;
+  var SPIRE_RITE_COST_MULT = 2.6;
+  /* Aliases to BASE for export/compat (live costs use *Cost(level)). */
+  var CINDER_COST = CINDER_COST_BASE;
+  var URN_RITE_COST = URN_RITE_COST_BASE;
+  var HEARTH_RITE_COST = HEARTH_RITE_COST_BASE;
+  var BEACON_RITE_COST = BEACON_RITE_COST_BASE;
+  var SPIRE_RITE_COST = SPIRE_RITE_COST_BASE;
   var RITE_MULT_BASE = 1.55;
   var SIPHON_COST_BASE = 65;
   var LEVY_COST_BASE = 22;
@@ -947,6 +958,26 @@
 
   function levyCost(level) {
     return N.cost(LEVY_COST_BASE, 3, level);
+  }
+
+  function cinderCost(level) {
+    return N.cost(CINDER_COST_BASE, CINDER_COST_MULT, level);
+  }
+
+  function urnRiteCost(level) {
+    return N.cost(URN_RITE_COST_BASE, URN_RITE_COST_MULT, level);
+  }
+
+  function hearthRiteCost(level) {
+    return N.cost(HEARTH_RITE_COST_BASE, HEARTH_RITE_COST_MULT, level);
+  }
+
+  function beaconRiteCost(level) {
+    return N.cost(BEACON_RITE_COST_BASE, BEACON_RITE_COST_MULT, level);
+  }
+
+  function spireRiteCost(level) {
+    return N.cost(SPIRE_RITE_COST_BASE, SPIRE_RITE_COST_MULT, level);
   }
 
   function bindingTollCost(level) {
@@ -3431,7 +3462,7 @@
 
   function buyCinders() {
     if (!state.unlockedPyres) return;
-    var cost = N.fromNumber(CINDER_COST);
+    var cost = cinderCost(state.cinderLevel);
     if (N.cmp(state.ash, cost) < 0) return;
     var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
@@ -3446,7 +3477,7 @@
 
   function buyUrnRite() {
     if (!state.unlockedUrns) return;
-    var cost = N.fromNumber(URN_RITE_COST);
+    var cost = urnRiteCost(state.urnRiteLevel);
     if (N.cmp(state.ash, cost) < 0) return;
     var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
@@ -3461,7 +3492,7 @@
 
   function buyHearthRite() {
     if (!state.unlockedHearths) return;
-    var cost = N.fromNumber(HEARTH_RITE_COST);
+    var cost = hearthRiteCost(state.hearthRiteLevel);
     if (N.cmp(state.ash, cost) < 0) return;
     var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
@@ -3476,7 +3507,7 @@
 
   function buyBeaconRite() {
     if (!state.unlockedBeacons) return;
-    var cost = N.fromNumber(BEACON_RITE_COST);
+    var cost = beaconRiteCost(state.beaconRiteLevel);
     if (N.cmp(state.ash, cost) < 0) return;
     var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
@@ -3491,7 +3522,7 @@
 
   function buySpireRite() {
     if (!state.unlockedSpires) return;
-    var cost = N.fromNumber(SPIRE_RITE_COST);
+    var cost = spireRiteCost(state.spireRiteLevel);
     if (N.cmp(state.ash, cost) < 0) return;
     var hollowBefore = state.ash;
     state.ash = N.sub(state.ash, cost);
@@ -7539,7 +7570,7 @@
         els.cinderRow.classList.toggle("is-hidden", !cinderOpen);
       }
       if (cinderOpen) {
-        var cCost = N.fromNumber(CINDER_COST);
+        var cCost = cinderCost(state.cinderLevel);
         var cMult = cinderMult(state.cinderLevel);
         if (els.cinderEffect) els.cinderEffect.textContent = "Cinders \u00d7" + formatTimes(cMult);
         if (els.cinderCost) els.cinderCost.textContent = F.formatNumber(cCost) + " Ash";
@@ -7551,7 +7582,7 @@
         els.urnRiteRow.classList.toggle("is-hidden", !urnRiteOpen);
       }
       if (urnRiteOpen) {
-        var uCost = N.fromNumber(URN_RITE_COST);
+        var uCost = urnRiteCost(state.urnRiteLevel);
         var uMult = urnRiteMult(state.urnRiteLevel);
         if (els.urnRiteEffect) els.urnRiteEffect.textContent = "Urn \u00d7" + formatTimes(uMult);
         if (els.urnRiteCost) els.urnRiteCost.textContent = F.formatNumber(uCost) + " Ash";
@@ -7563,7 +7594,7 @@
         els.hearthRiteRow.classList.toggle("is-hidden", !hearthRiteOpen);
       }
       if (hearthRiteOpen) {
-        var hCost = N.fromNumber(HEARTH_RITE_COST);
+        var hCost = hearthRiteCost(state.hearthRiteLevel);
         var hMult = hearthRiteMult(state.hearthRiteLevel);
         if (els.hearthRiteEffect) els.hearthRiteEffect.textContent = "Hearth \u00d7" + formatTimes(hMult);
         if (els.hearthRiteCost) els.hearthRiteCost.textContent = F.formatNumber(hCost) + " Ash";
@@ -7575,7 +7606,7 @@
         els.beaconRiteRow.classList.toggle("is-hidden", !beaconRiteOpen);
       }
       if (beaconRiteOpen) {
-        var bCost = N.fromNumber(BEACON_RITE_COST);
+        var bCost = beaconRiteCost(state.beaconRiteLevel);
         var bMult = beaconRiteMult(state.beaconRiteLevel);
         if (els.beaconRiteEffect) els.beaconRiteEffect.textContent = "Beacon \u00d7" + formatTimes(bMult);
         if (els.beaconRiteCost) els.beaconRiteCost.textContent = F.formatNumber(bCost) + " Ash";
@@ -7587,7 +7618,7 @@
         els.spireRiteRow.classList.toggle("is-hidden", !spireRiteOpen);
       }
       if (spireRiteOpen) {
-        var sCost = N.fromNumber(SPIRE_RITE_COST);
+        var sCost = spireRiteCost(state.spireRiteLevel);
         var sMult = spireRiteMult(state.spireRiteLevel);
         if (els.spireRiteEffect) els.spireRiteEffect.textContent = "Spire \u00d7" + formatTimes(sMult);
         if (els.spireRiteCost) els.spireRiteCost.textContent = F.formatNumber(sCost) + " Ash";
@@ -9467,40 +9498,40 @@
         return;
       }
       if ((ev.key === "c" || ev.key === "C") && !otherButton) {
-        var cinderCost = N.fromNumber(CINDER_COST);
-        if (state.unlockedPyres && N.cmp(state.ash, cinderCost) >= 0) {
+        var cHotCost = cinderCost(state.cinderLevel);
+        if (state.unlockedPyres && N.cmp(state.ash, cHotCost) >= 0) {
           ev.preventDefault();
           buyCinders();
         }
         return;
       }
       if ((ev.key === "u" || ev.key === "U") && !otherButton) {
-        var urnRiteCost = N.fromNumber(URN_RITE_COST);
-        if (state.unlockedUrns && N.cmp(state.ash, urnRiteCost) >= 0) {
+        var uHotCost = urnRiteCost(state.urnRiteLevel);
+        if (state.unlockedUrns && N.cmp(state.ash, uHotCost) >= 0) {
           ev.preventDefault();
           buyUrnRite();
         }
         return;
       }
       if ((ev.key === "h" || ev.key === "H") && !otherButton) {
-        var hearthRiteCost = N.fromNumber(HEARTH_RITE_COST);
-        if (state.unlockedHearths && N.cmp(state.ash, hearthRiteCost) >= 0) {
+        var hHotCost = hearthRiteCost(state.hearthRiteLevel);
+        if (state.unlockedHearths && N.cmp(state.ash, hHotCost) >= 0) {
           ev.preventDefault();
           buyHearthRite();
         }
         return;
       }
       if ((ev.key === "l" || ev.key === "L") && !otherButton) {
-        var beaconRiteCost = N.fromNumber(BEACON_RITE_COST);
-        if (state.unlockedBeacons && N.cmp(state.ash, beaconRiteCost) >= 0) {
+        var bHotCost = beaconRiteCost(state.beaconRiteLevel);
+        if (state.unlockedBeacons && N.cmp(state.ash, bHotCost) >= 0) {
           ev.preventDefault();
           buyBeaconRite();
         }
         return;
       }
       if ((ev.key === "s" || ev.key === "S") && !otherButton) {
-        var spireRiteCost = N.fromNumber(SPIRE_RITE_COST);
-        if (state.unlockedSpires && N.cmp(state.ash, spireRiteCost) >= 0) {
+        var sHotCost = spireRiteCost(state.spireRiteLevel);
+        if (state.unlockedSpires && N.cmp(state.ash, sHotCost) >= 0) {
           ev.preventDefault();
           buySpireRite();
         }
@@ -9728,6 +9759,11 @@
     normalizeVow: normalizeVow,
     siphonCost: siphonCost,
     levyCost: levyCost,
+    cinderCost: cinderCost,
+    urnRiteCost: urnRiteCost,
+    hearthRiteCost: hearthRiteCost,
+    beaconRiteCost: beaconRiteCost,
+    spireRiteCost: spireRiteCost,
     bindingTollCost: bindingTollCost,
     bindingTollRateMult: bindingTollRateMult,
     bindingTollCostMult: bindingTollCostMult,
@@ -9741,6 +9777,16 @@
     hearthRiteMult: hearthRiteMult,
     beaconRiteMult: beaconRiteMult,
     spireRiteMult: spireRiteMult,
+    CINDER_COST_BASE: CINDER_COST_BASE,
+    CINDER_COST_MULT: CINDER_COST_MULT,
+    URN_RITE_COST_BASE: URN_RITE_COST_BASE,
+    URN_RITE_COST_MULT: URN_RITE_COST_MULT,
+    HEARTH_RITE_COST_BASE: HEARTH_RITE_COST_BASE,
+    HEARTH_RITE_COST_MULT: HEARTH_RITE_COST_MULT,
+    BEACON_RITE_COST_BASE: BEACON_RITE_COST_BASE,
+    BEACON_RITE_COST_MULT: BEACON_RITE_COST_MULT,
+    SPIRE_RITE_COST_BASE: SPIRE_RITE_COST_BASE,
+    SPIRE_RITE_COST_MULT: SPIRE_RITE_COST_MULT,
     HEARTH_RITE_COST: HEARTH_RITE_COST,
     BEACON_RITE_COST: BEACON_RITE_COST,
     SPIRE_RITE_COST: SPIRE_RITE_COST,
