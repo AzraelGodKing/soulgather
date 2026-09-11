@@ -1906,6 +1906,8 @@ body::before {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   animation: toast-in 0.4s ease;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 

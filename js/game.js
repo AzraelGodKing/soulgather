@@ -79,6 +79,8 @@
   var HOLLOW_SHADE_CLEAR_FLOOR = 3;
   var HOLLOW_CLEAR_FRAC = 0.02;
   var TOAST_MS = 5200;
+  var TOAST_FAST_MS = 1800;
+  var TOAST_QUEUE_MAX = 5;
   var AWAY_MIN_DT = 2;
   var AWAY_SUMMARY_DT = 60;
   var TITHE_MIN = 25;
@@ -2276,6 +2278,8 @@
   var toastQueue = [];
   var toastActive = false;
   var toastHold = false;
+  var toastEscapeArmed = false;
+  var giftToastBatch = null;
   var pendingAwayToast = null;
   var loadFailed = false;
   var loadFailedRaw = null;
@@ -4024,6 +4028,7 @@
 
   function tryMilestoneGifts() {
     var granted = false;
+    beginGiftToastBatch();
     bumpPeakShades();
     bumpPeakLanterns();
     bumpPeakFetters();
@@ -4042,7 +4047,7 @@
       state.bonusLifetimeSouls = true;
       state.souls = N.add(state.souls, 50);
       markChronicle("giftSouls");
-      showToast("The well returns fifty souls.");
+      showToast("The well returns fifty souls.", "gifts");
       granted = true;
     }
 
@@ -4053,7 +4058,7 @@
       state.lifetimeShades = N.add(state.lifetimeShades, 1);
       bumpPeakShades();
       markChronicle("giftShades");
-      showToast("A shade is given, unbidden.");
+      showToast("A shade is given, unbidden.", "gifts");
       granted = true;
     }
 
@@ -4061,7 +4066,7 @@
       state.bonusFirstVessel = true;
       state.ash = N.add(state.ash, 3);
       markChronicle("giftVessel");
-      showToast("Ash from the first vessel.");
+      showToast("Ash from the first vessel.", "gifts");
       granted = true;
     }
 
@@ -4072,7 +4077,7 @@
       state.bonusThousandSouls = true;
       state.souls = N.add(state.souls, 200);
       markChronicle("giftThousand");
-      showToast("The well returns two hundred souls.");
+      showToast("The well returns two hundred souls.", "gifts");
       granted = true;
     }
 
@@ -4080,7 +4085,7 @@
       state.bonusFirstLantern = true;
       state.souls = N.add(state.souls, 10);
       markChronicle("giftLantern");
-      showToast("Ten souls for the first lantern.");
+      showToast("Ten souls for the first lantern.", "gifts");
       granted = true;
     }
 
@@ -4089,7 +4094,7 @@
       state.giftPeakLanterns = true;
       state.souls = N.add(state.souls, 20);
       markChronicle("giftPeakLanterns");
-      showToast("Twenty souls for ten lanterns.");
+      showToast("Twenty souls for ten lanterns.", "gifts");
       granted = true;
     }
 
@@ -4097,7 +4102,7 @@
       state.bonusFirstCenser = true;
       state.ash = N.add(state.ash, 5);
       markChronicle("giftCenser");
-      showToast("Ash from the first censer.");
+      showToast("Ash from the first censer.", "gifts");
       granted = true;
     }
 
@@ -4106,7 +4111,7 @@
       state.giftPeakCensers = true;
       state.ash = N.add(state.ash, 8);
       markChronicle("giftPeakCensers");
-      showToast("Eight ash for five censers.");
+      showToast("Eight ash for five censers.", "gifts");
       granted = true;
     }
 
@@ -4119,7 +4124,7 @@
         state.giftFirstPyre = true;
         state.ash = N.add(state.ash, 5);
         markChronicle("giftFirstPyre");
-        showToast("Five ash for the first pyre.");
+        showToast("Five ash for the first pyre.", "gifts");
         granted = true;
       }
     }
@@ -4129,7 +4134,7 @@
       state.giftPeakPyres = true;
       state.ash = N.add(state.ash, 10);
       markChronicle("giftPeakPyres");
-      showToast("Ten ash for five pyres.");
+      showToast("Ten ash for five pyres.", "gifts");
       granted = true;
     }
 
@@ -4142,7 +4147,7 @@
         state.giftFirstUrn = true;
         state.ash = N.add(state.ash, 6);
         markChronicle("giftFirstUrn");
-        showToast("Six ash for the first urn.");
+        showToast("Six ash for the first urn.", "gifts");
         granted = true;
       }
     }
@@ -4152,7 +4157,7 @@
       state.giftPeakUrns = true;
       state.ash = N.add(state.ash, 8);
       markChronicle("giftPeakUrns");
-      showToast("Eight ash for five urns.");
+      showToast("Eight ash for five urns.", "gifts");
       granted = true;
     }
 
@@ -4165,7 +4170,7 @@
         state.giftFirstHearth = true;
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstHearth");
-        showToast("Eight ash for the first hearth.");
+        showToast("Eight ash for the first hearth.", "gifts");
         granted = true;
       }
     }
@@ -4179,7 +4184,7 @@
         state.giftFirstBeacon = true;
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstBeacon");
-        showToast("Eight ash for the first beacon.");
+        showToast("Eight ash for the first beacon.", "gifts");
         granted = true;
       }
     }
@@ -4193,7 +4198,7 @@
         state.giftFirstSpire = true;
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstSpire");
-        showToast("Eight ash for the first spire.");
+        showToast("Eight ash for the first spire.", "gifts");
         granted = true;
       }
     }
@@ -4207,7 +4212,7 @@
         state.giftFirstObelisk = true;
         state.ash = N.add(state.ash, 8);
         markChronicle("giftFirstObelisk");
-        showToast("Eight ash for the first obelisk.");
+        showToast("Eight ash for the first obelisk.", "gifts");
         granted = true;
       }
     }
@@ -4217,7 +4222,7 @@
       state.giftPeakSpires = true;
       state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakSpires");
-      showToast("Seven ash for five spires.");
+      showToast("Seven ash for five spires.", "gifts");
       granted = true;
     }
 
@@ -4226,7 +4231,7 @@
       state.giftPeakObelisks = true;
       state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakObelisks");
-      showToast("Seven ash for five obelisks.");
+      showToast("Seven ash for five obelisks.", "gifts");
       granted = true;
     }
 
@@ -4235,7 +4240,7 @@
       state.giftPeakBeacons = true;
       state.ash = N.add(state.ash, 7);
       markChronicle("giftPeakBeacons");
-      showToast("Seven ash for five beacons.");
+      showToast("Seven ash for five beacons.", "gifts");
       granted = true;
     }
 
@@ -4244,7 +4249,7 @@
       state.giftPeakHearths = true;
       state.ash = N.add(state.ash, 10);
       markChronicle("giftPeakHearths");
-      showToast("Ten ash for five hearths.");
+      showToast("Ten ash for five hearths.", "gifts");
       granted = true;
     }
 
@@ -4252,7 +4257,7 @@
       state.giftFirstCinders = true;
       state.ash = N.add(state.ash, 8);
       markChronicle("giftFirstCinders");
-      showToast("Eight ash for the first cinders.");
+      showToast("Eight ash for the first cinders.", "gifts");
       granted = true;
     }
 
@@ -4260,7 +4265,7 @@
       state.giftFirstUrnRite = true;
       state.ash = N.add(state.ash, 6);
       markChronicle("giftFirstUrnRite");
-      showToast("Six ash for the first cut urn.");
+      showToast("Six ash for the first cut urn.", "gifts");
       granted = true;
     }
 
@@ -4268,7 +4273,7 @@
       state.giftFirstHearthRite = true;
       state.ash = N.add(state.ash, 8);
       markChronicle("giftFirstHearthRite");
-      showToast("Eight ash for the first cut hearth.");
+      showToast("Eight ash for the first cut hearth.", "gifts");
       granted = true;
     }
 
@@ -4276,7 +4281,7 @@
       state.giftFirstBeaconRite = true;
       state.ash = N.add(state.ash, 10);
       markChronicle("giftFirstBeaconRite");
-      showToast("Ten ash for the first cut beacon.");
+      showToast("Ten ash for the first cut beacon.", "gifts");
       granted = true;
     }
 
@@ -4284,7 +4289,7 @@
       state.giftFirstSpireRite = true;
       state.ash = N.add(state.ash, 10);
       markChronicle("giftFirstSpireRite");
-      showToast("Ten ash for the first cut spire.");
+      showToast("Ten ash for the first cut spire.", "gifts");
       granted = true;
     }
 
@@ -4292,7 +4297,7 @@
       state.giftFirstChalice = true;
       state.souls = N.add(state.souls, 15);
       markChronicle("giftFirstChalice");
-      showToast("Fifteen souls for the first chalice.");
+      showToast("Fifteen souls for the first chalice.", "gifts");
       granted = true;
     }
 
@@ -4300,7 +4305,7 @@
       state.giftThreeChalices = true;
       state.ash = N.add(state.ash, 10);
       markChronicle("giftThreeChalices");
-      showToast("Ten ash for three chalices.");
+      showToast("Ten ash for three chalices.", "gifts");
       granted = true;
     }
 
@@ -4308,7 +4313,7 @@
       state.giftFullCup = true;
       state.souls = N.add(state.souls, 25);
       markChronicle("giftFullCup");
-      showToast("Twenty-five souls for a full cup.");
+      showToast("Twenty-five souls for a full cup.", "gifts");
       granted = true;
     }
 
@@ -4316,7 +4321,7 @@
       state.giftFirstOssuary = true;
       state.souls = N.add(state.souls, 10);
       markChronicle("giftFirstOssuary");
-      showToast("Ten souls for the first bone.");
+      showToast("Ten souls for the first bone.", "gifts");
       granted = true;
     }
 
@@ -4324,7 +4329,7 @@
       state.giftFirstLongerProcession = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerProcession");
-      showToast("Five souls for the longer walk.");
+      showToast("Five souls for the longer walk.", "gifts");
       granted = true;
     }
 
@@ -4332,7 +4337,7 @@
       state.giftFirstDeeperToll = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstDeeperToll");
-      showToast("Five souls for the longer toll.");
+      showToast("Five souls for the longer toll.", "gifts");
       granted = true;
     }
 
@@ -4340,7 +4345,7 @@
       state.giftFirstLongerWake = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerWake");
-      showToast("Five souls for the longer wake.");
+      showToast("Five souls for the longer wake.", "gifts");
       granted = true;
     }
 
@@ -4348,7 +4353,7 @@
       state.giftFirstLongerTithe = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerTithe");
-      showToast("Five souls for the longer tithe.");
+      showToast("Five souls for the longer tithe.", "gifts");
       granted = true;
     }
 
@@ -4356,7 +4361,7 @@
       state.giftFirstLongerVeil = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerVeil");
-      showToast("Five souls for the longer veil.");
+      showToast("Five souls for the longer veil.", "gifts");
       granted = true;
     }
 
@@ -4364,7 +4369,7 @@
       state.giftFirstLongerHymn = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerHymn");
-      showToast("Five souls for the longer hymn.");
+      showToast("Five souls for the longer hymn.", "gifts");
       granted = true;
     }
 
@@ -4372,7 +4377,7 @@
       state.giftFirstLongerKnell = true;
       state.souls = N.add(state.souls, 5);
       markChronicle("giftFirstLongerKnell");
-      showToast("Five souls for the longer knell.");
+      showToast("Five souls for the longer knell.", "gifts");
       granted = true;
     }
 
@@ -4380,7 +4385,7 @@
       state.giftFullOssuary = true;
       state.souls = N.add(state.souls, 20);
       markChronicle("giftFullOssuary");
-      showToast("Twenty souls for eight bones.");
+      showToast("Twenty souls for eight bones.", "gifts");
       granted = true;
     }
 
@@ -4388,7 +4393,7 @@
       state.giftHundredDraws = true;
       state.souls = N.add(state.souls, 15);
       markChronicle("giftHundredDraws");
-      showToast("Fifteen souls for a hundred draws.");
+      showToast("Fifteen souls for a hundred draws.", "gifts");
       granted = true;
     }
 
@@ -4396,7 +4401,7 @@
       state.giftTwoHundredDraws = true;
       state.souls = N.add(state.souls, 20);
       markChronicle("giftTwoHundredDraws");
-      showToast("Twenty souls for two hundred draws.");
+      showToast("Twenty souls for two hundred draws.", "gifts");
       granted = true;
     }
 
@@ -4404,7 +4409,7 @@
       state.giftThreeHundredDraws = true;
       state.souls = N.add(state.souls, 25);
       markChronicle("giftThreeHundredDraws");
-      showToast("Twenty-five souls for three hundred draws.");
+      showToast("Twenty-five souls for three hundred draws.", "gifts");
       granted = true;
     }
 
@@ -4412,7 +4417,7 @@
       state.giftFirstEmberVow = true;
       state.ash = N.add(state.ash, 8);
       markChronicle("giftFirstEmberVow");
-      showToast("Eight ash for the ember vow.");
+      showToast("Eight ash for the ember vow.", "gifts");
       granted = true;
     }
 
@@ -4422,7 +4427,7 @@
       state.giftTwoVows = true;
       state.souls = N.add(state.souls, 10);
       markChronicle("giftTwoVows");
-      showToast("Ten souls for two vows.");
+      showToast("Ten souls for two vows.", "gifts");
       granted = true;
     }
 
@@ -4430,7 +4435,7 @@
       state.giftThreeVows = true;
       state.souls = N.add(state.souls, 15);
       markChronicle("giftThreeVows");
-      showToast("Fifteen souls for three vows.");
+      showToast("Fifteen souls for three vows.", "gifts");
       granted = true;
     }
 
@@ -4438,7 +4443,7 @@
       state.giftAllVows = true;
       state.souls = N.add(state.souls, 25);
       markChronicle("giftAllVows");
-      showToast("Twenty-five souls for four vows.");
+      showToast("Twenty-five souls for four vows.", "gifts");
       granted = true;
     }
 
@@ -4448,7 +4453,7 @@
       state.lifetimeShades = N.add(state.lifetimeShades, 2);
       bumpPeakShades();
       markChronicle("giftFetter");
-      showToast("Two shades for the first fetter.");
+      showToast("Two shades for the first fetter.", "gifts");
       granted = true;
     }
 
@@ -4459,7 +4464,7 @@
       state.lifetimeShades = N.add(state.lifetimeShades, 15);
       bumpPeakShades();
       markChronicle("giftPeakFetters");
-      showToast("Fifteen shades for eight fetters.");
+      showToast("Fifteen shades for eight fetters.", "gifts");
       granted = true;
     }
 
@@ -4470,7 +4475,7 @@
       state.bonusTenThousandSouls = true;
       state.souls = N.add(state.souls, 500);
       markChronicle("giftTenThousand");
-      showToast("The well returns five hundred souls.");
+      showToast("The well returns five hundred souls.", "gifts");
       granted = true;
     }
 
@@ -4481,7 +4486,7 @@
         state.unlockedVessels = true;
       }
       markChronicle("giftThrone");
-      showToast("A vessel is returned.");
+      showToast("A vessel is returned.", "gifts");
       granted = true;
     }
 
@@ -4492,7 +4497,7 @@
       state.giftFiveTributes = true;
       state.favor = (Number(state.favor) || 0) + 2;
       markChronicle("giftFiveTributes");
-      showToast("The GodKing returns two Favor.");
+      showToast("The GodKing returns two Favor.", "gifts");
       granted = true;
     }
 
@@ -4503,7 +4508,7 @@
       state.giftEightTributes = true;
       state.souls = N.add(state.souls, 25);
       markChronicle("giftEightTributes");
-      showToast("Twenty-five souls for eight emptyings.");
+      showToast("Twenty-five souls for eight emptyings.", "gifts");
       granted = true;
     }
 
@@ -4514,7 +4519,7 @@
       state.giftTwelveTributes = true;
       state.souls = N.add(state.souls, 40);
       markChronicle("giftTwelveTributes");
-      showToast("Forty souls for twelve emptyings.");
+      showToast("Forty souls for twelve emptyings.", "gifts");
       granted = true;
     }
 
@@ -4525,7 +4530,7 @@
       state.giftSixteenTributes = true;
       state.souls = N.add(state.souls, 50);
       markChronicle("giftSixteenTributes");
-      showToast("Fifty souls for sixteen emptyings.");
+      showToast("Fifty souls for sixteen emptyings.", "gifts");
       granted = true;
     }
 
@@ -4536,7 +4541,7 @@
       state.giftTwentyTributes = true;
       state.souls = N.add(state.souls, 60);
       markChronicle("giftTwentyTributes");
-      showToast("Sixty souls for twenty emptyings.");
+      showToast("Sixty souls for twenty emptyings.", "gifts");
       granted = true;
     }
 
@@ -4547,7 +4552,7 @@
       state.giftTwentyFourTributes = true;
       state.souls = N.add(state.souls, 70);
       markChronicle("giftTwentyFourTributes");
-      showToast("Seventy souls for twenty-four emptyings.");
+      showToast("Seventy souls for twenty-four emptyings.", "gifts");
       granted = true;
     }
 
@@ -4558,7 +4563,7 @@
       state.giftTwentyEightTributes = true;
       state.souls = N.add(state.souls, 80);
       markChronicle("giftTwentyEightTributes");
-      showToast("Eighty souls for twenty-eight emptyings.");
+      showToast("Eighty souls for twenty-eight emptyings.", "gifts");
       granted = true;
     }
 
@@ -4569,7 +4574,7 @@
       state.giftThirtyTwoTributes = true;
       state.souls = N.add(state.souls, 90);
       markChronicle("giftThirtyTwoTributes");
-      showToast("Ninety souls for thirty-two emptyings.");
+      showToast("Ninety souls for thirty-two emptyings.", "gifts");
       granted = true;
     }
 
@@ -4580,7 +4585,7 @@
       state.giftThirtySixTributes = true;
       state.souls = N.add(state.souls, 100);
       markChronicle("giftThirtySixTributes");
-      showToast("A hundred souls for thirty-six emptyings.");
+      showToast("A hundred souls for thirty-six emptyings.", "gifts");
       granted = true;
     }
 
@@ -4591,12 +4596,13 @@
       state.giftFortyTributes = true;
       state.souls = N.add(state.souls, 110);
       markChronicle("giftFortyTributes");
-      showToast("A hundred and ten souls for forty emptyings.");
+      showToast("A hundred and ten souls for forty emptyings.", "gifts");
       granted = true;
     }
 
     if (tryNamesBound()) granted = true;
 
+    flushGiftToasts();
     if (granted) save();
   }
 
@@ -4611,12 +4617,12 @@
       current += 1;
       state.namesBound = current;
       markChronicle("name" + current);
-      showToast("A name is bound: " + epithet + ".");
+      showToast("A name is bound: " + epithet + ".", "gifts");
       if (current === 1 && !state.giftFirstName) {
         state.giftFirstName = true;
         state.souls = N.add(state.souls, 15);
         markChronicle("giftFirstName");
-        showToast("Fifteen souls for the first name.");
+        showToast("Fifteen souls for the first name.", "gifts");
       }
       granted = true;
     }
@@ -4624,7 +4630,7 @@
     if (state.namesBound >= 12 && !state.namesComplete) {
       state.namesComplete = true;
       markChronicle("namesComplete");
-      showToast("The names of the bound are spoken. The harvest deepens.");
+      showToast("The names of the bound are spoken. The harvest deepens.", "gifts");
       granted = true;
     }
     if (state.namesComplete && !state.giftNamesComplete) {
@@ -4639,7 +4645,7 @@
         remOn
           ? "The GodKing returns Favor and Remembrance."
           : "The GodKing returns Favor."
-      );
+      , "gifts");
       granted = true;
     }
     return granted;
@@ -7442,10 +7448,109 @@
     }
   }
 
-  function showToast(message) {
+  function toastOverflowLabel(n) {
+    return "\u2026and " + n + " more.";
+  }
+
+  function toastOverflowCount(message) {
+    var m = /^\u2026and (\d+) more\.$/.exec(String(message || ""));
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  /** Pure: enqueue onto a queue copy, never exceeding max (overflow summary in last slot). */
+  function capEnqueueToast(queue, message, max) {
+    var q = queue ? queue.slice() : [];
+    var lim = max || TOAST_QUEUE_MAX;
+    if (!message) return q;
+    if (q.length < lim) {
+      q.push(message);
+      return q;
+    }
+    var last = q[q.length - 1];
+    var prev = toastOverflowCount(last);
+    var dropped = prev > 0 ? prev + 1 : 2;
+    q[q.length - 1] = toastOverflowLabel(dropped);
+    return q;
+  }
+
+  function pushToastQueued(message) {
     if (!message) return;
+    var next = capEnqueueToast(toastQueue, message, TOAST_QUEUE_MAX);
+    toastQueue.length = 0;
+    for (var i = 0; i < next.length; i++) toastQueue.push(next[i]);
+  }
+
+  function formatGiftBatchSummary(count, totals) {
+    var t = totals || {};
+    var parts = [];
+    var names = Math.max(0, Math.floor(Number(t.names) || 0));
+    var ash = Math.max(0, Math.floor(Number(t.ash) || 0));
+    var souls = Math.max(0, Math.floor(Number(t.souls) || 0));
+    var shades = Math.max(0, Math.floor(Number(t.shades) || 0));
+    var vessels = Math.max(0, Math.floor(Number(t.vessels) || 0));
+    var favor = Math.max(0, Math.floor(Number(t.favor) || 0));
+    if (names > 0) parts.push("+" + names + (names === 1 ? " name" : " names"));
+    if (ash > 0) parts.push("+" + ash + " ash");
+    if (souls > 0) parts.push("+" + souls + (souls === 1 ? " soul" : " souls"));
+    if (shades > 0) parts.push("+" + shades + (shades === 1 ? " shade" : " shades"));
+    if (vessels > 0) parts.push("+" + vessels + (vessels === 1 ? " vessel" : " vessels"));
+    if (favor > 0) parts.push("+" + favor + " Favor");
+    if (parts.length) return "The well was generous: " + parts.join(", ") + ".";
+    var n = Math.max(0, Math.floor(Number(count) || 0));
+    return "The well was generous. " + n + " gifts.";
+  }
+
+  function beginGiftToastBatch() {
+    giftToastBatch = {
+      messages: [],
+      souls: N.clone(state.souls),
+      ash: N.clone(state.ash),
+      shades: N.clone(state.shades),
+      vessels: N.clone(state.vessels),
+      names: Math.max(0, Math.floor(Number(state.namesBound) || 0)),
+      favor: Number(state.favor) || 0
+    };
+  }
+
+  function flushGiftToasts() {
+    if (!giftToastBatch) return;
+    var batch = giftToastBatch;
+    giftToastBatch = null;
+    var msgs = batch.messages || [];
+    if (!msgs.length) return;
+    if (msgs.length === 1) {
+      showToast(msgs[0]);
+      return;
+    }
+    var soulsGain = Math.max(0, Math.floor(N.toNumber(N.sub(state.souls, batch.souls)) || 0));
+    var ashGain = Math.max(0, Math.floor(N.toNumber(N.sub(state.ash, batch.ash)) || 0));
+    var shadesGain = Math.max(0, Math.floor(N.toNumber(N.sub(state.shades, batch.shades)) || 0));
+    var vesselsGain = Math.max(0, Math.floor(N.toNumber(N.sub(state.vessels, batch.vessels)) || 0));
+    var namesGain = Math.max(
+      0,
+      Math.floor(Number(state.namesBound) || 0) - (Number(batch.names) || 0)
+    );
+    var favorGain = Math.max(0, (Number(state.favor) || 0) - (Number(batch.favor) || 0));
+    showToast(
+      formatGiftBatchSummary(msgs.length, {
+        souls: soulsGain,
+        ash: ashGain,
+        shades: shadesGain,
+        vessels: vesselsGain,
+        names: namesGain,
+        favor: favorGain
+      })
+    );
+  }
+
+  function showToast(message, groupKey) {
+    if (!message) return;
+    if (groupKey === "gifts" && giftToastBatch) {
+      giftToastBatch.messages.push(message);
+      return;
+    }
     if (!els.toast || toastHold || toastActive) {
-      toastQueue.push(message);
+      pushToastQueued(message);
       return;
     }
     presentToast(message);
@@ -7465,9 +7570,10 @@
     els.toast.classList.remove("is-hidden");
     void els.toast.offsetWidth;
     els.toast.classList.add("is-visible");
+    var dwell = toastQueue.length >= 1 ? TOAST_FAST_MS : TOAST_MS;
     toastTimer = window.setTimeout(function () {
       hideToast(false);
-    }, TOAST_MS);
+    }, dwell);
   }
 
   function hideToast(immediate) {
@@ -7477,6 +7583,7 @@
     if (immediate) {
       toastQueue.length = 0;
       toastActive = false;
+      toastEscapeArmed = false;
       els.toast.classList.add("is-hidden");
       return;
     }
@@ -7486,11 +7593,31 @@
       presentToast(next);
       return;
     }
+    toastEscapeArmed = false;
     window.setTimeout(function () {
       if (!els.toast.classList.contains("is-visible") && !toastActive) {
         els.toast.classList.add("is-hidden");
       }
     }, 500);
+  }
+
+  /** Click / first Escape → next; Escape again while armed → clear queue. */
+  function dismissToastNext() {
+    if (!toastActive && !toastQueue.length) return;
+    hideToast(false);
+  }
+
+  function dismissToastEscape() {
+    if (!toastActive && !toastQueue.length) {
+      toastEscapeArmed = false;
+      return;
+    }
+    if (toastEscapeArmed) {
+      hideToast(true);
+      return;
+    }
+    toastEscapeArmed = true;
+    hideToast(false);
   }
 
   function bindLabel(oneText, verb, k, unitOne, unitMany) {
@@ -9822,6 +9949,11 @@
     els.vowEmberRow = document.getElementById("vow-ember-row");
     els.vowEmberBuy = document.getElementById("vow-ember-buy");
     els.toast = document.getElementById("toast");
+    if (els.toast) {
+      els.toast.addEventListener("click", function () {
+        dismissToastNext();
+      });
+    }
     els.resetBtn = document.getElementById("reset-btn");
     els.nextGoal = document.getElementById("next-goal");
     els.chronicleList = document.getElementById("chronicle-list");
@@ -10044,6 +10176,15 @@
       var active = document.activeElement || target;
       if (isTypingTarget(target) || isTypingTarget(active)) return;
 
+      var keyEarly = String(ev.key || "").toLowerCase();
+      if (keyEarly === "escape") {
+        if (toastActive || toastQueue.length) {
+          ev.preventDefault();
+          dismissToastEscape();
+        }
+        return;
+      }
+
       var actionEl = active || target;
       var tag = actionEl && actionEl.tagName ? actionEl.tagName.toLowerCase() : "";
       var buttonEl = null;
@@ -10098,6 +10239,15 @@
     if (pendingAwayToast) {
       toastQueue.unshift(pendingAwayToast);
       pendingAwayToast = null;
+      if (toastQueue.length > TOAST_QUEUE_MAX) {
+        var awayExtra = toastQueue.length - TOAST_QUEUE_MAX;
+        toastQueue.length = TOAST_QUEUE_MAX;
+        var awayLast = toastQueue[TOAST_QUEUE_MAX - 1];
+        var awayPrev = toastOverflowCount(awayLast);
+        toastQueue[TOAST_QUEUE_MAX - 1] = toastOverflowLabel(
+          awayPrev > 0 ? awayPrev + awayExtra : awayExtra + 1
+        );
+      }
     }
     toastHold = false;
     if (!toastActive && toastQueue.length) {
@@ -10168,6 +10318,13 @@
     hotkeyDefaultGuard: hotkeyDefaultGuard,
     HOTKEYS: HOTKEYS,
     resolveHotkey: resolveHotkey,
+    TOAST_MS: TOAST_MS,
+    TOAST_FAST_MS: TOAST_FAST_MS,
+    TOAST_QUEUE_MAX: TOAST_QUEUE_MAX,
+    toastOverflowLabel: toastOverflowLabel,
+    toastOverflowCount: toastOverflowCount,
+    capEnqueueToast: capEnqueueToast,
+    formatGiftBatchSummary: formatGiftBatchSummary,
     UNLOCK_AUTOBIND_URNS: UNLOCK_AUTOBIND_URNS,
     UNLOCK_AUTOBIND_HEARTHS: UNLOCK_AUTOBIND_HEARTHS,
     UNLOCK_AUTOBIND_BEACONS: UNLOCK_AUTOBIND_BEACONS,
