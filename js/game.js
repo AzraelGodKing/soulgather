@@ -68,6 +68,7 @@
   var AUTOBIND_INTERVAL = 1;
   var LIVE_FRAME_MAX = 1.0;
   var autobindAcc = 0;
+  var sanityAcc = 0;
   var HOLLOW_GRACE = 90;
   var HOLLOW_INTERVAL = 45;
   var HOLLOW_MAX = 5;
@@ -2478,6 +2479,8 @@
   function applyDt(dt, live) {
     if (dt <= 0 || !isFinite(dt)) return;
     dt = clamp(dt, 0, MAX_DT);
+    tripwireSanity();
+    if (loadFailed) return;
 
     var remaining = dt;
     while (remaining > 0) {
@@ -2560,6 +2563,12 @@
     checkUnlock();
     // AZR-163: credit wall clock only for the clamped dt actually simulated
     state.simulatedUntil = (Number(state.simulatedUntil) || Date.now()) + dt * 1000;
+    // AZR-168: ~1/s NaN/negative core-currency tripwire (not every frame)
+    sanityAcc += dt;
+    if (sanityAcc >= 1) {
+      sanityAcc = 0;
+      tripwireSanity();
+    }
   }
 
   function checkUnlock() {
@@ -5396,6 +5405,57 @@
     };
   }
 
+  function loadCount(v, max) {
+    var n = Math.floor(Number(v) || 0);
+    if (!isFinite(n) || n < 0) n = 0;
+    if (max != null) n = Math.min(max, n);
+    return n;
+  }
+
+  function loadNum(v) {
+    var x = N.load(v);
+    return N.isFinite(x) && N.cmp(x, 0) >= 0 ? x : N.fromNumber(0);
+  }
+
+  function numFieldBroken(v) {
+    if (typeof v === "number") return !isFinite(v) || v < 0;
+    if (v && typeof v === "object") {
+      if (typeof v.m !== "number" || !isFinite(v.m)) return true;
+      if (typeof v.e === "number" && !isFinite(v.e)) return true;
+      if (v.m < 0) return true;
+      return false;
+    }
+    return true;
+  }
+
+  function coreCurrenciesBroken() {
+    return (
+      numFieldBroken(state.souls) ||
+      numFieldBroken(state.shades) ||
+      numFieldBroken(state.ash) ||
+      numFieldBroken(state.lifetimeSouls)
+    );
+  }
+
+  function tripwireSanity() {
+    if (loadFailed) return;
+    if (!coreCurrenciesBroken()) return;
+    var raw = null;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+    } catch (err) {
+      raw = null;
+    }
+    if (raw == null) {
+      try {
+        raw = JSON.stringify(serializeState());
+      } catch (err2) {
+        raw = "";
+      }
+    }
+    beginLoadFailure(raw);
+  }
+
   function isFiniteStock(v) {
     if (typeof v === "number") return isFinite(v);
     if (v && typeof v === "object" && !Array.isArray(v)) {
@@ -5414,40 +5474,40 @@
     if (!isFiniteStock(data.lifetimeSouls)) return false;
     if (data.favorEarned != null && data.favorEarned !== undefined) {
       var fe = Number(data.favorEarned);
-      if (!isFinite(fe)) return false;
+      if (!isFinite(fe) || fe < 0) return false;
     }
     return true;
   }
 
   function applySaveData(data) {
-    state.souls = N.load(data.souls);
-    state.lifetimeSouls = N.load(data.lifetimeSouls);
-    state.lifetimeShades = N.load(data.lifetimeShades);
-    state.lifetimeSpirits = N.load(data.lifetimeSpirits);
-    state.shades = N.load(data.shades);
-    state.spirits = N.load(data.spirits);
-    state.vessels = N.load(data.vessels);
-    state.thrones = Number(data.thrones) || 0;
-    state.chalices = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(data.chalices) || 0)));
-    state.wellDepth = Number(data.wellDepth) || 0;
-    state.lanterns = N.load(data.lanterns);
-    state.ash = N.load(data.ash);
-    state.censers = N.load(data.censers);
-    state.pyres = N.load(data.pyres);
-    state.urns = N.load(data.urns);
-    state.hearths = N.load(data.hearths);
-    state.beacons = N.load(data.beacons);
-    state.spires = N.load(data.spires);
-    state.obelisks = N.load(data.obelisks);
-    state.fetters = N.load(data.fetters);
-    state.emberLevel = Number(data.emberLevel) || 0;
-    state.chainLevel = Number(data.chainLevel) || 0;
-    state.hollowLevel = Number(data.hollowLevel) || 0;
+    state.souls = loadNum(data.souls);
+    state.lifetimeSouls = loadNum(data.lifetimeSouls);
+    state.lifetimeShades = loadNum(data.lifetimeShades);
+    state.lifetimeSpirits = loadNum(data.lifetimeSpirits);
+    state.shades = loadNum(data.shades);
+    state.spirits = loadNum(data.spirits);
+    state.vessels = loadNum(data.vessels);
+    state.thrones = loadCount(data.thrones);
+    state.chalices = loadCount(data.chalices, CHALICE_MAX);
+    state.wellDepth = loadCount(data.wellDepth);
+    state.lanterns = loadNum(data.lanterns);
+    state.ash = loadNum(data.ash);
+    state.censers = loadNum(data.censers);
+    state.pyres = loadNum(data.pyres);
+    state.urns = loadNum(data.urns);
+    state.hearths = loadNum(data.hearths);
+    state.beacons = loadNum(data.beacons);
+    state.spires = loadNum(data.spires);
+    state.obelisks = loadNum(data.obelisks);
+    state.fetters = loadNum(data.fetters);
+    state.emberLevel = loadCount(data.emberLevel);
+    state.chainLevel = loadCount(data.chainLevel);
+    state.hollowLevel = loadCount(data.hollowLevel);
     state.unlockedSpirits = !!data.unlockedSpirits;
     state.unlockedVessels = !!data.unlockedVessels;
     state.unlockedWell = !!data.unlockedWell;
     state.unlockedThrones = !!data.unlockedThrones;
-    state.unlockedChalices = !!data.unlockedChalices || (Number(data.chalices) || 0) >= 1 || (Number(data.thrones) || 0) >= UNLOCK_CHALICES;
+    state.unlockedChalices = !!data.unlockedChalices || (loadCount(data.chalices) || 0) >= 1 || (loadCount(data.thrones) || 0) >= UNLOCK_CHALICES;
     state.unlockedLanterns = !!data.unlockedLanterns;
     state.unlockedMarks = !!data.unlockedMarks;
     state.unlockedCensers = !!data.unlockedCensers;
@@ -5472,69 +5532,60 @@
     state.unlockedAutobindBeacons = !!data.unlockedAutobindBeacons;
     state.unlockedAutobindSpires = !!data.unlockedAutobindSpires;
     state.unlockedAutobindObelisks = !!data.unlockedAutobindObelisks;
-    state.unlockedNightTithe = !!data.unlockedNightTithe || (Number(data.nightLeft) || 0) > 0;
-    state.unlockedVeil = !!data.unlockedVeil || (Number(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (Number(data.veilLeft) || 0) > 0;
-    state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (Number(data.wakeLeft) || 0) > 0;
-    state.unlockedToll = !!data.unlockedToll || (Number(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (Number(data.tollLeft) || 0) > 0;
+    state.unlockedNightTithe = !!data.unlockedNightTithe || (loadCount(data.nightLeft) || 0) > 0;
+    state.unlockedVeil = !!data.unlockedVeil || (loadCount(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (loadCount(data.veilLeft) || 0) > 0;
+    state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (loadCount(data.wakeLeft) || 0) > 0;
+    state.unlockedToll = !!data.unlockedToll || (loadCount(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (loadCount(data.tollLeft) || 0) > 0;
     state.toastShown = !!data.toastShown;
     state.vesselToastShown = !!data.vesselToastShown;
     state.throneToastShown = !!data.throneToastShown;
     state.lanternToastShown = !!data.lanternToastShown;
     state.censerToastShown = !!data.censerToastShown;
-    state.favor = Number(data.favor) || 0;
+    state.favor = loadCount(data.favor);
     if (data.favorEarned == null) {
-      state.favorEarned = Number(data.favor) || 0;
+      state.favorEarned = loadCount(data.favor);
     } else {
-      state.favorEarned = Number(data.favorEarned) || 0;
+      state.favorEarned = loadCount(data.favorEarned);
     }
-    state.edictLevel = Number(data.edictLevel) || 0;
-    state.memoryLevel = Number(data.memoryLevel) || 0;
-    state.echoLevel = Number(data.echoLevel) || 0;
-    if (state.echoLevel > 1) state.echoLevel = 1;
-    state.seatLevel = Number(data.seatLevel) || 0;
-    state.kindleLevel = Number(data.kindleLevel) || 0;
-    state.ashenLevel = Number(data.ashenLevel) || 0;
-    state.depthLevel = Math.max(0, Math.floor(Number(data.depthLevel) || 0));
+    state.edictLevel = loadCount(data.edictLevel);
+    state.memoryLevel = loadCount(data.memoryLevel);
+    state.echoLevel = loadCount(data.echoLevel, 1);
+    state.seatLevel = loadCount(data.seatLevel);
+    state.kindleLevel = loadCount(data.kindleLevel);
+    state.ashenLevel = loadCount(data.ashenLevel);
+    state.depthLevel = loadCount(data.depthLevel);
     state.buyMode = normalizeBuyMode(data.buyMode);
     state.buyModeHintDismissed = !!data.buyModeHintDismissed;
-    state.siphonLevel = Number(data.siphonLevel) || 0;
-    state.levyLevel = Number(data.levyLevel) || 0;
-    state.cinderLevel = Number(data.cinderLevel) || 0;
-    state.urnRiteLevel = Number(data.urnRiteLevel) || 0;
-    state.hearthRiteLevel = Number(data.hearthRiteLevel) || 0;
-    state.beaconRiteLevel = Number(data.beaconRiteLevel) || 0;
-    state.spireRiteLevel = Number(data.spireRiteLevel) || 0;
-    state.bindingTollLevel = Math.max(0, Math.min(BINDING_TOLL_MAX, Math.floor(Number(data.bindingTollLevel) || 0)));
+    state.siphonLevel = loadCount(data.siphonLevel);
+    state.levyLevel = loadCount(data.levyLevel);
+    state.cinderLevel = loadCount(data.cinderLevel);
+    state.urnRiteLevel = loadCount(data.urnRiteLevel);
+    state.hearthRiteLevel = loadCount(data.hearthRiteLevel);
+    state.beaconRiteLevel = loadCount(data.beaconRiteLevel);
+    state.spireRiteLevel = loadCount(data.spireRiteLevel);
+    state.bindingTollLevel = loadCount(data.bindingTollLevel, BINDING_TOLL_MAX);
     state.unlockedBindingToll = !!data.unlockedBindingToll || state.bindingTollLevel >= 1;
-    state.hollowStacks = Math.max(0, Math.min(HOLLOW_MAX, Math.floor(Number(data.hollowStacks) || 0)));
-    state.hollowIdle = Math.max(0, Number(data.hollowIdle) || 0);
+    state.hollowStacks = loadCount(data.hollowStacks, HOLLOW_MAX);
+    state.hollowIdle = loadCount(data.hollowIdle);
     state.hollowWarned = !!data.hollowWarned;
     state.wellDraws = !!data.wellDraws;
     state.unlockedWellDraws = !!data.unlockedWellDraws;
     state.aspect = normalizeAspect(data.aspect);
-    state.lastTick = Number(data.lastTick) || Date.now();
-    state.simulatedUntil = Number(data.simulatedUntil) || Number(data.lastTick) || Date.now();
+    state.lastTick = loadCount(data.lastTick) || Date.now();
+    state.simulatedUntil = loadCount(data.simulatedUntil) || loadCount(data.lastTick) || Date.now();
     state.chronicle = normalizeChronicle(data.chronicle);
-    state.titheLeft = Number(data.titheLeft) || 0;
-    if (state.titheLeft < 0) state.titheLeft = 0;
-    state.nightLeft = Number(data.nightLeft) || 0;
-    if (state.nightLeft < 0) state.nightLeft = 0;
-    state.hymnLeft = Number(data.hymnLeft) || 0;
-    if (state.hymnLeft < 0) state.hymnLeft = 0;
-    state.veilLeft = Number(data.veilLeft) || 0;
-    if (state.veilLeft < 0) state.veilLeft = 0;
-    state.tollLeft = Number(data.tollLeft) || 0;
-    if (state.tollLeft < 0) state.tollLeft = 0;
-    state.wakeLeft = Number(data.wakeLeft) || 0;
-    if (state.wakeLeft < 0) state.wakeLeft = 0;
-    state.processionLeft = Number(data.processionLeft) || 0;
-    if (state.processionLeft < 0) state.processionLeft = 0;
-    state.knellLeft = Number(data.knellLeft) || 0;
-    if (state.knellLeft < 0) state.knellLeft = 0;
+    state.titheLeft = loadCount(data.titheLeft);
+    state.nightLeft = loadCount(data.nightLeft);
+    state.hymnLeft = loadCount(data.hymnLeft);
+    state.veilLeft = loadCount(data.veilLeft);
+    state.tollLeft = loadCount(data.tollLeft);
+    state.wakeLeft = loadCount(data.wakeLeft);
+    state.processionLeft = loadCount(data.processionLeft);
+    state.knellLeft = loadCount(data.knellLeft);
     if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) {
       state.unlockedWake = true;
     }
-    state.tithePaid = !!data.tithePaid || (Number(data.titheLeft) || 0) > 0;
+    state.tithePaid = !!data.tithePaid || (loadCount(data.titheLeft) || 0) > 0;
     state.autobind = !!data.autobind;
     state.autobindSpirits = !!data.autobindSpirits;
     state.autobindVessels = !!data.autobindVessels;
@@ -5549,7 +5600,7 @@
     state.autobindBeacons = !!data.autobindBeacons;
     state.autobindSpires = !!data.autobindSpires;
     state.autobindObelisks = !!data.autobindObelisks;
-    state.clicksThisRun = Math.max(0, Math.floor(Number(data.clicksThisRun) || 0));
+    state.clicksThisRun = loadCount(data.clicksThisRun);
     if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
     if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
     if (
@@ -5560,21 +5611,21 @@
     ) {
       state.unlockedWake = true;
     }
-    state.peakShades = N.max(N.load(data.peakShades), N.load(data.shades));
-    state.peakLanterns = N.max(N.load(data.peakLanterns), N.load(data.lanterns));
-    state.peakFetters = N.max(N.load(data.peakFetters), N.load(data.fetters));
-    state.peakCensers = N.max(N.load(data.peakCensers), N.load(data.censers));
-    state.peakPyres = N.max(N.load(data.peakPyres), N.load(data.pyres));
-    state.peakUrns = N.max(N.load(data.peakUrns), N.load(data.urns));
-    state.peakHearths = N.max(N.load(data.peakHearths), N.load(data.hearths));
-    state.peakBeacons = N.max(N.load(data.peakBeacons), N.load(data.beacons));
-    state.peakSpires = N.max(N.load(data.peakSpires), N.load(data.spires));
-    state.peakObelisks = N.max(N.load(data.peakObelisks), N.load(data.obelisks));
+    state.peakShades = N.max(loadNum(data.peakShades), loadNum(data.shades));
+    state.peakLanterns = N.max(loadNum(data.peakLanterns), loadNum(data.lanterns));
+    state.peakFetters = N.max(loadNum(data.peakFetters), loadNum(data.fetters));
+    state.peakCensers = N.max(loadNum(data.peakCensers), loadNum(data.censers));
+    state.peakPyres = N.max(loadNum(data.peakPyres), loadNum(data.pyres));
+    state.peakUrns = N.max(loadNum(data.peakUrns), loadNum(data.urns));
+    state.peakHearths = N.max(loadNum(data.peakHearths), loadNum(data.hearths));
+    state.peakBeacons = N.max(loadNum(data.peakBeacons), loadNum(data.beacons));
+    state.peakSpires = N.max(loadNum(data.peakSpires), loadNum(data.spires));
+    state.peakObelisks = N.max(loadNum(data.peakObelisks), loadNum(data.obelisks));
     state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
     state.bonusPeakShades = !!data.bonusPeakShades;
     state.bonusFirstVessel = !!data.bonusFirstVessel;
     if (data.bonusFirstTribute == null) {
-      state.bonusFirstTribute = (Number(data.tributesLaid) || 0) >= 1;
+      state.bonusFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
     } else {
       state.bonusFirstTribute = !!data.bonusFirstTribute;
     }
@@ -5584,89 +5635,89 @@
     state.bonusFirstFetter = !!data.bonusFirstFetter;
     state.bonusTenThousandSouls = !!data.bonusTenThousandSouls;
     state.bonusFirstThrone = !!data.bonusFirstThrone;
-    state.crownWeight = Math.max(0, Math.floor(Number(data.crownWeight) || 0));
+    state.crownWeight = loadCount(data.crownWeight);
     if (data.giftCrown == null) {
       state.giftCrown = state.crownWeight >= 1;
     } else {
       state.giftCrown = !!data.giftCrown;
     }
     if (data.giftFirstName == null) {
-      state.giftFirstName = Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 1;
+      state.giftFirstName = Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 1;
     } else {
       state.giftFirstName = !!data.giftFirstName;
     }
     if (data.giftFiveTributes == null) {
-      state.giftFiveTributes = (Number(data.tributesLaid) || 0) >= 5;
+      state.giftFiveTributes = (loadCount(data.tributesLaid) || 0) >= 5;
     } else {
       state.giftFiveTributes = !!data.giftFiveTributes;
     }
     if (data.giftEightTributes == null) {
-      state.giftEightTributes = (Number(data.tributesLaid) || 0) >= 8;
+      state.giftEightTributes = (loadCount(data.tributesLaid) || 0) >= 8;
     } else {
       state.giftEightTributes = !!data.giftEightTributes;
     }
     if (data.giftTwelveTributes == null) {
-      state.giftTwelveTributes = (Number(data.tributesLaid) || 0) >= 12;
+      state.giftTwelveTributes = (loadCount(data.tributesLaid) || 0) >= 12;
     } else {
       state.giftTwelveTributes = !!data.giftTwelveTributes;
     }
     if (data.giftSixteenTributes == null) {
-      state.giftSixteenTributes = (Number(data.tributesLaid) || 0) >= 16;
+      state.giftSixteenTributes = (loadCount(data.tributesLaid) || 0) >= 16;
     } else {
       state.giftSixteenTributes = !!data.giftSixteenTributes;
     }
     if (data.giftTwentyTributes == null) {
-      state.giftTwentyTributes = (Number(data.tributesLaid) || 0) >= 20;
+      state.giftTwentyTributes = (loadCount(data.tributesLaid) || 0) >= 20;
     } else {
       state.giftTwentyTributes = !!data.giftTwentyTributes;
     }
     if (data.giftTwentyFourTributes == null) {
       state.giftTwentyFourTributes =
         hasChronicle("giftTwentyFourTributes") ||
-        (Number(data.tributesLaid) || 0) >= 24;
+        (loadCount(data.tributesLaid) || 0) >= 24;
     } else {
       state.giftTwentyFourTributes = !!data.giftTwentyFourTributes;
     }
     if (data.giftTwentyEightTributes == null) {
       state.giftTwentyEightTributes =
         hasChronicle("giftTwentyEightTributes") ||
-        (Number(data.tributesLaid) || 0) >= 28;
+        (loadCount(data.tributesLaid) || 0) >= 28;
     } else {
       state.giftTwentyEightTributes = !!data.giftTwentyEightTributes;
     }
     if (data.giftThirtyTwoTributes == null) {
       state.giftThirtyTwoTributes =
         hasChronicle("giftThirtyTwoTributes") ||
-        (Number(data.tributesLaid) || 0) >= 32;
+        (loadCount(data.tributesLaid) || 0) >= 32;
     } else {
       state.giftThirtyTwoTributes = !!data.giftThirtyTwoTributes;
     }
     if (data.giftThirtySixTributes == null) {
       state.giftThirtySixTributes =
         hasChronicle("giftThirtySixTributes") ||
-        (Number(data.tributesLaid) || 0) >= 36;
+        (loadCount(data.tributesLaid) || 0) >= 36;
     } else {
       state.giftThirtySixTributes = !!data.giftThirtySixTributes;
     }
     if (data.giftFortyTributes == null) {
       state.giftFortyTributes =
         hasChronicle("giftFortyTributes") ||
-        (Number(data.tributesLaid) || 0) >= 40;
+        (loadCount(data.tributesLaid) || 0) >= 40;
     } else {
       state.giftFortyTributes = !!data.giftFortyTributes;
     }
     if (data.giftNamesComplete == null) {
-      state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(Number(data.namesBound) || 0)) >= 12;
+      state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 12;
     } else {
       state.giftNamesComplete = !!data.giftNamesComplete;
     }
     if (data.giftFirstVeil == null) {
-      state.giftFirstVeil = hasChronicle("veil") || (Number(data.veilLeft) || 0) > 0;
+      state.giftFirstVeil = hasChronicle("veil") || (loadCount(data.veilLeft) || 0) > 0;
     } else {
       state.giftFirstVeil = !!data.giftFirstVeil;
     }
     if (data.giftFirstWake == null) {
-      state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (Number(data.wakeLeft) || 0) > 0;
+      state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (loadCount(data.wakeLeft) || 0) > 0;
     } else {
       state.giftFirstWake = !!data.giftFirstWake;
     }
@@ -5767,7 +5818,7 @@
       state.giftFirstCinders =
         hasChronicle("giftFirstCinders") ||
         hasChronicle("cinders") ||
-        (Number(data.cinderLevel) || 0) > 0;
+        (loadCount(data.cinderLevel) || 0) > 0;
     } else {
       state.giftFirstCinders = !!data.giftFirstCinders;
     }
@@ -5775,7 +5826,7 @@
       state.giftFirstUrnRite =
         hasChronicle("giftFirstUrnRite") ||
         hasChronicle("urnRite") ||
-        (Number(data.urnRiteLevel) || 0) > 0;
+        (loadCount(data.urnRiteLevel) || 0) > 0;
     } else {
       state.giftFirstUrnRite = !!data.giftFirstUrnRite;
     }
@@ -5783,7 +5834,7 @@
       state.giftFirstHearthRite =
         hasChronicle("giftFirstHearthRite") ||
         hasChronicle("hearthRite") ||
-        (Number(data.hearthRiteLevel) || 0) > 0;
+        (loadCount(data.hearthRiteLevel) || 0) > 0;
     } else {
       state.giftFirstHearthRite = !!data.giftFirstHearthRite;
     }
@@ -5791,7 +5842,7 @@
       state.giftFirstBeaconRite =
         hasChronicle("giftFirstBeaconRite") ||
         hasChronicle("beaconRite") ||
-        (Number(data.beaconRiteLevel) || 0) > 0;
+        (loadCount(data.beaconRiteLevel) || 0) > 0;
     } else {
       state.giftFirstBeaconRite = !!data.giftFirstBeaconRite;
     }
@@ -5799,7 +5850,7 @@
       state.giftFirstSpireRite =
         hasChronicle("giftFirstSpireRite") ||
         hasChronicle("spireRite") ||
-        (Number(data.spireRiteLevel) || 0) > 0;
+        (loadCount(data.spireRiteLevel) || 0) > 0;
     } else {
       state.giftFirstSpireRite = !!data.giftFirstSpireRite;
     }
@@ -5825,7 +5876,7 @@
       state.giftFirstOssuary =
         hasChronicle("giftFirstOssuary") ||
         hasChronicle("ossuary") ||
-        (Number(data.ossuaryLevel) || 0) >= 1;
+        (loadCount(data.ossuaryLevel) || 0) >= 1;
     } else {
       state.giftFirstOssuary = !!data.giftFirstOssuary;
     }
@@ -5873,7 +5924,7 @@
       state.giftFirstProcession =
         hasChronicle("procession") ||
         hasChronicle("giftFirstProcession") ||
-        (Number(data.processionLeft) || 0) > 0;
+        (loadCount(data.processionLeft) || 0) > 0;
     } else {
       state.giftFirstProcession = !!data.giftFirstProcession;
     }
@@ -5881,7 +5932,7 @@
       state.giftFirstLongerProcession =
         hasChronicle("giftFirstLongerProcession") ||
         hasChronicle("longerProcession") ||
-        (Number(data.longerProcessionLevel) || 0) >= 1;
+        (loadCount(data.longerProcessionLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerProcession = !!data.giftFirstLongerProcession;
     }
@@ -5889,7 +5940,7 @@
       state.giftFirstDeeperToll =
         hasChronicle("giftFirstDeeperToll") ||
         hasChronicle("deeperToll") ||
-        (Number(data.deeperTollLevel) || 0) >= 1;
+        (loadCount(data.deeperTollLevel) || 0) >= 1;
     } else {
       state.giftFirstDeeperToll = !!data.giftFirstDeeperToll;
     }
@@ -5897,7 +5948,7 @@
       state.giftFirstLongerWake =
         hasChronicle("giftFirstLongerWake") ||
         hasChronicle("longerWake") ||
-        (Number(data.longerWakeLevel) || 0) >= 1;
+        (loadCount(data.longerWakeLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerWake = !!data.giftFirstLongerWake;
     }
@@ -5905,7 +5956,7 @@
       state.giftFirstLongerTithe =
         hasChronicle("giftFirstLongerTithe") ||
         hasChronicle("longerTithe") ||
-        (Number(data.longerTitheLevel) || 0) >= 1;
+        (loadCount(data.longerTitheLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerTithe = !!data.giftFirstLongerTithe;
     }
@@ -5913,7 +5964,7 @@
       state.giftFirstLongerVeil =
         hasChronicle("giftFirstLongerVeil") ||
         hasChronicle("longerVeil") ||
-        (Number(data.longerVeilLevel) || 0) >= 1;
+        (loadCount(data.longerVeilLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerVeil = !!data.giftFirstLongerVeil;
     }
@@ -5921,7 +5972,7 @@
       state.giftFirstLongerHymn =
         hasChronicle("giftFirstLongerHymn") ||
         hasChronicle("longerHymn") ||
-        (Number(data.longerHymnLevel) || 0) >= 1;
+        (loadCount(data.longerHymnLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerHymn = !!data.giftFirstLongerHymn;
     }
@@ -5929,7 +5980,7 @@
       state.giftFirstLongerKnell =
         hasChronicle("giftFirstLongerKnell") ||
         hasChronicle("longerKnell") ||
-        (Number(data.longerKnellLevel) || 0) >= 1;
+        (loadCount(data.longerKnellLevel) || 0) >= 1;
     } else {
       state.giftFirstLongerKnell = !!data.giftFirstLongerKnell;
     }
@@ -5937,7 +5988,7 @@
       state.giftFirstToll =
         hasChronicle("toll") ||
         hasChronicle("giftFirstToll") ||
-        (Number(data.tollLeft) || 0) > 0;
+        (loadCount(data.tollLeft) || 0) > 0;
     } else {
       state.giftFirstToll = !!data.giftFirstToll;
     }
@@ -5945,66 +5996,66 @@
       state.giftFirstKnell =
         hasChronicle("knell") ||
         hasChronicle("giftFirstKnell") ||
-        (Number(data.knellLeft) || 0) > 0;
+        (loadCount(data.knellLeft) || 0) > 0;
     } else {
       state.giftFirstKnell = !!data.giftFirstKnell;
     }
-    state.choirLevel = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(data.choirLevel) || 0)));
+    state.choirLevel = loadCount(data.choirLevel, CHOIR_MAX);
     state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
-    state.choirEdictLevel = Math.max(0, Math.floor(Number(data.choirEdictLevel) || 0));
-    state.hymnEdictLevel = Math.max(0, Math.floor(Number(data.hymnEdictLevel) || 0));
-    state.smokeEdictLevel = Math.max(0, Math.floor(Number(data.smokeEdictLevel) || 0));
-    state.embersEdictLevel = Math.max(0, Math.floor(Number(data.embersEdictLevel) || 0));
-    state.urnEdictLevel = Math.max(0, Math.floor(Number(data.urnEdictLevel) || 0));
-    state.hearthEdictLevel = Math.max(0, Math.floor(Number(data.hearthEdictLevel) || 0));
-    state.beaconEdictLevel = Math.max(0, Math.floor(Number(data.beaconEdictLevel) || 0));
-    state.spireEdictLevel = Math.max(0, Math.floor(Number(data.spireEdictLevel) || 0));
-    state.obeliskEdictLevel = Math.max(0, Math.floor(Number(data.obeliskEdictLevel) || 0));
-    state.cinderEdictLevel = Math.max(0, Math.floor(Number(data.cinderEdictLevel) || 0));
-    state.cutEdictLevel = Math.max(0, Math.floor(Number(data.cutEdictLevel) || 0));
+    state.choirEdictLevel = loadCount(data.choirEdictLevel);
+    state.hymnEdictLevel = loadCount(data.hymnEdictLevel);
+    state.smokeEdictLevel = loadCount(data.smokeEdictLevel);
+    state.embersEdictLevel = loadCount(data.embersEdictLevel);
+    state.urnEdictLevel = loadCount(data.urnEdictLevel);
+    state.hearthEdictLevel = loadCount(data.hearthEdictLevel);
+    state.beaconEdictLevel = loadCount(data.beaconEdictLevel);
+    state.spireEdictLevel = loadCount(data.spireEdictLevel);
+    state.obeliskEdictLevel = loadCount(data.obeliskEdictLevel);
+    state.cinderEdictLevel = loadCount(data.cinderEdictLevel);
+    state.cutEdictLevel = loadCount(data.cutEdictLevel);
     var tendingLoaded = data.tendingEdictLevel;
     if (tendingLoaded == null && data.kindlingEdictLevel != null) {
       tendingLoaded = data.kindlingEdictLevel;
     }
-    state.tendingEdictLevel = Math.max(0, Math.floor(Number(tendingLoaded) || 0));
-    state.gleamEdictLevel = Math.max(0, Math.floor(Number(data.gleamEdictLevel) || 0));
-    state.riseEdictLevel = Math.max(0, Math.floor(Number(data.riseEdictLevel) || 0));
-    state.cupEdictLevel = Math.max(0, Math.floor(Number(data.cupEdictLevel) || 0));
-    state.draughtEdictLevel = Math.max(0, Math.floor(Number(data.draughtEdictLevel) || 0));
-    state.wakeEdictLevel = Math.max(0, Math.floor(Number(data.wakeEdictLevel) || 0));
-    state.processionEdictLevel = Math.max(0, Math.floor(Number(data.processionEdictLevel) || 0));
-    state.tollEdictLevel = Math.max(0, Math.floor(Number(data.tollEdictLevel) || 0));
-    state.veilEdictLevel = Math.max(0, Math.floor(Number(data.veilEdictLevel) || 0));
-    state.knellEdictLevel = Math.max(0, Math.floor(Number(data.knellEdictLevel) || 0));
-    state.nightEdictLevel = Math.max(0, Math.floor(Number(data.nightEdictLevel) || 0));
-    state.longMemoryLevel = Math.max(0, Math.floor(Number(data.longMemoryLevel) || 0));
-    state.quietCourtLevel = Math.max(0, Math.floor(Number(data.quietCourtLevel) || 0));
-    state.namesBound = Math.max(0, Math.min(12, Math.floor(Number(data.namesBound) || 0)));
+    state.tendingEdictLevel = loadCount(tendingLoaded);
+    state.gleamEdictLevel = loadCount(data.gleamEdictLevel);
+    state.riseEdictLevel = loadCount(data.riseEdictLevel);
+    state.cupEdictLevel = loadCount(data.cupEdictLevel);
+    state.draughtEdictLevel = loadCount(data.draughtEdictLevel);
+    state.wakeEdictLevel = loadCount(data.wakeEdictLevel);
+    state.processionEdictLevel = loadCount(data.processionEdictLevel);
+    state.tollEdictLevel = loadCount(data.tollEdictLevel);
+    state.veilEdictLevel = loadCount(data.veilEdictLevel);
+    state.knellEdictLevel = loadCount(data.knellEdictLevel);
+    state.nightEdictLevel = loadCount(data.nightEdictLevel);
+    state.longMemoryLevel = loadCount(data.longMemoryLevel);
+    state.quietCourtLevel = loadCount(data.quietCourtLevel);
+    state.namesBound = loadCount(data.namesBound, 12);
     state.namesComplete = !!data.namesComplete || state.namesBound >= 12;
-    state.remembrance = Math.max(0, Math.floor(Number(data.remembrance) || 0));
-    state.deeperNightLevel = Math.max(0, Math.floor(Number(data.deeperNightLevel) || 0));
-    state.ashenTideLevel = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(data.ashenTideLevel) || 0)));
-    state.ossuaryLevel = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(data.ossuaryLevel) || 0)));
-    state.longerProcessionLevel = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(data.longerProcessionLevel) || 0)));
-    state.deeperTollLevel = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(data.deeperTollLevel) || 0)));
-    state.longerWakeLevel = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(data.longerWakeLevel) || 0)));
-    state.longerTitheLevel = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(data.longerTitheLevel) || 0)));
-    state.longerVeilLevel = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(data.longerVeilLevel) || 0)));
-    state.longerHymnLevel = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(data.longerHymnLevel) || 0)));
-    state.longerKnellLevel = Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(data.longerKnellLevel) || 0)));
+    state.remembrance = loadCount(data.remembrance);
+    state.deeperNightLevel = loadCount(data.deeperNightLevel);
+    state.ashenTideLevel = loadCount(data.ashenTideLevel, ASHEN_TIDE_MAX);
+    state.ossuaryLevel = loadCount(data.ossuaryLevel, OSSUARY_MAX);
+    state.longerProcessionLevel = loadCount(data.longerProcessionLevel, LONGER_PROCESSION_MAX);
+    state.deeperTollLevel = loadCount(data.deeperTollLevel, DEEPER_TOLL_MAX);
+    state.longerWakeLevel = loadCount(data.longerWakeLevel, LONGER_WAKE_MAX);
+    state.longerTitheLevel = loadCount(data.longerTitheLevel, LONGER_TITHE_MAX);
+    state.longerVeilLevel = loadCount(data.longerVeilLevel, LONGER_VEIL_MAX);
+    state.longerHymnLevel = loadCount(data.longerHymnLevel, LONGER_HYMN_MAX);
+    state.longerKnellLevel = loadCount(data.longerKnellLevel, LONGER_KNELL_MAX);
     state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
     state.vowsKnown = seedVowsKnown(data.vowsKnown);
-    state.runStartedAt = Number(data.runStartedAt) || Date.now();
+    state.runStartedAt = loadCount(data.runStartedAt) || Date.now();
     if (data.allTimeSouls == null) {
-      state.allTimeSouls = N.load(data.lifetimeSouls);
+      state.allTimeSouls = loadNum(data.lifetimeSouls);
     } else {
-      state.allTimeSouls = N.load(data.allTimeSouls);
+      state.allTimeSouls = loadNum(data.allTimeSouls);
     }
     if (N.cmp(state.allTimeSouls, 0) < 0) state.allTimeSouls = N.fromNumber(0);
-    state.tributesLaid = Math.max(0, Math.floor(Number(data.tributesLaid) || 0));
-    state.bak1At = Math.max(0, Number(data.bak1At) || 0);
-    state.bak2At = Math.max(0, Number(data.bak2At) || 0);
+    state.tributesLaid = loadCount(data.tributesLaid);
+    state.bak1At = loadCount(data.bak1At);
+    state.bak2At = loadCount(data.bak2At);
   }
 
   function adoptSave(data) {
@@ -6140,6 +6191,8 @@
   }
 
   function save() {
+    if (loadFailed) return;
+    tripwireSanity();
     if (loadFailed) return;
     try {
       var json = JSON.stringify(serializeState());
@@ -10153,6 +10206,11 @@
     ashPerSec: ashPerSec,
     isSaveShape: isSaveShape,
     isFiniteStock: isFiniteStock,
+    loadCount: loadCount,
+    loadNum: loadNum,
+    applySaveData: applySaveData,
+    tripwireSanity: tripwireSanity,
+    getState: function () { return state; },
     SAVE_KEY: SAVE_KEY,
     SAVE_BAK1_KEY: SAVE_BAK1_KEY,
     SAVE_BAK2_KEY: SAVE_BAK2_KEY,

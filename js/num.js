@@ -14,9 +14,9 @@
     m = Number(m);
     e = Number(e);
     if (!isFinite(e)) e = 0;
+    // AZR-168: non-finite mantissa → 0 (idle-safe). Negatives still allowed here.
     if (m === 0 || !isFinite(m)) {
-      if (m === 0) return { m: 0, e: 0 };
-      return { m: m, e: 0 };
+      return { m: 0, e: 0 };
     }
     e = Math.floor(e);
     var sign = m < 0 ? -1 : 1;
@@ -39,8 +39,7 @@
       e -= 1;
     }
     if (m === 0 || !isFinite(m)) {
-      if (m === 0) return { m: 0, e: 0 };
-      return { m: sign * m, e: 0 };
+      return { m: 0, e: 0 };
     }
     return { m: sign * m, e: e };
   }
@@ -280,11 +279,16 @@
   }
 
   function load(v) {
-    if (v == null) return fromNumber(0);
-    if (typeof v === "number") return fromNumber(v);
-    if (typeof v === "string") return fromString(v);
-    if (typeof v === "object" && typeof v.m === "number") return normalize(v.m, v.e || 0);
-    return fromNumber(Number(v) || 0);
+    var n;
+    if (v == null) n = fromNumber(0);
+    else if (typeof v === "number") n = fromNumber(v);
+    else if (typeof v === "string") n = fromString(v);
+    else if (typeof v === "object" && typeof v.m === "number") n = normalize(v.m, v.e || 0);
+    else n = fromNumber(Number(v) || 0);
+    // AZR-168 save boundary: never return non-finite or negative. fromNumber(-1) stays for internal math.
+    // Check raw fields — numIsFinite/cmp go through from()/normalize and would hide Inf.
+    if (!n || !isFinite(n.m) || !isFinite(n.e) || n.m < 0) return fromNumber(0);
+    return n;
   }
 
   global.SoulgatherNum = {
