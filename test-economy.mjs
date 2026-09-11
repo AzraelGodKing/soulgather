@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -3070,6 +3070,279 @@ assertEqual(
     "AZR-170 render does not call revealWell as bandage",
     !/revealWell\s*\(/.test(renderBody)
   );
+}
+
+
+
+// AZR-171: Quiet Court ash-autobind evaluated once after edict starting stock;
+// table-driven applyAutobindStarts; headless Tribute restore via extracted helpers.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+
+  assertTrue("AZR-171 applyEdictStartingStock exists", /function applyEdictStartingStock\s*\(/.test(gameSrc));
+  assertTrue("AZR-171 applyAutobindStarts exists", /function applyAutobindStarts\s*\(/.test(gameSrc));
+  assertTrue("AZR-171 TRIBUTE_AUTOBIND_STARTS table exists", /var TRIBUTE_AUTOBIND_STARTS\s*=\s*\[/.test(gameSrc));
+
+  function fnBody(name) {
+    const start = gameSrc.indexOf("function " + name);
+    if (start < 0) return "";
+    let end = gameSrc.indexOf("\n  function ", start + 1);
+    if (name === "layTribute") {
+      const alt = gameSrc.indexOf("\n  function fmt(", start);
+      if (alt > start && (end < 0 || alt < end)) end = alt;
+    }
+    return gameSrc.slice(start, end > start ? end : undefined);
+  }
+
+  const tributeBody = fnBody("layTribute");
+  assertTrue(
+    "AZR-171 layTribute calls applyEdictStartingStock before applyAutobindStarts",
+    /applyEdictStartingStock\s*\(\s*state\s*\)[\s\S]*applyAutobindStarts\s*\(\s*state\s*\)/.test(tributeBody)
+  );
+  assertTrue(
+    "AZR-171 layTribute calls revealUnlockedCards(false) after autobind phase",
+    /applyAutobindStarts\s*\(\s*state\s*\)[\s\S]*revealUnlockedCards\(\s*false\s*\)/.test(tributeBody)
+  );
+  // First duplicate QC ash block deleted: quietCourtStartsUrnAutobind must not appear inline in layTribute.
+  assertTrue(
+    "AZR-171 layTribute has no inline quietCourtStartsUrnAutobind",
+    !/quietCourtStartsUrnAutobind/.test(tributeBody)
+  );
+  assertTrue(
+    "AZR-171 layTribute has no inline quietCourtStartsHearthAutobind",
+    !/quietCourtStartsHearthAutobind/.test(tributeBody)
+  );
+  // Exactly one table reference for urn QC predicate.
+  const urnPredMatches = gameSrc.match(/predicate:\s*quietCourtStartsUrnAutobind/g) || [];
+  assertEqual("AZR-171 quietCourtStartsUrnAutobind appears once in TRIBUTE table", urnPredMatches.length, 1);
+  assertTrue(
+    "AZR-171 comment requires ash unlocks after edict stock",
+    /Ash autobind unlocks[\s\S]{0,80}after Edict starting stock/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-171 exports applyEdictStartingStock",
+    /applyEdictStartingStock:\s*applyEdictStartingStock/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-171 exports applyAutobindStarts",
+    /applyAutobindStarts:\s*applyAutobindStarts/.test(gameSrc)
+  );
+
+  function extractFn(src, name) {
+    const start = src.indexOf("function " + name);
+    if (start < 0) throw new Error("missing " + name);
+    let i = src.indexOf("{", start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}") {
+        depth--;
+        if (depth === 0) return src.slice(start, i + 1);
+      }
+    }
+    throw new Error("unclosed " + name);
+  }
+
+  function extractVarArray(src, name) {
+    const start = src.indexOf("var " + name + " = [");
+    if (start < 0) throw new Error("missing " + name);
+    let i = src.indexOf("[", start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "[") depth++;
+      else if (src[i] === "]") {
+        depth--;
+        if (depth === 0) {
+          let end = i + 1;
+          if (src[end] === ";") end++;
+          return src.slice(start, end);
+        }
+      }
+    }
+    throw new Error("unclosed array " + name);
+  }
+
+  const UNLOCK_AUTOBIND_LANTERNS = 8;
+  const UNLOCK_AUTOBIND_FETTERS = 6;
+  const UNLOCK_AUTOBIND_CENSERS = 4;
+  const UNLOCK_AUTOBIND_PYRES = 4;
+  const UNLOCK_AUTOBIND_CHALICES = 3;
+  const UNLOCK_AUTOBIND_URNS = 3;
+  const UNLOCK_AUTOBIND_HEARTHS = 3;
+  const UNLOCK_AUTOBIND_BEACONS = 3;
+  const UNLOCK_AUTOBIND_SPIRES = 3;
+  const UNLOCK_AUTOBIND_OBELISKS = 3;
+  const CHOIR_MAX = 10;
+
+  const sandbox = {
+    N,
+    state: null,
+    CHOIR_MAX,
+    UNLOCK_AUTOBIND_LANTERNS,
+    UNLOCK_AUTOBIND_FETTERS,
+    UNLOCK_AUTOBIND_CENSERS,
+    UNLOCK_AUTOBIND_PYRES,
+    UNLOCK_AUTOBIND_CHALICES,
+    UNLOCK_AUTOBIND_URNS,
+    UNLOCK_AUTOBIND_HEARTHS,
+    UNLOCK_AUTOBIND_BEACONS,
+    UNLOCK_AUTOBIND_SPIRES,
+    UNLOCK_AUTOBIND_OBELISKS,
+    quietCourtStartsLanternAutobind,
+    quietCourtStartsFetterAutobind,
+    quietCourtStartsPyreAutobind,
+    quietCourtStartsChaliceAutobind,
+    quietCourtStartsUrnAutobind,
+    quietCourtStartsHearthAutobind,
+    quietCourtStartsBeaconAutobind,
+    quietCourtStartsSpireAutobind,
+    quietCourtStartsObeliskAutobind,
+    smokeStartsCenserAutobind,
+    cinderEdictStartsPyreAutobind,
+    cutEdictStartsUrnAutobind,
+    tendingEdictStartsHearthAutobind,
+    gleamEdictStartsBeaconAutobind,
+    riseEdictStartsSpireAutobind,
+    draughtStartsChaliceAutobind,
+    embersStartsPyres,
+    urnEdictStartsUrns,
+    hearthEdictStartsHearths,
+    beaconEdictStartsBeacons,
+    spireEdictStartsSpires,
+    obeliskEdictStartsObelisks,
+    cupStartsChalices,
+    TRIBUTE_AUTOBIND_STARTS: null,
+    applyEdictStartingStock: null,
+    applyAutobindStarts: null
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(extractVarArray(gameSrc, "TRIBUTE_AUTOBIND_STARTS"), sandbox);
+  vm.runInContext(extractFn(gameSrc, "applyEdictStartingStock"), sandbox);
+  vm.runInContext(extractFn(gameSrc, "applyAutobindStarts"), sandbox);
+
+  assertEqual("AZR-171 TRIBUTE_AUTOBIND_STARTS length", sandbox.TRIBUTE_AUTOBIND_STARTS.length, 16);
+
+  function freshBag() {
+    return {
+      quietCourtLevel: 0,
+      urnEdictLevel: 0,
+      hearthEdictLevel: 0,
+      beaconEdictLevel: 0,
+      spireEdictLevel: 0,
+      obeliskEdictLevel: 0,
+      memoryLevel: 0,
+      seatLevel: 0,
+      echoLevel: 0,
+      kindleLevel: 0,
+      ashenLevel: 0,
+      longMemoryLevel: 0,
+      depthLevel: 0,
+      embersEdictLevel: 0,
+      cupEdictLevel: 0,
+      choirEdictLevel: 0,
+      smokeEdictLevel: 0,
+      cinderEdictLevel: 0,
+      cutEdictLevel: 0,
+      tendingEdictLevel: 0,
+      gleamEdictLevel: 0,
+      riseEdictLevel: 0,
+      draughtEdictLevel: 0,
+      shades: N.fromNumber(0),
+      lanterns: N.fromNumber(0),
+      fetters: N.fromNumber(0),
+      censers: N.fromNumber(0),
+      pyres: N.fromNumber(0),
+      urns: N.fromNumber(0),
+      hearths: N.fromNumber(0),
+      beacons: N.fromNumber(0),
+      spires: N.fromNumber(0),
+      obelisks: N.fromNumber(0),
+      chalices: 0,
+      thrones: 0,
+      ash: N.fromNumber(0),
+      wellDepth: 0,
+      wellDraws: false,
+      choirLevel: 0,
+      autobind: false,
+      unlockedAutobind: false,
+      autobindUrns: false,
+      unlockedAutobindUrns: false,
+      autobindHearths: false,
+      unlockedAutobindHearths: false,
+      autobindBeacons: false,
+      unlockedAutobindBeacons: false,
+      autobindSpires: false,
+      unlockedAutobindSpires: false,
+      autobindObelisks: false,
+      unlockedAutobindObelisks: false,
+      autobindLanterns: false,
+      unlockedAutobindLanterns: false,
+      autobindFetters: false,
+      unlockedAutobindFetters: false,
+      autobindPyres: false,
+      unlockedAutobindPyres: false,
+      autobindChalices: false,
+      unlockedAutobindChalices: false,
+      autobindCensers: false,
+      unlockedAutobindCensers: false
+    };
+  }
+
+  // QC + edict stock at unlock threshold → autobind AND unlockedAutobind
+  {
+    const s = freshBag();
+    s.quietCourtLevel = 1;
+    s.urnEdictLevel = 3;
+    s.hearthEdictLevel = 3;
+    s.beaconEdictLevel = 3;
+    s.spireEdictLevel = 3;
+    s.obeliskEdictLevel = 3;
+    sandbox.applyEdictStartingStock(s);
+    sandbox.applyAutobindStarts(s);
+    assertTrue("AZR-171 QC+edict sets autobindUrns", !!s.autobindUrns);
+    assertTrue("AZR-171 QC+edict sets unlockedAutobindUrns", !!s.unlockedAutobindUrns);
+    assertTrue("AZR-171 QC+edict sets autobindHearths", !!s.autobindHearths);
+    assertTrue("AZR-171 QC+edict sets unlockedAutobindHearths", !!s.unlockedAutobindHearths);
+    assertTrue("AZR-171 QC+edict sets autobindBeacons", !!s.autobindBeacons);
+    assertTrue("AZR-171 QC+edict sets unlockedAutobindBeacons", !!s.unlockedAutobindBeacons);
+    assertTrue("AZR-171 QC+edict sets autobindSpires", !!s.autobindSpires);
+    assertTrue("AZR-171 QC+edict sets unlockedAutobindSpires", !!s.unlockedAutobindSpires);
+    assertTrue("AZR-171 QC+edict sets autobindObelisks", !!s.autobindObelisks);
+    assertTrue("AZR-171 QC+edict sets unlockedAutobindObelisks", !!s.unlockedAutobindObelisks);
+    assertEqual("AZR-171 QC+edict urn stock", unwrap(s.urns), 3);
+  }
+
+  // QC only, no edict stock → autobind but NOT unlocked (below threshold)
+  {
+    const s = freshBag();
+    s.quietCourtLevel = 1;
+    sandbox.applyEdictStartingStock(s);
+    sandbox.applyAutobindStarts(s);
+    assertTrue("AZR-171 QC-only sets autobindUrns", !!s.autobindUrns);
+    assertTrue("AZR-171 QC-only does not unlock AutobindUrns", !s.unlockedAutobindUrns);
+    assertTrue("AZR-171 QC-only sets autobindHearths", !!s.autobindHearths);
+    assertTrue("AZR-171 QC-only does not unlock AutobindHearths", !s.unlockedAutobindHearths);
+    assertTrue("AZR-171 QC-only sets autobindBeacons", !!s.autobindBeacons);
+    assertTrue("AZR-171 QC-only does not unlock AutobindBeacons", !s.unlockedAutobindBeacons);
+    assertTrue("AZR-171 QC-only sets autobindSpires", !!s.autobindSpires);
+    assertTrue("AZR-171 QC-only does not unlock AutobindSpires", !s.unlockedAutobindSpires);
+    assertTrue("AZR-171 QC-only sets autobindObelisks", !!s.autobindObelisks);
+    assertTrue("AZR-171 QC-only does not unlock AutobindObelisks", !s.unlockedAutobindObelisks);
+    assertEqual("AZR-171 QC-only urn stock", unwrap(s.urns), 0);
+    assertTrue("AZR-171 QC-only still starts shade autobind", !!s.autobind && !!s.unlockedAutobind);
+  }
+
+  // Sub-threshold edict stock (1 < 3) still does not unlock the row
+  {
+    const s = freshBag();
+    s.quietCourtLevel = 1;
+    s.urnEdictLevel = 1;
+    sandbox.applyEdictStartingStock(s);
+    sandbox.applyAutobindStarts(s);
+    assertTrue("AZR-171 QC+urnEdict1 sets autobindUrns", !!s.autobindUrns);
+    assertTrue("AZR-171 QC+urnEdict1 does not unlock AutobindUrns", !s.unlockedAutobindUrns);
+    assertEqual("AZR-171 QC+urnEdict1 urn stock", unwrap(s.urns), 1);
+  }
 }
 
 
