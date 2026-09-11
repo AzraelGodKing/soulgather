@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173 + AZR-174).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -3668,6 +3668,141 @@ assertEqual(
   );
 }
 
+
+// AZR-174: toast queue cap, gift coalesce, click/Escape dismiss, fast drain.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+
+  function extractFn(src, name) {
+    const start = src.indexOf("function " + name);
+    if (start < 0) throw new Error("missing " + name);
+    let i = src.indexOf("{", start);
+    let depth = 0;
+    for (; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}") {
+        depth--;
+        if (depth === 0) return src.slice(start, i + 1);
+      }
+    }
+    throw new Error("unclosed " + name);
+  }
+
+  assertTrue("AZR-174 TOAST_QUEUE_MAX = 5", /var TOAST_QUEUE_MAX\s*=\s*5\s*;/.test(gameSrc));
+  assertTrue("AZR-174 TOAST_FAST_MS = 1800", /var TOAST_FAST_MS\s*=\s*1800\s*;/.test(gameSrc));
+  assertTrue("AZR-174 TOAST_MS stays 5200", /var TOAST_MS\s*=\s*5200\s*;/.test(gameSrc));
+  assertTrue("AZR-174 showToast accepts groupKey", /function showToast\s*\(\s*message\s*,\s*groupKey\s*\)/.test(gameSrc));
+  assertTrue("AZR-174 beginGiftToastBatch exists", /function beginGiftToastBatch\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 flushGiftToasts exists", /function flushGiftToasts\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 capEnqueueToast exists", /function capEnqueueToast\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 formatGiftBatchSummary exists", /function formatGiftBatchSummary\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 dismissToastNext exists", /function dismissToastNext\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 dismissToastEscape exists", /function dismissToastEscape\s*\(/.test(gameSrc));
+  assertTrue("AZR-174 toastEscapeArmed state", /var toastEscapeArmed\s*=\s*false\s*;/.test(gameSrc));
+
+  assertTrue(
+    "AZR-174 click handler on toast",
+    /els\.toast\.addEventListener\(\s*"click"\s*,\s*function\s*\(\s*\)\s*\{\s*dismissToastNext\(\);/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 Escape handling after isTypingTarget",
+    /if \(isTypingTarget\(target\) \|\| isTypingTarget\(active\)\) return;[\s\S]*?keyEarly === "escape"[\s\S]*?dismissToastEscape\(\)/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-174 presentToast uses TOAST_FAST_MS when queue remaining",
+    /var dwell = toastQueue\.length >= 1 \? TOAST_FAST_MS : TOAST_MS/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 tryMilestoneGifts opens coalesce buffer",
+    /function tryMilestoneGifts\s*\(\)\s*\{[\s\S]*?beginGiftToastBatch\(\);/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 tryMilestoneGifts flushes gift toasts",
+    /flushGiftToasts\(\);\s*if \(granted\) save\(\);/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 tryMilestoneGifts still markChronicle per gift",
+    /markChronicle\("giftSouls"\);[\s\S]*?showToast\("The well returns fifty souls\."\s*,\s*"gifts"\)/.test(
+      gameSrc
+    )
+  );
+  assertTrue(
+    "AZR-174 tryNamesBound gift toasts use gifts key",
+    /showToast\("A name is bound: " \+ epithet \+ "\."\s*,\s*"gifts"\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-115 unshift still present",
+    /toastQueue\.unshift\(pendingAwayToast\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 exports TOAST_QUEUE_MAX",
+    /TOAST_QUEUE_MAX:\s*TOAST_QUEUE_MAX/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 exports capEnqueueToast",
+    /capEnqueueToast:\s*capEnqueueToast/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-174 exports formatGiftBatchSummary",
+    /formatGiftBatchSummary:\s*formatGiftBatchSummary/.test(gameSrc)
+  );
+
+  const sandbox = { TOAST_QUEUE_MAX: 5 };
+  vm.createContext(sandbox);
+  vm.runInContext(
+    extractFn(gameSrc, "toastOverflowLabel") +
+      "\n" +
+      extractFn(gameSrc, "toastOverflowCount") +
+      "\n" +
+      extractFn(gameSrc, "capEnqueueToast") +
+      "\n" +
+      extractFn(gameSrc, "formatGiftBatchSummary") +
+      "\nthis.toastOverflowLabel = toastOverflowLabel;" +
+      "\nthis.toastOverflowCount = toastOverflowCount;" +
+      "\nthis.capEnqueueToast = capEnqueueToast;" +
+      "\nthis.formatGiftBatchSummary = formatGiftBatchSummary;",
+    sandbox
+  );
+
+  assertEqual("AZR-174 TOAST_QUEUE_MAX === 5", sandbox.TOAST_QUEUE_MAX, 5);
+
+  let q = [];
+  for (let i = 0; i < 20; i++) {
+    q = sandbox.capEnqueueToast(q, "toast-" + i, sandbox.TOAST_QUEUE_MAX);
+  }
+  assertTrue("AZR-174 enqueue 20 → length <= 5", q.length <= 5);
+  assertEqual("AZR-174 enqueue 20 → length === 5", q.length, 5);
+  assertTrue(
+    "AZR-174 last is …and N more",
+    /^\u2026and \d+ more\.$/.test(q[q.length - 1])
+  );
+  const moreN = sandbox.toastOverflowCount(q[q.length - 1]);
+  assertTrue("AZR-174 overflow N >= 16", moreN >= 16);
+
+  // First 4 are real, 5th overflows: push 5 real then more
+  q = [];
+  for (let i = 0; i < 5; i++) q = sandbox.capEnqueueToast(q, "m" + i, 5);
+  assertEqual("AZR-174 five fit exactly", q.length, 5);
+  assertEqual("AZR-174 fifth still real", q[4], "m4");
+  q = sandbox.capEnqueueToast(q, "m5", 5);
+  assertEqual("AZR-174 sixth caps length", q.length, 5);
+  assertEqual("AZR-174 sixth → …and 2 more.", q[4], sandbox.toastOverflowLabel(2));
+  q = sandbox.capEnqueueToast(q, "m6", 5);
+  assertEqual("AZR-174 seventh → …and 3 more.", q[4], sandbox.toastOverflowLabel(3));
+
+  assertEqual(
+    "AZR-174 summary with amounts",
+    sandbox.formatGiftBatchSummary(3, { names: 3, ash: 26, souls: 250 }),
+    "The well was generous: +3 names, +26 ash, +250 souls."
+  );
+  assertEqual(
+    "AZR-174 summary fallback count",
+    sandbox.formatGiftBatchSummary(7, {}),
+    "The well was generous. 7 gifts."
+  );
+}
 
 if (failed > 0) {
   console.error(failed + " assertion(s) failed");
