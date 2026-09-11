@@ -7380,30 +7380,6 @@
     return verb + " " + k + " " + unitMany;
   }
 
-
-  function renderNames() {
-    var n = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
-    var open = n >= 1;
-    if (els.namesPanel) els.namesPanel.classList.toggle("is-hidden", !open);
-    if (!els.namesList) return;
-    if (!open) return;
-    var sig = "n" + n + (state.namesComplete ? "c" : "");
-    if (els.namesList.dataset.sig === sig) return;
-    els.namesList.dataset.sig = sig;
-    els.namesList.innerHTML = "";
-    var i;
-    for (i = 0; i < 12; i++) {
-      var li = document.createElement("li");
-      if (i < n) {
-        li.textContent = BOUND_NAMES[i];
-      } else {
-        li.textContent = "\u2014";
-        li.className = "is-locked";
-      }
-      els.namesList.appendChild(li);
-    }
-  }
-
   function render() {
     var F = SoulgatherFormat;
     if (!els.soulsCount) return;
