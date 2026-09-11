@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173 + AZR-174).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173 + AZR-174 + AZR-175).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -3801,6 +3801,183 @@ assertEqual(
     "AZR-174 summary fallback count",
     sandbox.formatGiftBatchSummary(7, {}),
     "The well was generous. 7 gifts."
+  );
+}
+
+// AZR-175: Stillness disables Draw, HUD vow chip, swear confirm, Ember greys Night/Wake.
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const htmlSrc = fs.readFileSync(path.join(root, "index.html"), "utf8");
+  const readmeSrc = fs.readFileSync(path.join(root, "README.md"), "utf8");
+
+  // gatherBtn disabled + aria-disabled under stillness (source)
+  assertTrue(
+    "AZR-175 render sets gatherBtn.disabled on stillness",
+    /var still = normalizeVow\(state\.vow\) === "stillness";\s*els\.gatherBtn\.disabled = still;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 render sets aria-disabled on stillness",
+    /els\.gatherBtn\.setAttribute\("aria-disabled", still \? "true" : "false"\)/.test(gameSrc)
+  );
+
+  // copy/aria-label "The well is still."
+  assertTrue(
+    "AZR-175 render sets aria-label to 'The well is still.' under stillness",
+    /els\.gatherBtn\.setAttribute\("aria-label", still \? "The well is still\." : "Draw from the Well"\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 render updates .verb to 'The well' under stillness",
+    /els\.gatherVerb[\s\S]*?textContent = still \? "The well" : "Draw from"/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 render updates .noun to 'is still.' under stillness",
+    /els\.gatherNoun[\s\S]*?textContent = still \? "is still\." : "the Well"/.test(gameSrc)
+  );
+
+  // Space/Enter path skips harvest when gather disabled or stillness
+  assertTrue(
+    "AZR-175 keydown checks gatherBtn.disabled before harvest",
+    /if \(\(els\.gatherBtn && els\.gatherBtn\.disabled\) \|\| normalizeVow\(state\.vow\) === "stillness"\) return;/.test(gameSrc)
+  );
+
+  // #vow-status in index.html
+  assertTrue(
+    "AZR-175 index.html has #vow-status",
+    /id="vow-status"/.test(htmlSrc)
+  );
+  assertTrue(
+    "AZR-175 #vow-status inside .souls-display",
+    /class="souls-display"[\s\S]*?id="vow-status"/.test(htmlSrc)
+  );
+  assertTrue(
+    "AZR-175 #vow-status after #hollow-status",
+    /id="hollow-status"[\s\S]*?id="vow-status"/.test(htmlSrc)
+  );
+
+  // HUD strings present (source uses JS escape sequences)
+  assertTrue(
+    "AZR-175 HUD string stillness",
+    gameSrc.includes("Vow: Stillness \\u2014 no draws")
+  );
+  assertTrue(
+    "AZR-175 HUD string poverty",
+    gameSrc.includes("Vow: Poverty \\u2014 no autobind Thrones")
+  );
+  assertTrue(
+    "AZR-175 HUD string hunger",
+    gameSrc.includes("Vow: Hunger \\u2014 tithe \\u00d72")
+  );
+  assertTrue(
+    "AZR-175 HUD string ember",
+    gameSrc.includes("Vow: Ember \\u2014 no Night\\u2019s Tithe, no Wake")
+  );
+
+  // hidden when no vow
+  assertTrue(
+    "AZR-175 vowStatus hidden when no vow",
+    /els\.vowStatus\.classList\.add\("is-hidden"\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 vowStatus shown when vow active",
+    /els\.vowStatus\.classList\.remove\("is-hidden"\)/.test(gameSrc)
+  );
+
+  // swearVow calls window.confirm and returns if !ok, before state.vow =
+  assertTrue(
+    "AZR-175 swearVow has VOW_CONFIRM map",
+    /var VOW_CONFIRM\s*=\s*\{/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 swearVow calls window.confirm before state.vow",
+    /function swearVow\(id\)\s*\{[\s\S]*?window\.confirm\(VOW_CONFIRM\[v\][\s\S]*?\) return;[\s\S]*?state\.vow = v;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 confirm copy stillness names restriction",
+    gameSrc.includes("The well will not answer a draw this emptying. This cannot be undone until Tribute.")
+  );
+  assertTrue(
+    "AZR-175 confirm copy poverty names restriction",
+    gameSrc.includes("Thrones will not autobind this emptying. This cannot be undone until Tribute.")
+  );
+  assertTrue(
+    "AZR-175 confirm copy hunger names restriction",
+    gameSrc.includes("The Tithe costs twice this emptying. This cannot be undone until Tribute.")
+  );
+  assertTrue(
+    "AZR-175 confirm copy ember names restriction",
+    gameSrc.includes("Night\\u2019s Tithe and the Wake will not answer this emptying. This cannot be undone until Tribute.")
+  );
+
+  // Ember night/wake reason copy + disabled under ember
+  assertTrue(
+    "AZR-175 Night reason copy under Ember",
+    gameSrc.includes("Ember holds the night.")
+  );
+  assertTrue(
+    "AZR-175 Wake reason copy under Ember",
+    gameSrc.includes("Ember holds the wake.")
+  );
+  assertTrue(
+    "AZR-175 nightTitheBuy sets aria-disabled under ember",
+    /els\.nightTitheBuy\.setAttribute\("aria-disabled", "true"\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 wakeBuy sets aria-disabled under ember",
+    /els\.wakeBuy\.setAttribute\("aria-disabled", "true"\)/.test(gameSrc)
+  );
+
+  // N/W still early-return on ember
+  assertTrue(
+    "AZR-175 payNightTithe early-returns on ember",
+    /function payNightTithe\(\)\s*\{[\s\S]*?normalizeVow\(state\.vow\) === "ember"\) return;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 keepWake early-returns on ember",
+    /function keepWake\(\)\s*\{[\s\S]*?normalizeVow\(state\.vow\) === "ember"\) return;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 N hotkey early-returns on ember",
+    /keys:[\s\S]*?"n"[\s\S]*?normalizeVow\(state\.vow\) === "ember"\) return;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 W hotkey early-returns on ember",
+    /keys:[\s\S]*?"w"[\s\S]*?normalizeVow\(state\.vow\) === "ember"\) return;/.test(gameSrc)
+  );
+
+  // No suppressed-click toast (Design OUT)
+  assertTrue(
+    "AZR-175 no suppressed-click toast string",
+    !gameSrc.includes("Stillness holds your hand")
+  );
+  assertTrue(
+    "AZR-175 no suppressed-click toast string (alt)",
+    !gameSrc.includes("stillness holds")
+  );
+
+  // README AZR-175 note; version stays 6.9.1
+  assertTrue(
+    "AZR-175 README mentions AZR-175",
+    readmeSrc.includes("AZR-175")
+  );
+  assertTrue(
+    "AZR-175 README still says v6.9.1",
+    readmeSrc.includes("v6.9.1")
+  );
+
+  // els.vowStatus wired in bind
+  assertTrue(
+    "AZR-175 els.vowStatus wired in bind",
+    /els\.vowStatus\s*=\s*document\.getElementById\("vow-status"\)/.test(gameSrc)
+  );
+
+  // els.gatherVerb and els.gatherNoun wired
+  assertTrue(
+    "AZR-175 els.gatherVerb wired",
+    /els\.gatherVerb\s*=/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-175 els.gatherNoun wired",
+    /els\.gatherNoun\s*=/.test(gameSrc)
   );
 }
 

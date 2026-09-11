@@ -1196,6 +1196,13 @@
     ember: "Ember"
   };
 
+  var VOW_HUD_STRINGS = {
+    stillness: "Vow: Stillness \u2014 no draws",
+    poverty: "Vow: Poverty \u2014 no autobind Thrones",
+    hunger: "Vow: Hunger \u2014 tithe \u00d72",
+    ember: "Vow: Ember \u2014 no Night\u2019s Tithe, no Wake"
+  };
+
   function normalizeVow(raw) {
     if (raw === "stillness") return "stillness";
     if (raw === "poverty") return "poverty";
@@ -4943,11 +4950,19 @@
     render();
   }
 
+  var VOW_CONFIRM = {
+    stillness: "Swear Stillness?\n\nThe well will not answer a draw this emptying. This cannot be undone until Tribute.",
+    poverty: "Swear Poverty?\n\nThrones will not autobind this emptying. This cannot be undone until Tribute.",
+    hunger: "Swear Hunger?\n\nThe Tithe costs twice this emptying. This cannot be undone until Tribute.",
+    ember: "Swear Ember?\n\nNight\u2019s Tithe and the Wake will not answer this emptying. This cannot be undone until Tribute."
+  };
+
   function swearVow(id) {
     if ((Number(state.favorEarned) || 0) < 1) return;
     if (normalizeVow(state.vow)) return;
     var v = normalizeVow(id);
     if (!v) return;
+    if (!window.confirm(VOW_CONFIRM[v] || "Swear this vow?")) return;
     state.vow = v;
     state.vowHungerPaid = false;
     rememberVow(v);
@@ -7650,6 +7665,20 @@
       var still = normalizeVow(state.vow) === "stillness";
       els.gatherBtn.disabled = still;
       els.gatherBtn.setAttribute("aria-disabled", still ? "true" : "false");
+      els.gatherBtn.setAttribute("aria-label", still ? "The well is still." : "Draw from the Well");
+      if (els.gatherVerb) els.gatherVerb.textContent = still ? "The well" : "Draw from";
+      if (els.gatherNoun) els.gatherNoun.textContent = still ? "is still." : "the Well";
+    }
+
+    if (els.vowStatus) {
+      var hudVow = normalizeVow(state.vow);
+      if (hudVow && VOW_HUD_STRINGS[hudVow]) {
+        els.vowStatus.textContent = VOW_HUD_STRINGS[hudVow];
+        els.vowStatus.classList.remove("is-hidden");
+      } else {
+        els.vowStatus.textContent = "";
+        els.vowStatus.classList.add("is-hidden");
+      }
     }
 
     if (els.soulsAsh) {
@@ -8195,12 +8224,17 @@
           els.nightTitheCost.textContent = F.formatNumber(nCost) + " Ash";
         }
         if (els.nightTitheBuy) {
+          var emberNight = normalizeVow(state.vow) === "ember" && !nightActive();
           if (nightActive()) {
             els.nightTitheBuy.disabled = true;
             els.nightTitheBuy.textContent = "Night burns \u2014 " + Math.ceil(nLeft) + "s";
+          } else if (emberNight) {
+            els.nightTitheBuy.disabled = true;
+            els.nightTitheBuy.setAttribute("aria-disabled", "true");
+            els.nightTitheBuy.textContent = "Ember holds the night.";
           } else {
-            els.nightTitheBuy.disabled =
-              normalizeVow(state.vow) === "ember" || N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
+            els.nightTitheBuy.disabled = N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
+            els.nightTitheBuy.removeAttribute("aria-disabled");
             els.nightTitheBuy.textContent = "Pay the Night's Tithe";
           }
         }
@@ -8221,12 +8255,17 @@
           els.wakeCost.textContent = F.formatNumber(wCost) + " Ash";
         }
         if (els.wakeBuy) {
+          var emberWake = normalizeVow(state.vow) === "ember" && !wakeActive();
           if (wakeActive()) {
             els.wakeBuy.disabled = true;
             els.wakeBuy.textContent = "The wake burns \u2014 " + Math.ceil(wLeft) + "s";
+          } else if (emberWake) {
+            els.wakeBuy.disabled = true;
+            els.wakeBuy.setAttribute("aria-disabled", "true");
+            els.wakeBuy.textContent = "Ember holds the wake.";
           } else {
-            els.wakeBuy.disabled =
-              normalizeVow(state.vow) === "ember" || N.cmp(state.ash, wCost) < 0;
+            els.wakeBuy.disabled = N.cmp(state.ash, wCost) < 0;
+            els.wakeBuy.removeAttribute("aria-disabled");
             els.wakeBuy.textContent = "Keep the Wake";
           }
         }
@@ -9569,12 +9608,15 @@
     els.soulsCount = document.getElementById("souls-count");
     els.soulsRate = document.getElementById("souls-rate");
     els.hollowStatus = document.getElementById("hollow-status");
+    els.vowStatus = document.getElementById("vow-status");
     els.soulsAsh = document.getElementById("souls-ash");
     els.soulsFavor = document.getElementById("souls-favor");
     els.soulsHymn = document.getElementById("souls-hymn");
     els.soulsWake = document.getElementById("souls-wake");
     els.soulsKnell = document.getElementById("souls-knell");
     els.gatherBtn = document.getElementById("gather-btn");
+    els.gatherVerb = els.gatherBtn ? els.gatherBtn.querySelector(".verb") : null;
+    els.gatherNoun = els.gatherBtn ? els.gatherBtn.querySelector(".noun") : null;
     els.buyMode = document.getElementById("buy-mode");
     els.buyModeHint = document.getElementById("buy-mode-hint");
     els.buyModeHintDismiss = document.getElementById("buy-mode-hint-dismiss");
@@ -10222,7 +10264,7 @@
         if (buttonEl && !isGather) return;
         if (isGather && key === "enter") return;
         if (key === " ") ev.preventDefault();
-        if (normalizeVow(state.vow) === "stillness") return;
+        if ((els.gatherBtn && els.gatherBtn.disabled) || normalizeVow(state.vow) === "stillness") return;
         harvest();
       }
     });
