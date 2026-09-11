@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -1610,6 +1610,24 @@ assertEqual("emberMult(2)", emberMult(2), 1.5625);
 assertEqual("dump/load number", unwrap(N.load(12)), 12);
 assertEqual("dump/load {m,e}", unwrap(N.load({ m: 1.2, e: 1 })), 12);
 assertEqual("dump round-trip 40", unwrap(N.load(N.dump(N.cost(10, 1.15, 10)))), 40);
+
+function assertLoadSafe(label, v) {
+  const x = N.load(v);
+  assertTrue(label, !!(x && N.isFinite(x) && N.cmp(x, 0) >= 0));
+}
+assertLoadSafe("AZR-168 N.load(NaN) finite >=0", NaN);
+assertLoadSafe("AZR-168 N.load(Infinity) finite >=0", Infinity);
+assertLoadSafe("AZR-168 N.load(-Infinity) finite >=0", -Infinity);
+assertLoadSafe("AZR-168 N.load({m:NaN}) finite >=0", { m: NaN, e: 0 });
+assertLoadSafe("AZR-168 N.load({m:Infinity}) finite >=0", { m: Infinity, e: 0 });
+assertLoadSafe("AZR-168 N.load('abc') finite >=0", "abc");
+assertLoadSafe("AZR-168 N.load(null) finite >=0", null);
+assertLoadSafe("AZR-168 N.load(undefined) finite >=0", undefined);
+assertLoadSafe("AZR-168 N.load(-1) finite >=0", -1);
+assertTrue(
+  "AZR-168 fromNumber(-1) still exists internally",
+  N.cmp(N.fromNumber(-1), 0) < 0
+);
 assertTrue("50*3^80 not Infinity", N.isFinite(siphon80) && N.toNumber(siphon80) !== Infinity);
 
 assertEqual(
@@ -2646,7 +2664,7 @@ assertEqual(
   );
   assertTrue(
     "AZR-163 migration falls back to lastTick",
-    /state\.simulatedUntil\s*=\s*Number\(data\.simulatedUntil\)\s*\|\|\s*Number\(data\.lastTick\)\s*\|\|\s*Date\.now\(\)/.test(
+    /state\.simulatedUntil\s*=\s*(?:Number|loadCount)\(data\.simulatedUntil\)\s*\|\|\s*(?:Number|loadCount)\(data\.lastTick\)\s*\|\|\s*Date\.now\(\)/.test(
       gameSrc
     )
   );
@@ -2793,6 +2811,36 @@ assertEqual(
   assertTrue(
     "AZR-165 exports isSaveShape",
     /isSaveShape:\s*isSaveShape/.test(gameSrc)
+  );
+}
+
+// AZR-168: save sanitise + tripwire source contracts
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const applyStart = gameSrc.indexOf("function applySaveData");
+  const applyEnd = gameSrc.indexOf("function adoptSave");
+  const applyFn = applyStart >= 0 && applyEnd > applyStart ? gameSrc.slice(applyStart, applyEnd) : "";
+  assertTrue("AZR-168 loadCount helper exists", /function loadCount\s*\(/.test(gameSrc));
+  assertTrue("AZR-168 loadNum helper exists", /function loadNum\s*\(/.test(gameSrc));
+  assertTrue("AZR-168 tripwireSanity exists", /function tripwireSanity\s*\(/.test(gameSrc));
+  assertTrue("AZR-168 sanityAcc ~1s accumulator", /sanityAcc\s*\+=\s*dt/.test(gameSrc));
+  assertTrue(
+    "AZR-168 save() still gated on loadFailed",
+    /function save\s*\(\s*\)\s*\{[\s\S]*?if\s*\(\s*loadFailed\s*\)\s*return\s*;/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-168 no Number(data. leftover in applySaveData",
+    applyFn.length > 0 && !/Number\(data\./.test(applyFn)
+  );
+  assertTrue(
+    "AZR-168 no raw N.load(data. in applySaveData",
+    applyFn.length > 0 && !/N\.load\(data\./.test(applyFn)
+  );
+  assertTrue("AZR-168 applySaveData uses loadCount", /loadCount\(data\./.test(applyFn));
+  assertTrue("AZR-168 applySaveData uses loadNum", /loadNum\(data\./.test(applyFn));
+  assertTrue(
+    "AZR-168 tripwire reuses beginLoadFailure",
+    /function tripwireSanity[\s\S]*?beginLoadFailure\s*\(/.test(gameSrc)
   );
 }
 

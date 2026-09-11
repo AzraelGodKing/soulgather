@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 AZR-165 load-failure safety tests.
+ * Soulgather v6.9.1 AZR-165 + AZR-168 load-failure / save-sanitise tests.
  * Source contracts + unit tests with mocked localStorage (boot deferred).
  */
 import fs from "fs";
@@ -355,6 +355,93 @@ assertEqual(
   "AZR-165 beginLoadFailure keeps raw",
   Eco.getLoadFailedRaw(),
   "KEEP-RAW"
+);
+
+// AZR-168: isSaveShape rejects malformed souls.m even with extra fields
+assertEqual(
+  "AZR-168 isSaveShape false for souls.m null payload",
+  Eco.isSaveShape({ souls: { m: null, e: 0 }, wellDepth: -5, thrones: -20 }),
+  false
+);
+assertEqual(
+  "AZR-168 isSaveShape false souls.m null with lifetimeSouls",
+  Eco.isSaveShape({
+    souls: { m: null, e: 0 },
+    lifetimeSouls: 0,
+    wellDepth: -5,
+    thrones: -20
+  }),
+  false
+);
+assertEqual(
+  "AZR-168 isSaveShape false negative favorEarned if present",
+  Eco.isSaveShape({ souls: 0, lifetimeSouls: 0, favorEarned: -1 }),
+  false
+);
+assertEqual(
+  "AZR-168 isSaveShape true missing favorEarned",
+  Eco.isSaveShape({ souls: 1, lifetimeSouls: 2 }),
+  true
+);
+
+// Import reject must not touch LS (isSaveShape false → importMemory returns before adoptSave)
+const importPayload = { souls: { m: null, e: 0 }, wellDepth: -5, thrones: -20 };
+storage.setItem("soulgather-v0", "KEEP-IMPORT");
+assertEqual("AZR-168 import payload rejected by isSaveShape", Eco.isSaveShape(importPayload), false);
+assertEqual(
+  "AZR-168 rejected import leaves current save untouched",
+  storage.getItem("soulgather-v0"),
+  "KEEP-IMPORT"
+);
+
+// applySaveData / loadCount sanitise (valid souls; negative counts → 0)
+Eco.setLoadFailed(false);
+Eco.applySaveData({
+  souls: 10,
+  lifetimeSouls: 10,
+  wellDepth: -5,
+  thrones: -20
+});
+assertEqual("AZR-168 loadCount wellDepth -5 → 0", Eco.getState().wellDepth, 0);
+assertEqual("AZR-168 loadCount thrones -20 → 0", Eco.getState().thrones, 0);
+assertEqual("AZR-168 loadCount(-5)", Eco.loadCount(-5), 0);
+assertEqual("AZR-168 loadCount(-20)", Eco.loadCount(-20), 0);
+assertEqual("AZR-168 loadCount(3, 2) caps", Eco.loadCount(3, 2), 2);
+
+// Source: no Number(data. leftover in applySaveData
+{
+  const applyStart = gameSrc.indexOf("function applySaveData");
+  const applyEnd = gameSrc.indexOf("function adoptSave");
+  const applyFn = gameSrc.slice(applyStart, applyEnd);
+  assertTrue(
+    "AZR-168 source: no Number(data. in applySaveData",
+    !/Number\(data\./.test(applyFn)
+  );
+  assertTrue("AZR-168 source: tripwireSanity exists", /function tripwireSanity\s*\(/.test(gameSrc));
+  assertTrue(
+    "AZR-168 source: save() still gated on loadFailed",
+    /function save\s*\(\s*\)\s*\{[\s\S]*?if\s*\(\s*loadFailed\s*\)\s*return\s*;/.test(gameSrc)
+  );
+  assertTrue("AZR-168 source: sanityAcc 1s tripwire", /sanityAcc\s*\+=\s*dt/.test(gameSrc));
+}
+
+// Tripwire: NaN core currency freezes autosave, does not wipe LS
+storage.setItem("soulgather-v0", "KEEP-TRIP");
+Eco.setLoadFailed(false);
+Eco.setLoadFailedRaw(null);
+Eco.getState().souls = { m: NaN, e: 0 };
+Eco.tripwireSanity();
+assertEqual("AZR-168 tripwire sets loadFailed", Eco.getLoadFailed(), true);
+assertEqual(
+  "AZR-168 tripwire does not wipe LS",
+  storage.getItem("soulgather-v0"),
+  "KEEP-TRIP"
+);
+Eco.save();
+assertEqual(
+  "AZR-168 save() after tripwire leaves LS identical",
+  storage.getItem("soulgather-v0"),
+  "KEEP-TRIP"
 );
 
 if (failed > 0) {
