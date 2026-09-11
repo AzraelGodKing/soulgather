@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -255,21 +255,52 @@ function purchasePlan(owned, currency, base, mult, buyMode, extraMult) {
   return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
 }
 
+const FAVOR_SOULS_BASE = 25000;
+
 function favorGain(lifetimeSouls) {
   const n = N.max(N.from(lifetimeSouls), 0);
   if (N.cmp(n, 0) <= 0) return 0;
   if (n.e < 15) {
     const v = N.toNumber(n);
     if (isFinite(v) && v >= 0) {
-      return Math.floor(Math.sqrt(v / 25000));
+      return Math.floor(Math.sqrt(v / FAVOR_SOULS_BASE) + 1e-9);
     }
   }
-  const q = N.div(n, 25000);
+  const q = N.div(n, FAVOR_SOULS_BASE);
   const s = N.floor(N.add(N.pow(q, 0.5), N.fromNumber(1e-9)));
   const asN = N.toNumber(s);
   if (!isFinite(asN) || asN > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
   if (asN < 0) return 0;
   return Math.floor(asN);
+}
+
+function soulsForFavor(n) {
+  const k = Math.max(0, Math.floor(Number(n) || 0));
+  if (!isFinite(k) || k <= 0) return N.fromNumber(0);
+  if (k <= 100000) {
+    return N.mul(N.fromNumber(FAVOR_SOULS_BASE), k * k);
+  }
+  return N.mul(N.fromNumber(FAVOR_SOULS_BASE), N.mul(N.fromNumber(k), N.fromNumber(k)));
+}
+
+function nextFavorThreshold(lifetimeSouls) {
+  return soulsForFavor(favorGain(lifetimeSouls) + 1);
+}
+
+function favorOrdinal(n) {
+  const k = Math.max(0, Math.floor(Number(n) || 0));
+  const mod100 = k % 100;
+  if (mod100 >= 11 && mod100 <= 13) return k + "th";
+  switch (k % 10) {
+    case 1:
+      return k + "st";
+    case 2:
+      return k + "nd";
+    case 3:
+      return k + "rd";
+    default:
+      return k + "th";
+  }
 }
 
 function prestigeMult(favor) {
@@ -1088,6 +1119,41 @@ assertEqual("favorGain(25000)", favorGain(25000), 1);
 assertEqual("favorGain(100000)", favorGain(100000), 2);
 assertEqual("favorGain(225000)", favorGain(225000), 3);
 
+assertEqual("FAVOR_SOULS_BASE === 25000", FAVOR_SOULS_BASE, 25000);
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const hits = gameSrc.match(/25000/g) || [];
+  assertEqual("game.js bare 25000 appears once", hits.length, 1);
+  assertTrue(
+    "game.js names FAVOR_SOULS_BASE = 25000",
+    /FAVOR_SOULS_BASE\s*=\s*25000/.test(gameSrc)
+  );
+}
+for (let n = 1; n <= 50; n++) {
+  const need = soulsForFavor(n);
+  assertEqual("favorGain(soulsForFavor(" + n + "))", favorGain(need), n);
+  const justUnder = N.sub(need, 1);
+  assertEqual(
+    "favorGain(soulsForFavor(" + n + ")-1)",
+    favorGain(justUnder),
+    n - 1
+  );
+}
+{
+  const copy = nextGoal({
+    unlockedSpirits: true,
+    unlockedVessels: true,
+    unlockedThrones: true,
+    favorEarned: 4,
+    aspect: "harvest",
+    lifetimeSouls: 412000,
+  });
+  assertTrue("nextGoal favorEarned=4 names 625k threshold", /625/.test(copy));
+  assertTrue("nextGoal favorEarned=4 does not lie with 25000", !/\b25000\b/.test(copy));
+  assertTrue("nextGoal favorEarned=4 leads with Lay Tribute", /^Lay Tribute\./.test(copy));
+  assertTrue("nextGoal favorEarned=4 says 4 Favor waits", /4 Favor waits/.test(copy));
+}
+
 assertEqual("prestigeMult(0)", prestigeMult(0), 1);
 assertEqual("prestigeMult(2)", prestigeMult(2), 2);
 
@@ -1379,6 +1445,24 @@ function nextGoal(view, format) {
     return "A throne at 1 Vessel.";
   }
   if (gain >= 1) {
+    if (favorEarned >= 1) {
+      const nextReady = nextFavorThreshold(lifetimeSouls);
+      const lifeReady = format(lifetimeSouls);
+      const nextReadyFmt = format(unwrap(nextReady));
+      return (
+        "Lay Tribute. " +
+        gain +
+        " Favor waits. The " +
+        favorOrdinal(gain + 1) +
+        " at " +
+        nextReadyFmt +
+        " — " +
+        lifeReady +
+        " / " +
+        nextReadyFmt +
+        "."
+      );
+    }
     return "Lay Tribute. The GodKing will remember.";
   }
   if (view.unlockedLanterns && lanterns < 1) {
@@ -1426,12 +1510,26 @@ function nextGoal(view, format) {
     return "A vow may be sworn.";
   }
   if (favorEarned >= 1) {
-    return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
+    const nextGather = nextFavorThreshold(lifetimeSouls);
+    const lifeGather = format(lifetimeSouls);
+    const nextGatherFmt = format(unwrap(nextGather));
+    return (
+      "The well gathers. Next Favor at " +
+      nextGatherFmt +
+      " — " +
+      lifeGather +
+      " / " +
+      nextGatherFmt +
+      "."
+    );
   }
+  const nextFirst = nextFavorThreshold(lifetimeSouls);
   return (
     "Tribute when the GodKing will remember. " +
     format(lifetimeSouls) +
-    " / 25000 lifetime Souls."
+    " / " +
+    format(unwrap(nextFirst)) +
+    " lifetime Souls."
   );
 }
 
@@ -1485,7 +1583,7 @@ assertEqual(
     favorEarned: 1,
     aspect: "harvest",
   }),
-  "The well gathers. Another Tribute at 25000 lifetime Souls this run."
+  "The well gathers. Next Favor at 25000 — 0 / 25000."
 );
 
 assertEqual(
@@ -1749,7 +1847,7 @@ assertEqual(
     aspect: "harvest",
     vow: "",
   }),
-  "Lay Tribute. The GodKing will remember."
+  "Lay Tribute. 1 Favor waits. The 2nd at 100000 — 25000 / 100000."
 );
 assertEqual(
   "nextGoal sworn vow",
@@ -1762,7 +1860,7 @@ assertEqual(
     aspect: "harvest",
     vow: "stillness",
   }),
-  "The well gathers. Another Tribute at 25000 lifetime Souls this run."
+  "The well gathers. Next Favor at 25000 — 0 / 25000."
 );
 
 assertEqual("remembranceCostFavor", remembranceCostFavor(), 3);

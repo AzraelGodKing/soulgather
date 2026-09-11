@@ -140,6 +140,7 @@
   var NIGHT_TITHE_FRAC = 0.25;
   var NIGHT_TITHE_SECS = 30;
   var REMEMBRANCE_FAVOR_COST = 3;
+  var FAVOR_SOULS_BASE = 25000;
   var ASHEN_TIDE_MAX = 5;
   var OSSUARY_COST = 1;
   var OSSUARY_MAX = 8;
@@ -160,7 +161,7 @@
   var UNLOCK_CHOIR_ASH = 20;
   var HYMN_SECS = 45;
   var HYMN_MULT = 1.25;
-  var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25000, 50000];
+  var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25e3, 50000];
   var BOUND_NAMES = [
     "The First Siphon",
     "The Quiet Chain",
@@ -357,15 +358,45 @@
     if (n.e < 15) {
       var v = N.toNumber(n);
       if (isFinite(v) && v >= 0) {
-        return Math.floor(Math.sqrt(v / 25000));
+        return Math.floor(Math.sqrt(v / FAVOR_SOULS_BASE) + 1e-9);
       }
     }
-    var q = N.div(n, 25000);
+    var q = N.div(n, FAVOR_SOULS_BASE);
     var s = N.floor(N.add(N.pow(q, 0.5), N.fromNumber(1e-9)));
     var asN = N.toNumber(s);
     if (!isFinite(asN) || asN > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
     if (asN < 0) return 0;
     return Math.floor(asN);
+  }
+
+  /** Souls required for the nth Favor: FAVOR_SOULS_BASE * n^2. */
+  function soulsForFavor(n) {
+    var k = Math.max(0, Math.floor(Number(n) || 0));
+    if (!isFinite(k) || k <= 0) return N.fromNumber(0);
+    if (k <= 100000) {
+      return N.mul(N.fromNumber(FAVOR_SOULS_BASE), k * k);
+    }
+    return N.mul(N.fromNumber(FAVOR_SOULS_BASE), N.mul(N.fromNumber(k), N.fromNumber(k)));
+  }
+
+  function nextFavorThreshold(lifetimeSouls) {
+    return soulsForFavor(favorGain(lifetimeSouls) + 1);
+  }
+
+  function favorOrdinal(n) {
+    var k = Math.max(0, Math.floor(Number(n) || 0));
+    var mod100 = k % 100;
+    if (mod100 >= 11 && mod100 <= 13) return k + "th";
+    switch (k % 10) {
+      case 1:
+        return k + "st";
+      case 2:
+        return k + "nd";
+      case 3:
+        return k + "rd";
+      default:
+        return k + "th";
+    }
   }
 
   function prestigeMult(favorEarned) {
@@ -1606,6 +1637,24 @@
       return "A throne at 1 Vessel.";
     }
     if (gain >= 1) {
+      if (favorEarned >= 1) {
+        var nextReady = nextFavorThreshold(view.lifetimeSouls);
+        var lifeReady = format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls);
+        var nextReadyFmt = format(nextReady);
+        return (
+          "Lay Tribute. " +
+          gain +
+          " Favor waits. The " +
+          favorOrdinal(gain + 1) +
+          " at " +
+          nextReadyFmt +
+          " — " +
+          lifeReady +
+          " / " +
+          nextReadyFmt +
+          "."
+        );
+      }
       return "Lay Tribute. The GodKing will remember.";
     }
     if (view.unlockedLanterns && lanterns < 1) {
@@ -1653,12 +1702,26 @@
       return "A vow may be sworn.";
     }
     if (favorEarned >= 1) {
-      return "The well gathers. Another Tribute at 25000 lifetime Souls this run.";
+      var nextGather = nextFavorThreshold(view.lifetimeSouls);
+      var lifeGather = format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls);
+      var nextGatherFmt = format(nextGather);
+      return (
+        "The well gathers. Next Favor at " +
+        nextGatherFmt +
+        " — " +
+        lifeGather +
+        " / " +
+        nextGatherFmt +
+        "."
+      );
     }
+    var nextFirst = nextFavorThreshold(view.lifetimeSouls);
     return (
       "Tribute when the GodKing will remember. " +
       format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls) +
-      " / 25000 lifetime Souls."
+      " / " +
+      format(nextFirst) +
+      " lifetime Souls."
     );
   }
 
@@ -10071,6 +10134,9 @@
     chaliceCost: chaliceCost,
     markCost: markCost,
     favorGain: favorGain,
+    FAVOR_SOULS_BASE: FAVOR_SOULS_BASE,
+    soulsForFavor: soulsForFavor,
+    nextFavorThreshold: nextFavorThreshold,
     prestigeMult: prestigeMult,
     prodMult: prodMult,
     chaliceMult: chaliceMult,
