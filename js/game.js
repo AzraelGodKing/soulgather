@@ -2043,6 +2043,7 @@
       unlockedWellDraws: false,
       aspect: "",
       lastTick: Date.now(),
+      simulatedUntil: Date.now(),
       chronicle: [],
       titheLeft: 0,
       nightLeft: 0,
@@ -2542,6 +2543,8 @@
       tryAutobindSpirits();
     }
     checkUnlock();
+    // AZR-163: credit wall clock only for the clamped dt actually simulated
+    state.simulatedUntil = (Number(state.simulatedUntil) || Date.now()) + dt * 1000;
   }
 
   function checkUnlock() {
@@ -4980,6 +4983,7 @@
     "unlockedWellDraws",
     "aspect",
     "lastTick",
+    "simulatedUntil",
     "chronicle",
     "titheLeft",
     "nightLeft",
@@ -5221,6 +5225,7 @@
       unlockedWellDraws: state.unlockedWellDraws,
       aspect: normalizeAspect(state.aspect),
       lastTick: Date.now(),
+      simulatedUntil: Number(state.simulatedUntil) || Number(state.lastTick) || Date.now(),
       chronicle: state.chronicle || [],
       titheLeft: Number(state.titheLeft) || 0,
       nightLeft: Number(state.nightLeft) || 0,
@@ -5475,6 +5480,7 @@
     state.unlockedWellDraws = !!data.unlockedWellDraws;
     state.aspect = normalizeAspect(data.aspect);
     state.lastTick = Number(data.lastTick) || Date.now();
+    state.simulatedUntil = Number(data.simulatedUntil) || Number(data.lastTick) || Date.now();
     state.chronicle = normalizeChronicle(data.chronicle);
     state.titheLeft = Number(data.titheLeft) || 0;
     if (state.titheLeft < 0) state.titheLeft = 0;
@@ -5998,6 +6004,46 @@
     lastFrame = 0;
   }
 
+  function buildAwayToast(soulsGained, ashGained, shadesGained) {
+    var awayMsg = "The well gathered while you were away.";
+    if (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) {
+      awayMsg += " +" + fmt(soulsGained) + " Souls";
+    }
+    if (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) {
+      awayMsg += " +" + fmt(ashGained) + " Ash";
+    }
+    if (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0) {
+      awayMsg += " +" + fmt(shadesGained) + " Shades";
+    }
+    return awayMsg;
+  }
+
+  function maybeAwayToast(offline, soulsGained, ashGained, shadesGained) {
+    if (
+      offline > AWAY_SUMMARY_DT &&
+      (
+        (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) ||
+        (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) ||
+        (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0)
+      )
+    ) {
+      return buildAwayToast(soulsGained, ashGained, shadesGained);
+    }
+    return null;
+  }
+
+  // AZR-163: credit production through wall-now via offline applyDt (no Hollow / live Autobind).
+  // Advances simulatedUntil inside applyDt; then syncs to now so MAX_DT excess is not re-credited.
+  function settleToNow() {
+    var now = Date.now();
+    var until = Number(state.simulatedUntil) || now;
+    var dt = (now - until) / 1000;
+    if (dt > MAX_DT) dt = MAX_DT;
+    if (dt > 0) applyDt(dt, false);
+    state.simulatedUntil = now;
+    return dt;
+  }
+
   function save() {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(serializeState()));
@@ -6014,40 +6060,24 @@
       if (!data || typeof data !== "object") return;
       applySaveData(data);
 
-      var offline = (Date.now() - state.lastTick) / 1000;
+      var offline = (Date.now() - state.simulatedUntil) / 1000;
       var soulsBefore = N.clone(state.souls);
       var ashBefore = N.clone(state.ash);
       var shadesBefore = N.clone(state.shades);
       if (offline > 0.25) {
-        applyDt(offline);
+        applyDt(offline, false);
       }
       var soulsGained = N.sub(state.souls, soulsBefore);
       var ashGained = N.sub(state.ash, ashBefore);
       var shadesGained = N.sub(state.shades, shadesBefore);
+      // Sync wall after catchup (burns excess beyond MAX_DT; do not double-apply).
+      state.simulatedUntil = Date.now();
       state.lastTick = Date.now();
       syncChronicle();
       save();
 
-      if (
-        offline > AWAY_SUMMARY_DT &&
-        (
-          (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) ||
-          (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) ||
-          (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0)
-        )
-      ) {
-        var awayMsg = "The well gathered while you were away.";
-        if (N.isFinite(soulsGained) && N.cmp(soulsGained, 0) > 0) {
-          awayMsg += " +" + fmt(soulsGained) + " Souls";
-        }
-        if (N.isFinite(ashGained) && N.cmp(ashGained, 0) > 0) {
-          awayMsg += " +" + fmt(ashGained) + " Ash";
-        }
-        if (N.isFinite(shadesGained) && N.cmp(shadesGained, 0) > 0) {
-          awayMsg += " +" + fmt(shadesGained) + " Shades";
-        }
-        pendingAwayToast = awayMsg;
-      }
+      var awayMsg = maybeAwayToast(offline, soulsGained, ashGained, shadesGained);
+      if (awayMsg) pendingAwayToast = awayMsg;
     } catch (err) {
       state = freshState();
     }
@@ -6120,6 +6150,7 @@
 
     adoptSave(data);
     state.lastTick = Date.now();
+    state.simulatedUntil = Date.now();
     syncChronicle();
     save();
     render();
@@ -9422,9 +9453,28 @@
     }
 
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) {
+      if (document.hidden) {
+        settleToNow();
+        save();
+      } else {
+        var until = Number(state.simulatedUntil) || Date.now();
+        var gap = (Date.now() - until) / 1000;
+        var soulsBefore = N.clone(state.souls);
+        var ashBefore = N.clone(state.ash);
+        var shadesBefore = N.clone(state.shades);
+        settleToNow();
         lastFrame = 0;
+        var soulsGained = N.sub(state.souls, soulsBefore);
+        var ashGained = N.sub(state.ash, ashBefore);
+        var shadesGained = N.sub(state.shades, shadesBefore);
+        var awayMsg = maybeAwayToast(gap, soulsGained, ashGained, shadesGained);
+        if (awayMsg) showToast(awayMsg);
       }
+    });
+
+    window.addEventListener("pagehide", function () {
+      settleToNow();
+      save();
     });
 
     document.addEventListener("keydown", function (ev) {
@@ -9817,6 +9867,8 @@
     HOLLOW_ASH_CLEAR_FLOOR: HOLLOW_ASH_CLEAR_FLOOR,
     HOLLOW_SHADE_CLEAR_FLOOR: HOLLOW_SHADE_CLEAR_FLOOR,
     HOLLOW_CLEAR_FRAC: HOLLOW_CLEAR_FRAC,
+    MAX_DT: MAX_DT,
+    AWAY_SUMMARY_DT: AWAY_SUMMARY_DT,
     normalizeAspect: normalizeAspect,
     nextGoal: nextGoal,
     titheCost: titheCost,
