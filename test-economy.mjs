@@ -2580,7 +2580,7 @@ assertEqual(
   );
   assertTrue(
     "tickHollowHunger only in live applyDt path",
-    /if \(live\) \{[\s\S]*?tickHollowHunger\(dt\)/.test(gameSrc)
+    /if \(live\) \{[\s\S]*?tickHollowHunger\(liveSpan\)/.test(gameSrc)
   );
   const re = /function (tryAutobind\w*)\(/g;
   let m;
@@ -2662,11 +2662,7 @@ assertEqual(
     "AZR-163 does not use beforeunload for settle",
     !/beforeunload/.test(gameSrc)
   );
-  // Deferred to AZR-164: no 1Hz background simulation clock
-  assertTrue(
-    "AZR-163 no 1Hz setInterval background clock",
-    !/setInterval\s*\(\s*[^,]+,\s*1000\s*\)/.test(gameSrc)
-  );
+  // AZR-164 owns the 1Hz hidden heartbeat (asserted below).
   assertTrue("AZR-163 exports MAX_DT", /MAX_DT:\s*MAX_DT/.test(gameSrc));
 
   // Unit-style: migration
@@ -2709,6 +2705,71 @@ assertEqual(
     "AZR-163 settle caps at MAX_DT",
     settleGap(0, (MAX_DT + 1000) * 1000, MAX_DT),
     MAX_DT
+  );
+}
+
+
+// AZR-164: LIVE_FRAME_MAX + Hollow freeze while hidden + 1Hz heartbeat
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  assertTrue("AZR-164 LIVE_FRAME_MAX = 1.0", /LIVE_FRAME_MAX\s*=\s*1(?:\.0)?\s*;/.test(gameSrc));
+  assertTrue("AZR-164 exports LIVE_FRAME_MAX", /LIVE_FRAME_MAX:\s*LIVE_FRAME_MAX/.test(gameSrc));
+  assertTrue(
+    "AZR-164 liveSpan = Math.min(dt, LIVE_FRAME_MAX)",
+    /liveSpan\s*=\s*Math\.min\(\s*dt\s*,\s*LIVE_FRAME_MAX\s*\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 tickHollowHunger called with liveSpan",
+    /tickHollowHunger\(\s*liveSpan\s*\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 autobindAcc uses liveSpan",
+    /autobindAcc\s*\+=\s*liveSpan/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 tickHollowHunger freezes while document.hidden",
+    /function tickHollowHunger\s*\(\s*dt\s*\)\s*\{[\s\S]*?document\.hidden[\s\S]*?return/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 setInterval 1000 hidden heartbeat exists",
+    /setInterval\s*\(\s*function\s*\(\)\s*\{[\s\S]*?\}\s*,\s*1000\s*\)/.test(gameSrc)
+  );
+  assertTrue("AZR-164 startHiddenHeartbeat helper", /function startHiddenHeartbeat\s*\(/.test(gameSrc));
+  assertTrue("AZR-164 clearHiddenHeartbeat helper", /function clearHiddenHeartbeat\s*\(/.test(gameSrc));
+  assertTrue(
+    "AZR-164 heartbeat cleared on show (visibilitychange !hidden)",
+    /visibilitychange[\s\S]{0,800}clearHiddenHeartbeat/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 heartbeat started on hide",
+    /document\.hidden[\s\S]{0,400}startHiddenHeartbeat/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-164 pagehide clears heartbeat",
+    /pagehide[\s\S]{0,200}clearHiddenHeartbeat/.test(gameSrc)
+  );
+  // No Date.now stamp of simulatedUntil outside applyDt (serialize / settle sync / freshState / load sync OK;
+  // the live advance contract remains applyDt's `+ dt * 1000`).
+  assertTrue(
+    "AZR-164 applyDt still sole live simulatedUntil advance",
+    /state\.simulatedUntil\s*=\s*\(Number\(state\.simulatedUntil\)\s*\|\|\s*Date\.now\(\)\)\s*\+\s*dt\s*\*\s*1000/.test(
+      gameSrc
+    )
+  );
+  // Unit: LIVE_FRAME_MAX clamp math
+  const LIVE_FRAME_MAX = 1.0;
+  assertEqual("AZR-164 LIVE_FRAME_MAX === 1", LIVE_FRAME_MAX, 1);
+  function liveSpanOf(dt) {
+    return Math.min(dt, LIVE_FRAME_MAX);
+  }
+  assertEqual("AZR-164 liveSpan(0.016)", liveSpanOf(0.016), 0.016);
+  assertEqual("AZR-164 liveSpan(1)", liveSpanOf(1), 1);
+  assertEqual("AZR-164 liveSpan(60) clamped", liveSpanOf(60), 1);
+  assertEqual("AZR-164 liveSpan(600) clamped", liveSpanOf(600), 1);
+  // tickHollowHunger must never be invoked with dt > LIVE_FRAME_MAX at the call site
+  assertTrue(
+    "AZR-164 no tickHollowHunger(dt) in live path (source contract)",
+    !/if \(live\) \{[\s\S]*?tickHollowHunger\(dt\)/.test(gameSrc)
   );
 }
 
