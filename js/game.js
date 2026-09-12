@@ -210,6 +210,11 @@
 
   function markDirty() { _dirty = true; }
 
+  var saveDirty = false;
+  function markSaveDirty() { saveDirty = true; }
+  function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
+  function markRenderDirty() { markDirty(); }
+
   function addOwned(owned, i) {
     i = Number(i) || 0;
     if (owned && typeof owned === "object" && typeof owned.m === "number") {
@@ -3035,12 +3040,10 @@
     state.souls = N.add(state.souls, power);
     state.lifetimeSouls = N.add(state.lifetimeSouls, power);
     state.allTimeSouls = N.add(state.allTimeSouls, power);
-    checkUnlock();
-    save();
     pulseGather();
     spawnRipple(power);
+    markSaveDirty();
     markDirty();
-    render();
   }
 
   function purchasePlan(owned, currency, base, mult, extraMult) {
@@ -3079,8 +3082,8 @@
     state.wellDepth += plan.k;
     toastBulk(plan.k, "Deepened " + plan.k + " levels");
     syncChronicle();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyShade() {
@@ -3099,8 +3102,8 @@
     state.lifetimeShades = N.add(state.lifetimeShades, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Shades");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySpirit() {
@@ -3120,8 +3123,8 @@
     state.lifetimeSpirits = N.add(state.lifetimeSpirits, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Spirits");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyVessel() {
@@ -3134,8 +3137,8 @@
     state.vessels = N.add(state.vessels, plan.k);
     toastBulk(plan.k, "Bound " + plan.k + " Vessels");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyThrone() {
@@ -3149,8 +3152,8 @@
     state.thrones += plan.k;
     toastBulk(plan.k, "Raised " + plan.k + " Thrones");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLantern() {
@@ -3168,8 +3171,8 @@
     }
     markChronicle("lantern");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyFetter() {
@@ -3183,8 +3186,8 @@
     toastBulk(plan.k, "Bound " + plan.k + " Fetters");
     markChronicle("fetter");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyCenser() {
@@ -3198,8 +3201,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Censers");
     markChronicle("censer");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyPyre() {
@@ -3213,8 +3216,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Pyres");
     markChronicle("pyre");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyUrn() {
@@ -3228,8 +3231,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Urns");
     markChronicle("urn");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyHearth() {
@@ -3243,8 +3246,8 @@
     toastBulk(plan.k, "Kindled " + plan.k + " Hearths");
     markChronicle("hearth");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyBeacon() {
@@ -3258,8 +3261,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Beacons");
     markChronicle("beacon");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySpire() {
@@ -3273,8 +3276,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Spires");
     markChronicle("spire");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyObelisk() {
@@ -3288,8 +3291,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Obelisks");
     markChronicle("obelisk");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function chalicePlan() {
@@ -3321,8 +3324,8 @@
     toastBulk(plan.k, "Raised " + plan.k + " Chalices");
     markChronicle("chalice");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyMark(kind) {
@@ -3343,8 +3346,8 @@
     noteHollowManualSpend("ash", cost, hollowBefore);
     state[levelKey] += 1;
     markChronicle("mark");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyEdict() {
@@ -3354,8 +3357,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.edictLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyMemory() {
@@ -3365,8 +3368,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.memoryLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyEcho() {
@@ -3378,8 +3381,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.echoLevel = 1;
     markChronicle("echo");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySeat() {
@@ -3390,8 +3393,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.seatLevel += 1;
     markChronicle("seat");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyKindle() {
@@ -3401,8 +3404,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.kindleLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyAshen() {
@@ -3412,8 +3415,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.ashenLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyDepth() {
@@ -3423,8 +3426,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.depthLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyChoirEdict() {
@@ -3435,8 +3438,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.choirEdictLevel += 1;
     markChronicle("choirEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyHymnEdict() {
@@ -3447,8 +3450,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.hymnEdictLevel += 1;
     markChronicle("hymnEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySmokeEdict() {
@@ -3459,8 +3462,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.smokeEdictLevel += 1;
     markChronicle("smokeEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyEmbersEdict() {
@@ -3471,8 +3474,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.embersEdictLevel += 1;
     markChronicle("embersEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyUrnEdict() {
@@ -3483,8 +3486,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.urnEdictLevel += 1;
     markChronicle("urnEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyHearthEdict() {
@@ -3495,8 +3498,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.hearthEdictLevel += 1;
     markChronicle("hearthEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyBeaconEdict() {
@@ -3507,8 +3510,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.beaconEdictLevel += 1;
     markChronicle("beaconEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySpireEdict() {
@@ -3519,8 +3522,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.spireEdictLevel += 1;
     markChronicle("spireEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyObeliskEdict() {
@@ -3531,8 +3534,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.obeliskEdictLevel += 1;
     markChronicle("obeliskEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyCinderEdict() {
@@ -3543,8 +3546,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.cinderEdictLevel += 1;
     markChronicle("cinderEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyCutEdict() {
@@ -3555,8 +3558,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.cutEdictLevel += 1;
     markChronicle("cutEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyTendingEdict() {
@@ -3567,8 +3570,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.tendingEdictLevel += 1;
     markChronicle("tendingEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyGleamEdict() {
@@ -3579,8 +3582,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.gleamEdictLevel += 1;
     markChronicle("gleamEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyRiseEdict() {
@@ -3591,8 +3594,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.riseEdictLevel += 1;
     markChronicle("riseEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyCupEdict() {
@@ -3603,8 +3606,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.cupEdictLevel += 1;
     markChronicle("cupEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyDraughtEdict() {
@@ -3615,8 +3618,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.draughtEdictLevel += 1;
     markChronicle("draughtEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyWakeEdict() {
@@ -3627,8 +3630,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.wakeEdictLevel += 1;
     markChronicle("wakeEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyProcessionEdict() {
@@ -3639,8 +3642,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.processionEdictLevel += 1;
     markChronicle("processionEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyTollEdict() {
@@ -3651,8 +3654,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.tollEdictLevel += 1;
     markChronicle("tollEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyVeilEdict() {
@@ -3663,8 +3666,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.veilEdictLevel += 1;
     markChronicle("veilEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyKnellEdict() {
@@ -3675,8 +3678,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.knellEdictLevel += 1;
     markChronicle("knellEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyNightEdict() {
@@ -3687,8 +3690,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.nightEdictLevel += 1;
     markChronicle("nightEdict");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySiphon() {
@@ -3699,8 +3702,8 @@
     noteHollowManualSpend("souls", cost, hollowBefore);
     state.siphonLevel += 1;
     syncChronicle();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLevy() {
@@ -3712,8 +3715,8 @@
     noteHollowManualSpend("shades", cost, hollowBefore);
     state.levyLevel += 1;
     syncChronicle();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyBindingToll() {
@@ -3730,8 +3733,8 @@
     markChronicle("bindingToll");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyCinders() {
@@ -3745,8 +3748,8 @@
     markChronicle("cinders");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyUrnRite() {
@@ -3760,8 +3763,8 @@
     markChronicle("urnRite");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyHearthRite() {
@@ -3775,8 +3778,8 @@
     markChronicle("hearthRite");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyBeaconRite() {
@@ -3790,8 +3793,8 @@
     markChronicle("beaconRite");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buySpireRite() {
@@ -3805,8 +3808,8 @@
     markChronicle("spireRite");
     syncChronicle();
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyWellDraws() {
@@ -3819,8 +3822,8 @@
     state.wellDraws = true;
     state.unlockedWellDraws = true;
     syncChronicle();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function currentTitheCost() {
@@ -3846,8 +3849,8 @@
     }
     checkUnlock();
     showToast("The GodKing takes his cut.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function payNightTithe() {
@@ -3862,8 +3865,8 @@
     noteHollowManualSpend("ash", cost, hollowBefore);
     state.nightLeft = nightSecs(state.deeperNightLevel);
     showToast("The GodKing hungers at midnight.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function keepWake() {
@@ -3884,15 +3887,15 @@
       showToast("Eight ash for the first wake.");
     }
     showToast("The fire does not sleep.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function toggleAutobind() {
     if (!state.unlockedAutobind) return;
     state.autobind = !state.autobind;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobind() {
@@ -3907,8 +3910,8 @@
   function toggleAutobindSpirits() {
     if (!state.unlockedAutobindSpirits) return;
     state.autobindSpirits = !state.autobindSpirits;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindSpirits() {
@@ -3924,8 +3927,8 @@
   function toggleAutobindVessels() {
     if (!state.unlockedAutobindVessels) return;
     state.autobindVessels = !state.autobindVessels;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindVessels() {
@@ -3940,8 +3943,8 @@
   function toggleAutobindLanterns() {
     if (!state.unlockedAutobindLanterns) return;
     state.autobindLanterns = !state.autobindLanterns;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindLanterns() {
@@ -3956,8 +3959,8 @@
   function toggleAutobindFetters() {
     if (!state.unlockedAutobindFetters) return;
     state.autobindFetters = !state.autobindFetters;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindFetters() {
@@ -3972,8 +3975,8 @@
   function toggleAutobindCensers() {
     if (!state.unlockedAutobindCensers) return;
     state.autobindCensers = !state.autobindCensers;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindCensers() {
@@ -3989,8 +3992,8 @@
   function toggleAutobindThrones() {
     if (!state.unlockedAutobindThrones) return;
     state.autobindThrones = !state.autobindThrones;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindThrones() {
@@ -4006,8 +4009,8 @@
   function toggleAutobindPyres() {
     if (!state.unlockedAutobindPyres) return;
     state.autobindPyres = !state.autobindPyres;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindPyres() {
@@ -4022,8 +4025,8 @@
   function toggleAutobindUrns() {
     if (!state.unlockedAutobindUrns) return;
     state.autobindUrns = !state.autobindUrns;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindUrns() {
@@ -4039,8 +4042,8 @@
   function toggleAutobindHearths() {
     if (!state.unlockedAutobindHearths) return;
     state.autobindHearths = !state.autobindHearths;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindHearths() {
@@ -4056,8 +4059,8 @@
   function toggleAutobindBeacons() {
     if (!state.unlockedAutobindBeacons) return;
     state.autobindBeacons = !state.autobindBeacons;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindBeacons() {
@@ -4073,8 +4076,8 @@
   function toggleAutobindSpires() {
     if (!state.unlockedAutobindSpires) return;
     state.autobindSpires = !state.autobindSpires;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindSpires() {
@@ -4090,8 +4093,8 @@
   function toggleAutobindObelisks() {
     if (!state.unlockedAutobindObelisks) return;
     state.autobindObelisks = !state.autobindObelisks;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindObelisks() {
@@ -4107,8 +4110,8 @@
   function toggleAutobindChalices() {
     if (!state.unlockedAutobindChalices) return;
     state.autobindChalices = !state.autobindChalices;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function tryAutobindChalices() {
@@ -4140,8 +4143,8 @@
       showToast("Ten souls for the first toll.");
     }
     showToast("The well answers twice.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function thinVeil() {
@@ -4162,8 +4165,8 @@
       showToast("Ten ash for the first veil.");
     }
     showToast("The well's mouth is near.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function bumpPeakShades() {
@@ -4783,7 +4786,7 @@
     if (tryNamesBound()) granted = true;
 
     flushGiftToasts();
-    if (granted) save();
+    if (granted) markSaveDirty();
   }
 
   function tryNamesBound() {
@@ -4845,8 +4848,8 @@
       markChronicle("giftCrown");
       showToast("The crown was generous.");
     }
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongMemory() {
@@ -4857,8 +4860,8 @@
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.longMemoryLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyQuietCourt() {
@@ -4870,8 +4873,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.quietCourtLevel += 1;
     markChronicle("quietCourt");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function crownUnlocked() {
@@ -4891,8 +4894,8 @@
     noteHollowManualSpend("favor", cost, hollowBefore);
     state.remembrance = (Number(state.remembrance) || 0) + 1;
     showToast("The GodKing keeps a remembrance.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyDeeperNight() {
@@ -4903,8 +4906,8 @@
     state.remembrance -= cost;
     noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.deeperNightLevel += 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerProcession() {
@@ -4919,8 +4922,8 @@
     state.longerProcessionLevel = level + 1;
     markChronicle("longerProcession");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyDeeperToll() {
@@ -4935,8 +4938,8 @@
     state.deeperTollLevel = level + 1;
     markChronicle("deeperToll");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerWake() {
@@ -4951,8 +4954,8 @@
     state.longerWakeLevel = level + 1;
     markChronicle("longerWake");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerTithe() {
@@ -4967,8 +4970,8 @@
     state.longerTitheLevel = level + 1;
     markChronicle("longerTithe");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerVeil() {
@@ -4983,8 +4986,8 @@
     state.longerVeilLevel = level + 1;
     markChronicle("longerVeil");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerHymn() {
@@ -4999,8 +5002,8 @@
     state.longerHymnLevel = level + 1;
     markChronicle("longerHymn");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyLongerKnell() {
@@ -5015,8 +5018,8 @@
     state.longerKnellLevel = level + 1;
     markChronicle("longerKnell");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyAshenTide() {
@@ -5029,8 +5032,8 @@
     state.remembrance -= cost;
     noteHollowManualSpend("remembrance", cost, hollowBefore);
     state.ashenTideLevel = level + 1;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function buyOssuary() {
@@ -5045,8 +5048,8 @@
     state.ossuaryLevel = level + 1;
     markChronicle("ossuary");
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function beginProcession() {
@@ -5066,8 +5069,8 @@
       showToast("Five souls for the first procession.");
     }
     showToast("They walk the emptied hall.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function soundKnell() {
@@ -5087,8 +5090,8 @@
       showToast("Five souls for the first knell.");
     }
     showToast("The well answers twice.");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function beginKnell() {
@@ -5108,8 +5111,8 @@
     if (markChronicle("choir")) {
       showToast("The choir of ash sings.");
     }
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function swearAspect(id) {
@@ -5119,8 +5122,8 @@
     if (!a) return;
     state.aspect = a;
     markChronicle("aspect");
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   var VOW_CONFIRM = {
@@ -5153,15 +5156,15 @@
       }
     }
     checkUnlock();
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function dismissBuyModeHint() {
     if (state.buyModeHintDismissed) return;
     state.buyModeHintDismissed = true;
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   function setBuyMode(mode) {
@@ -5171,8 +5174,8 @@
     if (!state.buyModeHintDismissed) {
       state.buyModeHintDismissed = true;
     }
-    save();
-    render();
+    markSaveDirty();
+    markDirty();
   }
 
   var SAVE_FIELDS = [
@@ -7404,7 +7407,7 @@
     if (withToast && !state.toastShown) {
       state.toastShown = true;
       showToast("The well answers. A will can be bound.");
-      save();
+      markSaveDirty();
     }
   }
 
@@ -7413,7 +7416,7 @@
     if (withToast && !state.vesselToastShown) {
       state.vesselToastShown = true;
       showToast("A vessel waits. A will can be housed.");
-      save();
+      markSaveDirty();
     }
   }
 
@@ -7422,7 +7425,7 @@
     if (withToast && !state.throneToastShown) {
       state.throneToastShown = true;
       showToast("A throne may be raised.");
-      save();
+      markSaveDirty();
     }
   }
 
@@ -7435,7 +7438,7 @@
     if (withToast && !state.censerToastShown) {
       state.censerToastShown = true;
       showToast("They burn what the well discards.");
-      save();
+      markSaveDirty();
     }
   }
 
@@ -10367,7 +10370,8 @@
       if (document.hidden) {
         // AZR-163 settle first, then AZR-164 heartbeat from now (no double-credit).
         settleToNow();
-        save();
+        markSaveDirty();
+        flushSave();
         startHiddenHeartbeat();
       } else {
         clearHiddenHeartbeat();
@@ -10389,7 +10393,8 @@
     window.addEventListener("pagehide", function () {
       clearHiddenHeartbeat();
       settleToNow();
-      save();
+      markSaveDirty();
+      flushSave();
     });
 
     window.addEventListener("unload", function () {
@@ -10479,7 +10484,7 @@
     if (!toastActive && toastQueue.length) {
       presentToast(toastQueue.shift());
     }
-    window.setInterval(save, AUTOSAVE_MS);
+    window.setInterval(flushSave, AUTOSAVE_MS);
     window.requestAnimationFrame(tick);
   }
 
@@ -10757,6 +10762,9 @@
     BAK1_MS: BAK1_MS,
     BAK2_MS: BAK2_MS,
     save: save,
+    flushSave: flushSave,
+    markSaveDirty: markSaveDirty,
+    getSaveDirty: function () { return saveDirty; },
     beginLoadFailure: beginLoadFailure,
     getLoadFailed: function () { return loadFailed; },
     setLoadFailed: function (v) { loadFailed = !!v; },

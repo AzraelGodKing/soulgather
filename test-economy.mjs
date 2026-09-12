@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173 + AZR-174 + AZR-175).
+ * Soulgather v6.9.1 economy smoke test (AZR-162 + AZR-163 + AZR-165 + AZR-168 + AZR-169 + AZR-170 + AZR-171 + AZR-172 + AZR-173 + AZR-174 + AZR-175 + AZR-167).
  * Loads js/num.js + js/format.js (classic scripts) and duplicates in-game formulas.
  */
 
@@ -3720,7 +3720,7 @@ assertEqual(
   );
   assertTrue(
     "AZR-174 tryMilestoneGifts flushes gift toasts",
-    /flushGiftToasts\(\);\s*if \(granted\) save\(\);/.test(gameSrc)
+    /flushGiftToasts\(\);\s*if \(granted\) markSaveDirty\(\);/.test(gameSrc)
   );
   assertTrue(
     "AZR-174 tryMilestoneGifts still markChronicle per gift",
@@ -4609,6 +4609,185 @@ assertEqual(
   assertTrue(
     "AZR-166 footer CSS stays v6.9.1",
     !gameSrc.includes("v6.10.0") && !gameSrc.includes("v7.0")
+  );
+}
+
+// ─── AZR-167 Debounce save + drop per-click full render ───────────────────────
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const readmeSrc = fs.readFileSync(path.join(root, "README.md"), "utf8");
+
+  // ── Source: harvest has no checkUnlock / save() / render(); has pulseGather, spawnRipple, markSaveDirty, markDirty ──
+  const harvestMatch = gameSrc.match(/function harvest\(\)\s*\{([\s\S]*?)\n  \}/);
+  assertTrue("AZR-167 harvest found", !!harvestMatch);
+  if (harvestMatch) {
+    const hBody = harvestMatch[1];
+    assertTrue(
+      "AZR-167 harvest has no checkUnlock",
+      !hBody.includes("checkUnlock")
+    );
+    assertTrue(
+      "AZR-167 harvest has no save()",
+      !/\bsave\(\)/.test(hBody)
+    );
+    assertTrue(
+      "AZR-167 harvest has no render()",
+      !/\brender\(\)/.test(hBody)
+    );
+    assertTrue(
+      "AZR-167 harvest has pulseGather",
+      hBody.includes("pulseGather()")
+    );
+    assertTrue(
+      "AZR-167 harvest has spawnRipple",
+      /spawnRipple\(/.test(hBody)
+    );
+    assertTrue(
+      "AZR-167 harvest has markSaveDirty",
+      hBody.includes("markSaveDirty()")
+    );
+    assertTrue(
+      "AZR-167 harvest has markDirty",
+      hBody.includes("markDirty()")
+    );
+  }
+
+  // ── Source: markSaveDirty / flushSave / saveDirty exist and are distinct from _dirty ──
+  assertTrue(
+    "AZR-167 function markSaveDirty exists",
+    /function markSaveDirty\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 function flushSave exists",
+    /function flushSave\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 var saveDirty exists",
+    /var saveDirty\s*=\s*false/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 saveDirty is distinct from _dirty",
+    /var _dirty\s*=\s*true/.test(gameSrc) && /var saveDirty\s*=\s*false/.test(gameSrc)
+  );
+
+  // ── Source: setInterval uses flushSave ──
+  assertTrue(
+    "AZR-167 setInterval uses flushSave",
+    /setInterval\(flushSave,\s*AUTOSAVE_MS\)/.test(gameSrc)
+  );
+
+  // ── Source: visibilitychange hidden calls flushSave ──
+  assertTrue(
+    "AZR-167 visibilitychange hidden calls flushSave",
+    /visibilitychange[\s\S]*?document\.hidden[\s\S]*?flushSave\(\)/.test(gameSrc)
+  );
+
+  // ── Source: pagehide calls flushSave ──
+  assertTrue(
+    "AZR-167 pagehide calls flushSave",
+    /pagehide[\s\S]*?flushSave\(\)/.test(gameSrc)
+  );
+
+  // ── Source: layTribute still calls save() immediately ──
+  const tributeMatch = gameSrc.match(/function layTribute\(\)\s*\{([\s\S]*?)\n  function /);
+  assertTrue("AZR-167 layTribute found", !!tributeMatch);
+  if (tributeMatch) {
+    assertTrue(
+      "AZR-167 layTribute calls save() immediately",
+      /\bsave\(\)/.test(tributeMatch[1])
+    );
+  }
+
+  // ── Source: importMemory still calls save() immediately ──
+  const importMatch = gameSrc.match(/function importMemory\(\)\s*\{([\s\S]*?)\n  function /);
+  assertTrue("AZR-167 importMemory found", !!importMatch);
+  if (importMatch) {
+    assertTrue(
+      "AZR-167 importMemory calls save() immediately",
+      /\bsave\(\)/.test(importMatch[1])
+    );
+  }
+
+  // ── Source: startFreshAfterLoadFail still calls save() immediately ──
+  const freshMatch = gameSrc.match(/function startFreshAfterLoadFail\(\)\s*\{([\s\S]*?)\n  \}/);
+  assertTrue("AZR-167 startFreshAfterLoadFail found", !!freshMatch);
+  if (freshMatch) {
+    assertTrue(
+      "AZR-167 startFreshAfterLoadFail calls save() immediately",
+      /\bsave\(\)/.test(freshMatch[1])
+    );
+  }
+
+  // ── Source: buyShade (one buy*) no longer has save(); has markSaveDirty ──
+  const buyShadeMatch = gameSrc.match(/function buyShade\(\)\s*\{([\s\S]*?)\n  \}/);
+  assertTrue("AZR-167 buyShade found", !!buyShadeMatch);
+  if (buyShadeMatch) {
+    const bBody = buyShadeMatch[1];
+    assertTrue(
+      "AZR-167 buyShade has no immediate save()",
+      !/\bsave\(\)/.test(bBody)
+    );
+    assertTrue(
+      "AZR-167 buyShade has markSaveDirty",
+      bBody.includes("markSaveDirty()")
+    );
+    assertTrue(
+      "AZR-167 buyShade still has checkUnlock",
+      bBody.includes("checkUnlock()")
+    );
+  }
+
+  // ── Count of save(); in game.js is small (≤15) ──
+  const saveCallCount = (gameSrc.match(/\bsave\(\)/g) || []).length;
+  assertTrue(
+    "AZR-167 save() call count ≤ 15 (got " + saveCallCount + ")",
+    saveCallCount <= 15
+  );
+
+  // ── Unit test: markSaveDirty then flushSave invokes save once; second flushSave is no-op ──
+  assertTrue(
+    "AZR-167 exports flushSave",
+    /flushSave:\s*flushSave/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 exports markSaveDirty",
+    /markSaveDirty:\s*markSaveDirty/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 exports getSaveDirty",
+    /getSaveDirty/.test(gameSrc)
+  );
+
+  // ── Footer still v6.9.1 ──
+  assertTrue(
+    "AZR-167 footer CSS stays v6.9.1",
+    !gameSrc.includes("v6.10.0") && !gameSrc.includes("v7.0")
+  );
+
+  // ── README ──
+  assertTrue(
+    "AZR-167 README mentions AZR-167",
+    readmeSrc.includes("AZR-167")
+  );
+  assertTrue(
+    "AZR-167 README still says v6.9.1",
+    readmeSrc.includes("v6.9.1")
+  );
+
+  // ── Save key unchanged ──
+  assertTrue(
+    "AZR-167 save key soulgather-v0 unchanged",
+    /SAVE_KEY\s*=\s*"soulgather-v0"/.test(gameSrc)
+  );
+
+  // ── No economy number retunes ──
+  assertTrue(
+    "AZR-167 COST_BASE still 10",
+    /var COST_BASE = 10/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-167 COST_MULT still 1.15",
+    /var COST_MULT = 1\.15/.test(gameSrc)
   );
 }
 
