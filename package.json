@@ -1,0 +1,9 @@
+{
+  "name": "soulgather",
+  "private": true,
+  "version": "6.9.1",
+  "scripts": {
+    "test": "node test-economy.mjs && node sim-firstrun.mjs",
+    "check": "node --check js/game.js && node --check js/num.js && node --check js/format.js"
+  }
+}
