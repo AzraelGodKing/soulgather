@@ -2206,248 +2206,310 @@
     return false;
   }
 
+  // ─── FIELDS: declarative persistence policy (AZR-178) ──────────────────────────
+  // kind:  num    = N big-number      count = non-negative integer
+  //        flag   = boolean           str   = string (normalizer optional)
+  //        list   = array             time  = Date.now() timestamp
+  //        obj    = plain object
+  // scope: run    = wiped on Tribute/Reset
+  //        account = survives Tribute, wiped on Reset
+  // max:   optional cap for count fields
+  // dflt:  override default (function → called each time, else literal)
+  // save:  optional serialize normalizer   load: optional load normalizer
+  var FIELDS = {
+    // ── Resources (num, run) ──
+    souls:            { kind: "num",   scope: "run" },
+    lifetimeSouls:    { kind: "num",   scope: "run" },
+    lifetimeShades:   { kind: "num",   scope: "run" },
+    lifetimeSpirits:  { kind: "num",   scope: "run" },
+    shades:           { kind: "num",   scope: "run" },
+    spirits:          { kind: "num",   scope: "run" },
+    vessels:          { kind: "num",   scope: "run" },
+    thrones:          { kind: "count", scope: "run" },
+    chalices:         { kind: "count", scope: "run", max: CHALICE_MAX },
+    wellDepth:        { kind: "count", scope: "run" },
+    lanterns:         { kind: "num",   scope: "run" },
+    ash:              { kind: "num",   scope: "run" },
+    censers:          { kind: "num",   scope: "run" },
+    pyres:            { kind: "num",   scope: "run" },
+    urns:             { kind: "num",   scope: "run" },
+    hearths:          { kind: "num",   scope: "run" },
+    beacons:          { kind: "num",   scope: "run" },
+    spires:           { kind: "num",   scope: "run" },
+    obelisks:         { kind: "num",   scope: "run" },
+    fetters:          { kind: "num",   scope: "run" },
+    // ── Upgrade levels (count, run) ──
+    emberLevel:       { kind: "count", scope: "run" },
+    chainLevel:       { kind: "count", scope: "run" },
+    hollowLevel:      { kind: "count", scope: "run" },
+    // ── Unlock flags (flag, run) ──
+    unlockedSpirits:          { kind: "flag", scope: "run" },
+    unlockedVessels:          { kind: "flag", scope: "run" },
+    unlockedWell:             { kind: "flag", scope: "run" },
+    unlockedThrones:          { kind: "flag", scope: "run" },
+    unlockedChalices:         { kind: "flag", scope: "run" },
+    unlockedLanterns:         { kind: "flag", scope: "run" },
+    unlockedMarks:            { kind: "flag", scope: "run" },
+    unlockedCensers:          { kind: "flag", scope: "run" },
+    unlockedPyres:            { kind: "flag", scope: "run" },
+    unlockedUrns:             { kind: "flag", scope: "run" },
+    unlockedHearths:          { kind: "flag", scope: "run" },
+    unlockedBeacons:          { kind: "flag", scope: "run" },
+    unlockedSpires:           { kind: "flag", scope: "run" },
+    unlockedObelisks:         { kind: "flag", scope: "run" },
+    unlockedFetters:          { kind: "flag", scope: "run" },
+    unlockedAutobind:         { kind: "flag", scope: "run" },
+    unlockedAutobindSpirits:  { kind: "flag", scope: "run" },
+    unlockedAutobindVessels:  { kind: "flag", scope: "run" },
+    unlockedAutobindLanterns: { kind: "flag", scope: "run" },
+    unlockedAutobindFetters:  { kind: "flag", scope: "run" },
+    unlockedAutobindCensers:  { kind: "flag", scope: "run" },
+    unlockedAutobindThrones:  { kind: "flag", scope: "run" },
+    unlockedAutobindPyres:    { kind: "flag", scope: "run" },
+    unlockedAutobindChalices: { kind: "flag", scope: "run" },
+    unlockedAutobindUrns:     { kind: "flag", scope: "run" },
+    unlockedAutobindHearths:  { kind: "flag", scope: "run" },
+    unlockedAutobindBeacons:  { kind: "flag", scope: "run" },
+    unlockedAutobindSpires:   { kind: "flag", scope: "run" },
+    unlockedAutobindObelisks: { kind: "flag", scope: "run" },
+    unlockedNightTithe:       { kind: "flag", scope: "run" },
+    unlockedVeil:             { kind: "flag", scope: "run" },
+    unlockedWake:             { kind: "flag", scope: "run" },
+    unlockedToll:             { kind: "flag", scope: "run" },
+    // ── Toast flags (flag, run) ──
+    toastShown:          { kind: "flag", scope: "run" },
+    vesselToastShown:    { kind: "flag", scope: "run" },
+    throneToastShown:    { kind: "flag", scope: "run" },
+    lanternToastShown:   { kind: "flag", scope: "run" },
+    censerToastShown:    { kind: "flag", scope: "run" },
+    // ── Reliquary (account) ──
+    favor:            { kind: "count", scope: "account" },
+    favorEarned:      { kind: "count", scope: "account" },
+    edictLevel:       { kind: "count", scope: "account" },
+    memoryLevel:      { kind: "count", scope: "account" },
+    echoLevel:        { kind: "count", scope: "account", max: 1 },
+    seatLevel:        { kind: "count", scope: "account" },
+    kindleLevel:      { kind: "count", scope: "account" },
+    ashenLevel:       { kind: "count", scope: "account" },
+    depthLevel:       { kind: "count", scope: "account" },
+    // ── UI prefs (account) ──
+    buyMode:              { kind: "str",  scope: "account", dflt: "1", load: normalizeBuyMode },
+    buyModeHintDismissed: { kind: "flag", scope: "account" },
+    // ── Rite levels (count, run) ──
+    siphonLevel:      { kind: "count", scope: "run" },
+    levyLevel:        { kind: "count", scope: "run" },
+    cinderLevel:      { kind: "count", scope: "run" },
+    urnRiteLevel:     { kind: "count", scope: "run" },
+    hearthRiteLevel:  { kind: "count", scope: "run" },
+    beaconRiteLevel:  { kind: "count", scope: "run" },
+    spireRiteLevel:   { kind: "count", scope: "run" },
+    bindingTollLevel: { kind: "count", scope: "run", max: BINDING_TOLL_MAX },
+    unlockedBindingToll: { kind: "flag", scope: "run" },
+    // ── Hollow (run) ──
+    hollowStacks:  { kind: "count", scope: "run", max: HOLLOW_MAX },
+    hollowIdle:    { kind: "count", scope: "run" },
+    hollowWarned:  { kind: "flag",  scope: "run" },
+    // ── Well draws (run) ──
+    wellDraws:         { kind: "flag", scope: "run" },
+    unlockedWellDraws: { kind: "flag", scope: "run" },
+    // ── Aspect / vow (str, run) ──
+    aspect: { kind: "str", scope: "run", save: normalizeAspect, load: normalizeAspect },
+    // ── Timestamps (time) ──
+    lastTick:      { kind: "time", scope: "run" },
+    simulatedUntil:{ kind: "time", scope: "run" },
+    // ── Chronicle (list, account) ──
+    chronicle: { kind: "list", scope: "account", load: normalizeChronicle },
+    // ── Timers (count, run) ──
+    titheLeft:      { kind: "count", scope: "run" },
+    nightLeft:      { kind: "count", scope: "run" },
+    tithePaid:      { kind: "flag",  scope: "run" },
+    autobind:           { kind: "flag", scope: "run" },
+    autobindSpirits:    { kind: "flag", scope: "run" },
+    autobindVessels:    { kind: "flag", scope: "run" },
+    autobindLanterns:   { kind: "flag", scope: "run" },
+    autobindFetters:    { kind: "flag", scope: "run" },
+    autobindCensers:    { kind: "flag", scope: "run" },
+    autobindThrones:    { kind: "flag", scope: "run" },
+    autobindPyres:      { kind: "flag", scope: "run" },
+    autobindChalices:   { kind: "flag", scope: "run" },
+    autobindUrns:       { kind: "flag", scope: "run" },
+    autobindHearths:    { kind: "flag", scope: "run" },
+    autobindBeacons:    { kind: "flag", scope: "run" },
+    autobindSpires:     { kind: "flag", scope: "run" },
+    autobindObelisks:   { kind: "flag", scope: "run" },
+    clicksThisRun:  { kind: "count", scope: "run" },
+    veilLeft:       { kind: "count", scope: "run" },
+    tollLeft:       { kind: "count", scope: "run" },
+    wakeLeft:       { kind: "count", scope: "run" },
+    processionLeft: { kind: "count", scope: "run" },
+    knellLeft:      { kind: "count", scope: "run" },
+    // ── Peaks (num, account) ──
+    peakShades:    { kind: "num", scope: "account" },
+    peakLanterns:  { kind: "num", scope: "account" },
+    peakFetters:   { kind: "num", scope: "account" },
+    peakCensers:   { kind: "num", scope: "account" },
+    peakPyres:     { kind: "num", scope: "account" },
+    peakUrns:      { kind: "num", scope: "account" },
+    peakHearths:   { kind: "num", scope: "account" },
+    peakBeacons:   { kind: "num", scope: "account" },
+    peakSpires:    { kind: "num", scope: "account" },
+    peakObelisks:  { kind: "num", scope: "account" },
+    // ── Bonus flags (flag, account) ──
+    bonusLifetimeSouls:  { kind: "flag", scope: "account" },
+    bonusPeakShades:     { kind: "flag", scope: "account" },
+    bonusFirstVessel:    { kind: "flag", scope: "account" },
+    bonusFirstTribute:   { kind: "flag", scope: "account" },
+    bonusThousandSouls:  { kind: "flag", scope: "account" },
+    bonusFirstLantern:   { kind: "flag", scope: "account" },
+    bonusFirstCenser:    { kind: "flag", scope: "account" },
+    bonusFirstFetter:    { kind: "flag", scope: "account" },
+    bonusTenThousandSouls: { kind: "flag", scope: "account" },
+    bonusFirstThrone:    { kind: "flag", scope: "account" },
+    // ── Gift flags (flag, account) ──
+    giftCrown:              { kind: "flag", scope: "account" },
+    giftFirstName:          { kind: "flag", scope: "account" },
+    giftFiveTributes:       { kind: "flag", scope: "account" },
+    giftNamesComplete:      { kind: "flag", scope: "account" },
+    giftFirstVeil:          { kind: "flag", scope: "account" },
+    giftFirstWake:          { kind: "flag", scope: "account" },
+    giftPeakLanterns:       { kind: "flag", scope: "account" },
+    giftPeakFetters:        { kind: "flag", scope: "account" },
+    giftPeakCensers:        { kind: "flag", scope: "account" },
+    giftFirstPyre:          { kind: "flag", scope: "account" },
+    giftFirstUrn:           { kind: "flag", scope: "account" },
+    giftFirstHearth:        { kind: "flag", scope: "account" },
+    giftFirstBeacon:        { kind: "flag", scope: "account" },
+    giftFirstSpire:         { kind: "flag", scope: "account" },
+    giftFirstObelisk:       { kind: "flag", scope: "account" },
+    giftEightTributes:      { kind: "flag", scope: "account" },
+    giftPeakPyres:          { kind: "flag", scope: "account" },
+    giftPeakUrns:           { kind: "flag", scope: "account" },
+    giftPeakHearths:        { kind: "flag", scope: "account" },
+    giftPeakBeacons:        { kind: "flag", scope: "account" },
+    giftPeakSpires:         { kind: "flag", scope: "account" },
+    giftPeakObelisks:       { kind: "flag", scope: "account" },
+    giftFirstCinders:       { kind: "flag", scope: "account" },
+    giftFirstUrnRite:       { kind: "flag", scope: "account" },
+    giftFirstHearthRite:    { kind: "flag", scope: "account" },
+    giftFirstBeaconRite:    { kind: "flag", scope: "account" },
+    giftFirstSpireRite:     { kind: "flag", scope: "account" },
+    giftFirstChalice:       { kind: "flag", scope: "account" },
+    giftTwelveTributes:     { kind: "flag", scope: "account" },
+    giftSixteenTributes:    { kind: "flag", scope: "account" },
+    giftTwentyTributes:     { kind: "flag", scope: "account" },
+    giftTwentyFourTributes: { kind: "flag", scope: "account" },
+    giftTwentyEightTributes:{ kind: "flag", scope: "account" },
+    giftThirtyTwoTributes:  { kind: "flag", scope: "account" },
+    giftThirtySixTributes:  { kind: "flag", scope: "account" },
+    giftFortyTributes:      { kind: "flag", scope: "account" },
+    giftFullCup:            { kind: "flag", scope: "account" },
+    giftThreeChalices:      { kind: "flag", scope: "account" },
+    giftFirstOssuary:       { kind: "flag", scope: "account" },
+    giftFullOssuary:        { kind: "flag", scope: "account" },
+    giftHundredDraws:       { kind: "flag", scope: "account" },
+    giftTwoHundredDraws:    { kind: "flag", scope: "account" },
+    giftThreeHundredDraws:  { kind: "flag", scope: "account" },
+    giftFirstEmberVow:      { kind: "flag", scope: "account" },
+    giftTwoVows:            { kind: "flag", scope: "account" },
+    giftThreeVows:          { kind: "flag", scope: "account" },
+    giftAllVows:            { kind: "flag", scope: "account" },
+    giftFirstProcession:        { kind: "flag", scope: "account" },
+    giftFirstLongerProcession:  { kind: "flag", scope: "account" },
+    giftFirstDeeperToll:        { kind: "flag", scope: "account" },
+    giftFirstLongerWake:        { kind: "flag", scope: "account" },
+    giftFirstLongerTithe:       { kind: "flag", scope: "account" },
+    giftFirstLongerVeil:        { kind: "flag", scope: "account" },
+    giftFirstLongerHymn:        { kind: "flag", scope: "account" },
+    giftFirstLongerKnell:       { kind: "flag", scope: "account" },
+    giftFirstToll:              { kind: "flag", scope: "account" },
+    giftFirstKnell:             { kind: "flag", scope: "account" },
+    // ── Choir / edict levels (account) ──
+    choirLevel:        { kind: "count", scope: "run", max: CHOIR_MAX },
+    unlockedChoir:     { kind: "flag",  scope: "run" },
+    choirEdictLevel:   { kind: "count", scope: "account" },
+    hymnEdictLevel:    { kind: "count", scope: "account" },
+    smokeEdictLevel:   { kind: "count", scope: "account" },
+    embersEdictLevel:  { kind: "count", scope: "account" },
+    urnEdictLevel:     { kind: "count", scope: "account" },
+    hearthEdictLevel:  { kind: "count", scope: "account" },
+    beaconEdictLevel:  { kind: "count", scope: "account" },
+    spireEdictLevel:   { kind: "count", scope: "account" },
+    obeliskEdictLevel: { kind: "count", scope: "account" },
+    cinderEdictLevel:  { kind: "count", scope: "account" },
+    cutEdictLevel:     { kind: "count", scope: "account" },
+    tendingEdictLevel: { kind: "count", scope: "account" },
+    gleamEdictLevel:   { kind: "count", scope: "account" },
+    riseEdictLevel:    { kind: "count", scope: "account" },
+    cupEdictLevel:     { kind: "count", scope: "account" },
+    draughtEdictLevel: { kind: "count", scope: "account" },
+    wakeEdictLevel:    { kind: "count", scope: "account" },
+    processionEdictLevel: { kind: "count", scope: "account" },
+    tollEdictLevel:    { kind: "count", scope: "account" },
+    veilEdictLevel:    { kind: "count", scope: "account" },
+    knellEdictLevel:   { kind: "count", scope: "account" },
+    nightEdictLevel:   { kind: "count", scope: "account" },
+    // ── Hymn timer / misc account ──
+    hymnLeft:          { kind: "count", scope: "run" },
+    crownWeight:       { kind: "count", scope: "account" },
+    longMemoryLevel:   { kind: "count", scope: "account" },
+    quietCourtLevel:   { kind: "count", scope: "account" },
+    namesBound:        { kind: "count", scope: "account", max: 12 },
+    namesComplete:     { kind: "flag",  scope: "account" },
+    remembrance:       { kind: "count", scope: "account" },
+    deeperNightLevel:  { kind: "count", scope: "account" },
+    ashenTideLevel:    { kind: "count", scope: "account", max: ASHEN_TIDE_MAX },
+    ossuaryLevel:      { kind: "count", scope: "account", max: OSSUARY_MAX },
+    longerProcessionLevel: { kind: "count", scope: "account", max: LONGER_PROCESSION_MAX },
+    deeperTollLevel:   { kind: "count", scope: "account", max: DEEPER_TOLL_MAX },
+    longerWakeLevel:   { kind: "count", scope: "account", max: LONGER_WAKE_MAX },
+    longerTitheLevel:  { kind: "count", scope: "account", max: LONGER_TITHE_MAX },
+    longerVeilLevel:   { kind: "count", scope: "account", max: LONGER_VEIL_MAX },
+    longerHymnLevel:   { kind: "count", scope: "account", max: LONGER_HYMN_MAX },
+    longerKnellLevel:  { kind: "count", scope: "account", max: LONGER_KNELL_MAX },
+    // ── Vow / backup (run) ──
+    vow:            { kind: "str",  scope: "run", save: normalizeVow, load: normalizeVow },
+    vowHungerPaid:  { kind: "flag", scope: "run" },
+    vowsKnown:      { kind: "obj",  scope: "account", dflt: emptyVowsKnown, save: normalizeVowsKnown, load: seedVowsKnown },
+    bak1At:         { kind: "count", scope: "run" },
+    bak2At:         { kind: "count", scope: "run" },
+    runStartedAt:   { kind: "time",  scope: "run" },
+    // ── All-time / tribute counter (account) ──
+    allTimeSouls:   { kind: "num",   scope: "account" },
+    tributesLaid:   { kind: "count", scope: "account" }
+  };
+
+  var FIELDS_KEYS = Object.keys(FIELDS);
+
+  function fieldDefault(f) {
+    if (f.dflt !== undefined) return typeof f.dflt === "function" ? f.dflt() : f.dflt;
+    switch (f.kind) {
+      case "num":  return N.fromNumber(0);
+      case "count":return 0;
+      case "flag": return false;
+      case "str":  return "";
+      case "list": return [];
+      case "time": return Date.now();
+      case "obj":  return {};
+    }
+    return undefined;
+  }
+
   function freshState() {
-    return {
-      souls: N.fromNumber(0),
-      lifetimeSouls: N.fromNumber(0),
-      lifetimeShades: N.fromNumber(0),
-      lifetimeSpirits: N.fromNumber(0),
-      shades: N.fromNumber(0),
-      spirits: N.fromNumber(0),
-      vessels: N.fromNumber(0),
-      thrones: 0,
-      chalices: 0,
-      wellDepth: 0,
-      lanterns: N.fromNumber(0),
-      ash: N.fromNumber(0),
-      censers: N.fromNumber(0),
-      pyres: N.fromNumber(0),
-      urns: N.fromNumber(0),
-      hearths: N.fromNumber(0),
-      beacons: N.fromNumber(0),
-      spires: N.fromNumber(0),
-      obelisks: N.fromNumber(0),
-      fetters: N.fromNumber(0),
-      emberLevel: 0,
-      chainLevel: 0,
-      hollowLevel: 0,
-      unlockedSpirits: false,
-      unlockedVessels: false,
-      unlockedWell: false,
-      unlockedThrones: false,
-      unlockedChalices: false,
-      unlockedLanterns: false,
-      unlockedMarks: false,
-      unlockedCensers: false,
-      unlockedPyres: false,
-      unlockedUrns: false,
-      unlockedHearths: false,
-      unlockedBeacons: false,
-      unlockedSpires: false,
-      unlockedObelisks: false,
-      unlockedFetters: false,
-      unlockedAutobind: false,
-      unlockedAutobindSpirits: false,
-      unlockedAutobindVessels: false,
-      unlockedAutobindLanterns: false,
-      unlockedAutobindFetters: false,
-      unlockedAutobindCensers: false,
-      unlockedAutobindThrones: false,
-      unlockedAutobindPyres: false,
-      unlockedAutobindChalices: false,
-      unlockedAutobindUrns: false,
-      unlockedAutobindHearths: false,
-      unlockedAutobindBeacons: false,
-      unlockedAutobindSpires: false,
-      unlockedAutobindObelisks: false,
-      unlockedNightTithe: false,
-      unlockedVeil: false,
-      unlockedWake: false,
-      unlockedToll: false,
-      toastShown: false,
-      vesselToastShown: false,
-      throneToastShown: false,
-      lanternToastShown: false,
-      censerToastShown: false,
-      favor: 0,
-      favorEarned: 0,
-      edictLevel: 0,
-      memoryLevel: 0,
-      echoLevel: 0,
-      seatLevel: 0,
-      kindleLevel: 0,
-      ashenLevel: 0,
-      depthLevel: 0,
-      buyMode: "1",
-      buyModeHintDismissed: false,
-      siphonLevel: 0,
-      levyLevel: 0,
-      cinderLevel: 0,
-      urnRiteLevel: 0,
-      hearthRiteLevel: 0,
-      beaconRiteLevel: 0,
-      spireRiteLevel: 0,
-      bindingTollLevel: 0,
-      unlockedBindingToll: false,
-      hollowStacks: 0,
-      hollowIdle: 0,
-      hollowWarned: false,
-      wellDraws: false,
-      unlockedWellDraws: false,
-      aspect: "",
-      lastTick: Date.now(),
-      simulatedUntil: Date.now(),
-      chronicle: [],
-      titheLeft: 0,
-      nightLeft: 0,
-      tithePaid: false,
-      autobind: false,
-      autobindSpirits: false,
-      autobindVessels: false,
-      autobindLanterns: false,
-      autobindFetters: false,
-      autobindCensers: false,
-      autobindThrones: false,
-      autobindPyres: false,
-      autobindChalices: false,
-      autobindUrns: false,
-      autobindHearths: false,
-      autobindBeacons: false,
-      autobindSpires: false,
-      autobindObelisks: false,
-      clicksThisRun: 0,
-      veilLeft: 0,
-      tollLeft: 0,
-      wakeLeft: 0,
-      processionLeft: 0,
-      knellLeft: 0,
-      peakShades: N.fromNumber(0),
-      peakLanterns: N.fromNumber(0),
-      peakFetters: N.fromNumber(0),
-      peakCensers: N.fromNumber(0),
-      peakPyres: N.fromNumber(0),
-      peakUrns: N.fromNumber(0),
-      peakHearths: N.fromNumber(0),
-      peakBeacons: N.fromNumber(0),
-      peakSpires: N.fromNumber(0),
-      peakObelisks: N.fromNumber(0),
-      bonusLifetimeSouls: false,
-      bonusPeakShades: false,
-      bonusFirstVessel: false,
-      bonusFirstTribute: false,
-      bonusThousandSouls: false,
-      bonusFirstLantern: false,
-      bonusFirstCenser: false,
-      bonusFirstFetter: false,
-      bonusTenThousandSouls: false,
-      bonusFirstThrone: false,
-      giftCrown: false,
-      giftFirstName: false,
-      giftFiveTributes: false,
-      giftNamesComplete: false,
-      giftFirstVeil: false,
-      giftFirstWake: false,
-      giftPeakLanterns: false,
-      giftPeakFetters: false,
-      giftPeakCensers: false,
-      giftFirstPyre: false,
-      giftFirstUrn: false,
-      giftFirstHearth: false,
-      giftFirstBeacon: false,
-      giftFirstSpire: false,
-      giftFirstObelisk: false,
-      giftEightTributes: false,
-      giftPeakPyres: false,
-      giftPeakUrns: false,
-      giftPeakHearths: false,
-      giftPeakBeacons: false,
-      giftPeakSpires: false,
-      giftPeakObelisks: false,
-      giftFirstCinders: false,
-      giftFirstUrnRite: false,
-      giftFirstHearthRite: false,
-      giftFirstBeaconRite: false,
-      giftFirstSpireRite: false,
-      giftFirstChalice: false,
-      giftTwelveTributes: false,
-      giftSixteenTributes: false,
-      giftTwentyTributes: false,
-      giftTwentyFourTributes: false,
-      giftTwentyEightTributes: false,
-      giftThirtyTwoTributes: false,
-      giftThirtySixTributes: false,
-      giftFortyTributes: false,
-      giftFullCup: false,
-      giftThreeChalices: false,
-      giftFirstOssuary: false,
-      giftFullOssuary: false,
-      giftHundredDraws: false,
-      giftTwoHundredDraws: false,
-      giftThreeHundredDraws: false,
-      giftFirstEmberVow: false,
-      giftTwoVows: false,
-      giftThreeVows: false,
-      giftAllVows: false,
-      giftFirstProcession: false,
-      giftFirstLongerProcession: false,
-      giftFirstDeeperToll: false,
-      giftFirstLongerWake: false,
-      giftFirstLongerTithe: false,
-      giftFirstLongerVeil: false,
-      giftFirstLongerHymn: false,
-      giftFirstLongerKnell: false,
-      giftFirstToll: false,
-      giftFirstKnell: false,
-      choirLevel: 0,
-      unlockedChoir: false,
-      choirEdictLevel: 0,
-      hymnEdictLevel: 0,
-      smokeEdictLevel: 0,
-      embersEdictLevel: 0,
-      urnEdictLevel: 0,
-      hearthEdictLevel: 0,
-      beaconEdictLevel: 0,
-      spireEdictLevel: 0,
-      obeliskEdictLevel: 0,
-      cinderEdictLevel: 0,
-      cutEdictLevel: 0,
-      tendingEdictLevel: 0,
-      gleamEdictLevel: 0,
-      riseEdictLevel: 0,
-      cupEdictLevel: 0,
-      draughtEdictLevel: 0,
-      wakeEdictLevel: 0,
-      processionEdictLevel: 0,
-      tollEdictLevel: 0,
-      veilEdictLevel: 0,
-      knellEdictLevel: 0,
-      nightEdictLevel: 0,
-      hymnLeft: 0,
-      crownWeight: 0,
-      longMemoryLevel: 0,
-      quietCourtLevel: 0,
-      namesBound: 0,
-      namesComplete: false,
-      remembrance: 0,
-      deeperNightLevel: 0,
-      ashenTideLevel: 0,
-      ossuaryLevel: 0,
-      longerProcessionLevel: 0,
-      deeperTollLevel: 0,
-      longerWakeLevel: 0,
-      longerTitheLevel: 0,
-      longerVeilLevel: 0,
-      longerHymnLevel: 0,
-      longerKnellLevel: 0,
-      vow: "",
-      vowHungerPaid: false,
-      vowsKnown: emptyVowsKnown(),
-      bak1At: 0,
-      bak2At: 0,
-      runStartedAt: Date.now(),
-      allTimeSouls: N.fromNumber(0),
-      tributesLaid: 0
-    };
+    var s = {};
+    for (var i = 0; i < FIELDS_KEYS.length; i++) {
+      s[FIELDS_KEYS[i]] = fieldDefault(FIELDS[FIELDS_KEYS[i]]);
+    }
+    return s;
+  }
+
+  function resetToScope(target) {
+    var fresh = freshState();
+    for (var i = 0; i < FIELDS_KEYS.length; i++) {
+      var k = FIELDS_KEYS[i];
+      if (FIELDS[k].scope === target) {
+        state[k] = fresh[k];
+      }
+    }
   }
 
   var state = freshState();
@@ -5179,491 +5241,39 @@
     markDirty();
   }
 
-  var SAVE_FIELDS = [
-    "souls",
-    "lifetimeSouls",
-    "lifetimeShades",
-    "lifetimeSpirits",
-    "shades",
-    "spirits",
-    "vessels",
-    "thrones",
-    "chalices",
-    "wellDepth",
-    "lanterns",
-    "ash",
-    "censers",
-    "pyres",
-    "urns",
-    "hearths",
-    "beacons",
-    "spires",
-    "obelisks",
-    "fetters",
-    "emberLevel",
-    "chainLevel",
-    "hollowLevel",
-    "unlockedSpirits",
-    "unlockedVessels",
-    "unlockedWell",
-    "unlockedThrones",
-    "unlockedChalices",
-    "unlockedLanterns",
-    "unlockedMarks",
-    "unlockedCensers",
-    "unlockedPyres",
-    "unlockedUrns",
-    "unlockedHearths",
-    "unlockedBeacons",
-    "unlockedSpires",
-    "unlockedObelisks",
-    "unlockedFetters",
-    "unlockedAutobind",
-    "unlockedAutobindSpirits",
-    "unlockedAutobindVessels",
-    "unlockedAutobindLanterns",
-    "unlockedAutobindFetters",
-    "unlockedAutobindCensers",
-    "unlockedAutobindThrones",
-    "unlockedAutobindPyres",
-    "unlockedAutobindChalices",
-    "unlockedAutobindUrns",
-    "unlockedAutobindHearths",
-    "unlockedAutobindBeacons",
-    "unlockedAutobindSpires",
-    "unlockedAutobindObelisks",
-    "unlockedNightTithe",
-    "unlockedVeil",
-    "unlockedWake",
-    "unlockedToll",
-    "toastShown",
-    "vesselToastShown",
-    "throneToastShown",
-    "lanternToastShown",
-    "censerToastShown",
-    "favor",
-    "favorEarned",
-    "edictLevel",
-    "memoryLevel",
-    "echoLevel",
-    "seatLevel",
-    "kindleLevel",
-    "ashenLevel",
-    "depthLevel",
-    "buyMode",
-    "buyModeHintDismissed",
-    "siphonLevel",
-    "levyLevel",
-    "cinderLevel",
-    "urnRiteLevel",
-    "hearthRiteLevel",
-    "beaconRiteLevel",
-    "spireRiteLevel",
-    "bindingTollLevel",
-    "unlockedBindingToll",
-    "hollowStacks",
-    "hollowIdle",
-    "hollowWarned",
-    "wellDraws",
-    "unlockedWellDraws",
-    "aspect",
-    "lastTick",
-    "simulatedUntil",
-    "chronicle",
-    "titheLeft",
-    "nightLeft",
-    "tithePaid",
-    "autobind",
-    "autobindSpirits",
-    "autobindVessels",
-    "autobindLanterns",
-    "autobindFetters",
-    "autobindCensers",
-    "autobindThrones",
-    "autobindPyres",
-    "autobindChalices",
-    "autobindUrns",
-    "autobindHearths",
-    "autobindBeacons",
-    "autobindSpires",
-    "autobindObelisks",
-    "clicksThisRun",
-    "veilLeft",
-    "tollLeft",
-    "wakeLeft",
-    "processionLeft",
-    "knellLeft",
-    "peakShades",
-    "peakLanterns",
-    "peakFetters",
-    "peakCensers",
-    "peakPyres",
-    "peakUrns",
-    "peakHearths",
-    "peakBeacons",
-    "peakSpires",
-    "bonusLifetimeSouls",
-    "bonusPeakShades",
-    "bonusFirstVessel",
-    "bonusFirstTribute",
-    "bonusThousandSouls",
-    "bonusFirstLantern",
-    "bonusFirstCenser",
-    "bonusFirstFetter",
-    "bonusTenThousandSouls",
-    "bonusFirstThrone",
-    "giftCrown",
-    "giftFirstName",
-    "giftFiveTributes",
-    "giftNamesComplete",
-    "giftFirstVeil",
-    "giftFirstWake",
-    "giftPeakLanterns",
-    "giftPeakFetters",
-    "giftPeakCensers",
-    "giftFirstPyre",
-    "giftFirstUrn",
-    "giftFirstHearth",
-    "giftFirstBeacon",
-    "giftFirstSpire",
-    "giftEightTributes",
-    "giftPeakPyres",
-    "giftPeakUrns",
-    "giftPeakHearths",
-    "giftPeakBeacons",
-    "giftPeakSpires",
-    "giftPeakObelisks",
-    "giftFirstCinders",
-    "giftFirstUrnRite",
-    "giftFirstHearthRite",
-    "giftFirstBeaconRite",
-    "giftFirstSpireRite",
-    "giftFirstChalice",
-    "giftThreeChalices",
-    "giftTwelveTributes",
-    "giftSixteenTributes",
-    "giftTwentyTributes",
-    "giftTwentyFourTributes",
-    "giftTwentyEightTributes",
-    "giftThirtyTwoTributes",
-    "giftThirtySixTributes",
-    "giftFortyTributes",
-    "giftFullCup",
-    "giftFirstOssuary",
-    "giftFullOssuary",
-    "giftHundredDraws",
-    "giftTwoHundredDraws",
-    "giftThreeHundredDraws",
-    "giftFirstEmberVow",
-    "giftTwoVows",
-    "giftThreeVows",
-    "giftAllVows",
-    "giftFirstProcession",
-    "giftFirstLongerProcession",
-    "giftFirstDeeperToll",
-    "giftFirstLongerWake",
-    "giftFirstLongerTithe",
-    "giftFirstLongerVeil",
-    "giftFirstLongerHymn",
-    "giftFirstLongerKnell",
-    "giftFirstToll",
-    "giftFirstKnell",
-    "choirLevel",
-    "unlockedChoir",
-    "choirEdictLevel",
-    "hymnEdictLevel",
-    "smokeEdictLevel",
-    "embersEdictLevel",
-    "urnEdictLevel",
-    "hearthEdictLevel",
-    "beaconEdictLevel",
-    "spireEdictLevel",
-    "cinderEdictLevel",
-    "cutEdictLevel",
-    "tendingEdictLevel",
-    "gleamEdictLevel",
-    "riseEdictLevel",
-    "cupEdictLevel",
-    "draughtEdictLevel",
-    "wakeEdictLevel",
-    "processionEdictLevel",
-    "tollEdictLevel",
-    "veilEdictLevel",
-    "knellEdictLevel",
-    "nightEdictLevel",
-    "hymnLeft",
-    "crownWeight",
-    "longMemoryLevel",
-    "quietCourtLevel",
-    "namesBound",
-    "namesComplete",
-    "remembrance",
-    "deeperNightLevel",
-    "ashenTideLevel",
-    "ossuaryLevel",
-    "longerProcessionLevel",
-    "deeperTollLevel",
-    "longerWakeLevel",
-    "longerTitheLevel",
-    "longerVeilLevel",
-    "longerHymnLevel",
-    "longerKnellLevel",
-    "vow",
-    "vowHungerPaid",
-    "vowsKnown",
-    "bak1At",
-    "bak2At",
-    "runStartedAt",
-    "allTimeSouls",
-    "tributesLaid"
-  ];
+  var SAVE_FIELDS = FIELDS_KEYS;
 
   function dumpNum(v) {
     return N.dump(v);
   }
 
   function serializeState() {
-    return {
-      souls: dumpNum(state.souls),
-      lifetimeSouls: dumpNum(state.lifetimeSouls),
-      lifetimeShades: dumpNum(state.lifetimeShades),
-      lifetimeSpirits: dumpNum(state.lifetimeSpirits),
-      shades: dumpNum(state.shades),
-      spirits: dumpNum(state.spirits),
-      vessels: dumpNum(state.vessels),
-      thrones: state.thrones,
-      chalices: Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0))),
-      wellDepth: state.wellDepth,
-      lanterns: dumpNum(state.lanterns),
-      ash: dumpNum(state.ash),
-      censers: dumpNum(state.censers),
-      pyres: dumpNum(state.pyres),
-      urns: dumpNum(state.urns),
-      hearths: dumpNum(state.hearths),
-      beacons: dumpNum(state.beacons),
-      spires: dumpNum(state.spires),
-      obelisks: dumpNum(state.obelisks),
-      fetters: dumpNum(state.fetters),
-      emberLevel: state.emberLevel,
-      chainLevel: state.chainLevel,
-      hollowLevel: state.hollowLevel,
-      unlockedSpirits: state.unlockedSpirits,
-      unlockedVessels: state.unlockedVessels,
-      unlockedWell: state.unlockedWell,
-      unlockedThrones: state.unlockedThrones,
-      unlockedChalices: !!state.unlockedChalices || (Number(state.chalices) || 0) >= 1,
-      unlockedLanterns: state.unlockedLanterns,
-      unlockedMarks: state.unlockedMarks,
-      unlockedCensers: state.unlockedCensers,
-      unlockedPyres: !!state.unlockedPyres,
-      unlockedUrns: !!state.unlockedUrns,
-      unlockedHearths: !!state.unlockedHearths,
-      unlockedBeacons: !!state.unlockedBeacons,
-      unlockedSpires: !!state.unlockedSpires,
-      unlockedObelisks: !!state.unlockedObelisks,
-      unlockedFetters: !!state.unlockedFetters,
-      unlockedAutobind: !!state.unlockedAutobind,
-      unlockedAutobindSpirits: !!state.unlockedAutobindSpirits,
-      unlockedAutobindVessels: !!state.unlockedAutobindVessels,
-      unlockedAutobindLanterns: !!state.unlockedAutobindLanterns,
-      unlockedAutobindFetters: !!state.unlockedAutobindFetters,
-      unlockedAutobindCensers: !!state.unlockedAutobindCensers,
-      unlockedAutobindThrones: !!state.unlockedAutobindThrones,
-      unlockedAutobindPyres: !!state.unlockedAutobindPyres,
-      unlockedAutobindChalices: !!state.unlockedAutobindChalices,
-      unlockedAutobindUrns: !!state.unlockedAutobindUrns,
-      unlockedAutobindHearths: !!state.unlockedAutobindHearths,
-      unlockedAutobindBeacons: !!state.unlockedAutobindBeacons,
-      unlockedAutobindSpires: !!state.unlockedAutobindSpires,
-      unlockedAutobindObelisks: !!state.unlockedAutobindObelisks,
-      unlockedNightTithe: !!state.unlockedNightTithe,
-      unlockedVeil: !!state.unlockedVeil,
-      unlockedWake: !!state.unlockedWake,
-      unlockedToll: !!state.unlockedToll,
-      toastShown: state.toastShown,
-      vesselToastShown: state.vesselToastShown,
-      throneToastShown: state.throneToastShown,
-      lanternToastShown: state.lanternToastShown,
-      censerToastShown: state.censerToastShown,
-      favor: state.favor,
-      favorEarned: state.favorEarned,
-      edictLevel: state.edictLevel,
-      memoryLevel: state.memoryLevel,
-      echoLevel: state.echoLevel,
-      seatLevel: state.seatLevel,
-      kindleLevel: Number(state.kindleLevel) || 0,
-      ashenLevel: Number(state.ashenLevel) || 0,
-      depthLevel: Number(state.depthLevel) || 0,
-      buyMode: state.buyMode,
-      buyModeHintDismissed: !!state.buyModeHintDismissed,
-      siphonLevel: state.siphonLevel,
-      levyLevel: state.levyLevel,
-      cinderLevel: Number(state.cinderLevel) || 0,
-      urnRiteLevel: Number(state.urnRiteLevel) || 0,
-      hearthRiteLevel: Number(state.hearthRiteLevel) || 0,
-      beaconRiteLevel: Number(state.beaconRiteLevel) || 0,
-      spireRiteLevel: Number(state.spireRiteLevel) || 0,
-      bindingTollLevel: Math.max(0, Math.min(BINDING_TOLL_MAX, Math.floor(Number(state.bindingTollLevel) || 0))),
-      unlockedBindingToll: !!state.unlockedBindingToll || (Number(state.bindingTollLevel) || 0) >= 1,
-      hollowStacks: Math.max(0, Math.min(HOLLOW_MAX, Math.floor(Number(state.hollowStacks) || 0))),
-      hollowIdle: Math.max(0, Number(state.hollowIdle) || 0),
-      hollowWarned: !!state.hollowWarned,
-      wellDraws: state.wellDraws,
-      unlockedWellDraws: state.unlockedWellDraws,
-      aspect: normalizeAspect(state.aspect),
-      lastTick: Date.now(),
-      simulatedUntil: Number(state.simulatedUntil) || Number(state.lastTick) || Date.now(),
-      chronicle: state.chronicle || [],
-      titheLeft: Number(state.titheLeft) || 0,
-      nightLeft: Number(state.nightLeft) || 0,
-      tithePaid: !!state.tithePaid,
-      autobind: !!state.autobind,
-      autobindSpirits: !!state.autobindSpirits,
-      autobindVessels: !!state.autobindVessels,
-      autobindLanterns: !!state.autobindLanterns,
-      autobindFetters: !!state.autobindFetters,
-      autobindCensers: !!state.autobindCensers,
-      autobindThrones: !!state.autobindThrones,
-      autobindPyres: !!state.autobindPyres,
-      autobindChalices: !!state.autobindChalices,
-      autobindUrns: !!state.autobindUrns,
-      autobindHearths: !!state.autobindHearths,
-      autobindBeacons: !!state.autobindBeacons,
-      autobindSpires: !!state.autobindSpires,
-      autobindObelisks: !!state.autobindObelisks,
-      clicksThisRun: Math.max(0, Math.floor(Number(state.clicksThisRun) || 0)),
-      veilLeft: Number(state.veilLeft) || 0,
-      tollLeft: Number(state.tollLeft) || 0,
-      wakeLeft: Number(state.wakeLeft) || 0,
-      processionLeft: Number(state.processionLeft) || 0,
-      knellLeft: Number(state.knellLeft) || 0,
-      peakShades: dumpNum(state.peakShades),
-      peakLanterns: dumpNum(state.peakLanterns),
-      peakFetters: dumpNum(state.peakFetters),
-      peakCensers: dumpNum(state.peakCensers),
-      peakPyres: dumpNum(state.peakPyres),
-      peakUrns: dumpNum(state.peakUrns),
-      peakHearths: dumpNum(state.peakHearths),
-      peakBeacons: dumpNum(state.peakBeacons),
-      peakSpires: dumpNum(state.peakSpires),
-      peakObelisks: dumpNum(state.peakObelisks),
-      bonusLifetimeSouls: !!state.bonusLifetimeSouls,
-      bonusPeakShades: !!state.bonusPeakShades,
-      bonusFirstVessel: !!state.bonusFirstVessel,
-      bonusFirstTribute: !!state.bonusFirstTribute,
-      bonusThousandSouls: !!state.bonusThousandSouls,
-      bonusFirstLantern: !!state.bonusFirstLantern,
-      bonusFirstCenser: !!state.bonusFirstCenser,
-      bonusFirstFetter: !!state.bonusFirstFetter,
-      bonusTenThousandSouls: !!state.bonusTenThousandSouls,
-      bonusFirstThrone: !!state.bonusFirstThrone,
-      giftCrown: !!state.giftCrown,
-      giftFirstName: !!state.giftFirstName,
-      giftFiveTributes: !!state.giftFiveTributes,
-      giftNamesComplete: !!state.giftNamesComplete,
-      giftFirstVeil: !!state.giftFirstVeil,
-      giftFirstWake: !!state.giftFirstWake,
-      giftPeakLanterns: !!state.giftPeakLanterns,
-      giftPeakFetters: !!state.giftPeakFetters,
-      giftPeakCensers: !!state.giftPeakCensers,
-      giftFirstPyre: !!state.giftFirstPyre,
-      giftFirstUrn: !!state.giftFirstUrn,
-      giftFirstHearth: !!state.giftFirstHearth,
-      giftFirstBeacon: !!state.giftFirstBeacon,
-      giftFirstSpire: !!state.giftFirstSpire,
-      giftFirstObelisk: !!state.giftFirstObelisk,
-      giftEightTributes: !!state.giftEightTributes,
-      giftPeakPyres: !!state.giftPeakPyres,
-      giftPeakUrns: !!state.giftPeakUrns,
-      giftPeakHearths: !!state.giftPeakHearths,
-      giftPeakBeacons: !!state.giftPeakBeacons,
-      giftPeakSpires: !!state.giftPeakSpires,
-      giftPeakObelisks: !!state.giftPeakObelisks,
-      giftFirstCinders: !!state.giftFirstCinders,
-      giftFirstUrnRite: !!state.giftFirstUrnRite,
-      giftFirstHearthRite: !!state.giftFirstHearthRite,
-      giftFirstBeaconRite: !!state.giftFirstBeaconRite,
-      giftFirstSpireRite: !!state.giftFirstSpireRite,
-      giftFirstChalice: !!state.giftFirstChalice,
-      giftTwelveTributes: !!state.giftTwelveTributes,
-      giftSixteenTributes: !!state.giftSixteenTributes,
-      giftTwentyTributes: !!state.giftTwentyTributes,
-      giftTwentyFourTributes: !!state.giftTwentyFourTributes,
-      giftTwentyEightTributes: !!state.giftTwentyEightTributes,
-      giftThirtyTwoTributes: !!state.giftThirtyTwoTributes,
-      giftThirtySixTributes: !!state.giftThirtySixTributes,
-      giftFortyTributes: !!state.giftFortyTributes,
-      giftFullCup: !!state.giftFullCup,
-      giftThreeChalices: !!state.giftThreeChalices,
-      giftFirstOssuary: !!state.giftFirstOssuary,
-      giftFullOssuary: !!state.giftFullOssuary,
-      giftHundredDraws: !!state.giftHundredDraws,
-      giftTwoHundredDraws: !!state.giftTwoHundredDraws,
-      giftThreeHundredDraws: !!state.giftThreeHundredDraws,
-      giftFirstEmberVow: !!state.giftFirstEmberVow,
-      giftTwoVows: !!state.giftTwoVows,
-      giftThreeVows: !!state.giftThreeVows,
-      giftAllVows: !!state.giftAllVows,
-      giftFirstProcession: !!state.giftFirstProcession,
-      giftFirstLongerProcession: !!state.giftFirstLongerProcession,
-      giftFirstDeeperToll: !!state.giftFirstDeeperToll,
-      giftFirstLongerWake: !!state.giftFirstLongerWake,
-      giftFirstLongerTithe: !!state.giftFirstLongerTithe,
-      giftFirstLongerVeil: !!state.giftFirstLongerVeil,
-      giftFirstLongerHymn: !!state.giftFirstLongerHymn,
-      giftFirstLongerKnell: !!state.giftFirstLongerKnell,
-      giftFirstToll: !!state.giftFirstToll,
-      giftFirstKnell: !!state.giftFirstKnell,
-      choirLevel: Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0))),
-      unlockedChoir: !!state.unlockedChoir || (Number(state.choirLevel) || 0) >= 1,
-      choirEdictLevel: Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)),
-      hymnEdictLevel: Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0)),
-      smokeEdictLevel: Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0)),
-      embersEdictLevel: Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0)),
-      urnEdictLevel: Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0)),
-      hearthEdictLevel: Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0)),
-      beaconEdictLevel: Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0)),
-      spireEdictLevel: Math.max(0, Math.floor(Number(state.spireEdictLevel) || 0)),
-      obeliskEdictLevel: Math.max(0, Math.floor(Number(state.obeliskEdictLevel) || 0)),
-      cinderEdictLevel: Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0)),
-      cutEdictLevel: Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0)),
-      tendingEdictLevel: Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0)),
-      gleamEdictLevel: Math.max(0, Math.floor(Number(state.gleamEdictLevel) || 0)),
-      riseEdictLevel: Math.max(0, Math.floor(Number(state.riseEdictLevel) || 0)),
-      cupEdictLevel: Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0)),
-      draughtEdictLevel: Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0)),
-      wakeEdictLevel: Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0)),
-      processionEdictLevel: Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0)),
-      tollEdictLevel: Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0)),
-      veilEdictLevel: Math.max(0, Math.floor(Number(state.veilEdictLevel) || 0)),
-      knellEdictLevel: Math.max(0, Math.floor(Number(state.knellEdictLevel) || 0)),
-      nightEdictLevel: Math.max(0, Math.floor(Number(state.nightEdictLevel) || 0)),
-      hymnLeft: Number(state.hymnLeft) || 0,
-      crownWeight: Number(state.crownWeight) || 0,
-      longMemoryLevel: Number(state.longMemoryLevel) || 0,
-      quietCourtLevel: Number(state.quietCourtLevel) || 0,
-      namesBound: Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0))),
-      namesComplete: !!state.namesComplete || (Number(state.namesBound) || 0) >= 12,
-      remembrance: Math.max(0, Math.floor(Number(state.remembrance) || 0)),
-      deeperNightLevel: Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0)),
-      ashenTideLevel: Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0))),
-      ossuaryLevel: Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0))),
-      longerProcessionLevel: Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0))),
-      deeperTollLevel: Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0))),
-      longerWakeLevel: Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0))),
-      longerTitheLevel: Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0))),
-      longerVeilLevel: Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0))),
-      longerHymnLevel: Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0))),
-      longerKnellLevel: Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(state.longerKnellLevel) || 0))),
-      vow: normalizeVow(state.vow),
-      vowHungerPaid: !!state.vowHungerPaid,
-      vowsKnown: normalizeVowsKnown(state.vowsKnown),
-      bak1At: Number(state.bak1At) || 0,
-      bak2At: Number(state.bak2At) || 0,
-      runStartedAt: Number(state.runStartedAt) || Date.now(),
-      allTimeSouls: dumpNum(state.allTimeSouls),
-      tributesLaid: Number(state.tributesLaid) || 0
-    };
+    var out = {};
+    for (var i = 0; i < FIELDS_KEYS.length; i++) {
+      var k = FIELDS_KEYS[i];
+      var f = FIELDS[k];
+      var v = state[k];
+      switch (f.kind) {
+        case "num":  out[k] = dumpNum(v); break;
+        case "count":
+          var n = Math.max(0, Math.floor(Number(v) || 0));
+          if (f.max != null) n = Math.min(f.max, n);
+          out[k] = n;
+          break;
+        case "flag": out[k] = !!v; break;
+        case "str":  out[k] = f.save ? f.save(v) : v; break;
+        case "list": out[k] = v || []; break;
+        case "time": out[k] = Number(v) || Date.now(); break;
+        case "obj":  out[k] = f.save ? f.save(v) : v; break;
+      }
+    }
+    out.lastTick = Date.now();
+    out.simulatedUntil = Number(state.simulatedUntil) || Number(state.lastTick) || Date.now();
+    if ((Number(state.chalices) || 0) >= 1) out.unlockedChalices = true;
+    if ((Number(state.bindingTollLevel) || 0) >= 1) out.unlockedBindingToll = true;
+    if ((Number(state.choirLevel) || 0) >= 1) out.unlockedChoir = true;
+    if ((Number(state.namesBound) || 0) >= 12) out.namesComplete = true;
+    return out;
   }
 
   function loadCount(v, max) {
@@ -5741,137 +5351,21 @@
   }
 
   function applySaveData(data) {
-    state.souls = loadNum(data.souls);
-    state.lifetimeSouls = loadNum(data.lifetimeSouls);
-    state.lifetimeShades = loadNum(data.lifetimeShades);
-    state.lifetimeSpirits = loadNum(data.lifetimeSpirits);
-    state.shades = loadNum(data.shades);
-    state.spirits = loadNum(data.spirits);
-    state.vessels = loadNum(data.vessels);
-    state.thrones = loadCount(data.thrones);
-    state.chalices = loadCount(data.chalices, CHALICE_MAX);
-    state.wellDepth = loadCount(data.wellDepth);
-    state.lanterns = loadNum(data.lanterns);
-    state.ash = loadNum(data.ash);
-    state.censers = loadNum(data.censers);
-    state.pyres = loadNum(data.pyres);
-    state.urns = loadNum(data.urns);
-    state.hearths = loadNum(data.hearths);
-    state.beacons = loadNum(data.beacons);
-    state.spires = loadNum(data.spires);
-    state.obelisks = loadNum(data.obelisks);
-    state.fetters = loadNum(data.fetters);
-    state.emberLevel = loadCount(data.emberLevel);
-    state.chainLevel = loadCount(data.chainLevel);
-    state.hollowLevel = loadCount(data.hollowLevel);
-    state.unlockedSpirits = !!data.unlockedSpirits;
-    state.unlockedVessels = !!data.unlockedVessels;
-    state.unlockedWell = !!data.unlockedWell;
-    state.unlockedThrones = !!data.unlockedThrones;
-    state.unlockedChalices = !!data.unlockedChalices || (loadCount(data.chalices) || 0) >= 1 || (loadCount(data.thrones) || 0) >= UNLOCK_CHALICES;
-    state.unlockedLanterns = !!data.unlockedLanterns;
-    state.unlockedMarks = !!data.unlockedMarks;
-    state.unlockedCensers = !!data.unlockedCensers;
-    state.unlockedPyres = !!data.unlockedPyres;
-    state.unlockedUrns = !!data.unlockedUrns || N.cmp(state.urns, 1) >= 0 || N.cmp(state.pyres, UNLOCK_URNS) >= 0;
-    state.unlockedHearths = !!data.unlockedHearths || N.cmp(state.hearths, 1) >= 0 || N.cmp(state.urns, UNLOCK_HEARTHS) >= 0;
-    state.unlockedBeacons = !!data.unlockedBeacons || N.cmp(state.beacons, 1) >= 0 || N.cmp(state.hearths, UNLOCK_BEACONS) >= 0;
-    state.unlockedSpires = !!data.unlockedSpires || N.cmp(state.spires, 1) >= 0 || N.cmp(state.beacons, UNLOCK_SPIRES) >= 0;
-    state.unlockedObelisks = !!data.unlockedObelisks || N.cmp(state.obelisks, 1) >= 0 || N.cmp(state.spires, UNLOCK_OBELISKS) >= 0;
-    state.unlockedFetters = !!data.unlockedFetters;
-    state.unlockedAutobind = !!data.unlockedAutobind;
-    state.unlockedAutobindSpirits = !!data.unlockedAutobindSpirits;
-    state.unlockedAutobindVessels = !!data.unlockedAutobindVessels;
-    state.unlockedAutobindLanterns = !!data.unlockedAutobindLanterns;
-    state.unlockedAutobindFetters = !!data.unlockedAutobindFetters;
-    state.unlockedAutobindCensers = !!data.unlockedAutobindCensers;
-    state.unlockedAutobindThrones = !!data.unlockedAutobindThrones;
-    state.unlockedAutobindPyres = !!data.unlockedAutobindPyres;
-    state.unlockedAutobindChalices = !!data.unlockedAutobindChalices;
-    state.unlockedAutobindUrns = !!data.unlockedAutobindUrns;
-    state.unlockedAutobindHearths = !!data.unlockedAutobindHearths;
-    state.unlockedAutobindBeacons = !!data.unlockedAutobindBeacons;
-    state.unlockedAutobindSpires = !!data.unlockedAutobindSpires;
-    state.unlockedAutobindObelisks = !!data.unlockedAutobindObelisks;
-    state.unlockedNightTithe = !!data.unlockedNightTithe || (loadCount(data.nightLeft) || 0) > 0;
-    state.unlockedVeil = !!data.unlockedVeil || (loadCount(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (loadCount(data.veilLeft) || 0) > 0;
-    state.unlockedWake = !!data.unlockedWake || !!data.unlockedPyres || (loadCount(data.wakeLeft) || 0) > 0;
-    state.unlockedToll = !!data.unlockedToll || (loadCount(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (loadCount(data.tollLeft) || 0) > 0;
-    state.toastShown = !!data.toastShown;
-    state.vesselToastShown = !!data.vesselToastShown;
-    state.throneToastShown = !!data.throneToastShown;
-    state.lanternToastShown = !!data.lanternToastShown;
-    state.censerToastShown = !!data.censerToastShown;
-    state.favor = loadCount(data.favor);
-    if (data.favorEarned == null) {
-      state.favorEarned = loadCount(data.favor);
-    } else {
-      state.favorEarned = loadCount(data.favorEarned);
+    for (var i = 0; i < FIELDS_KEYS.length; i++) {
+      var k = FIELDS_KEYS[i];
+      var f = FIELDS[k];
+      var raw = data[k];
+      switch (f.kind) {
+        case "num":  state[k] = loadNum(raw); break;
+        case "count":state[k] = loadCount(raw, f.max); break;
+        case "flag": state[k] = !!raw; break;
+        case "str":  state[k] = f.load ? f.load(raw) : (raw || ""); break;
+        case "list": state[k] = f.load ? f.load(raw) : (raw || []); break;
+        case "time": state[k] = loadCount(raw) || Date.now(); break;
+        case "obj":  state[k] = f.load ? f.load(raw) : (raw || {}); break;
+      }
     }
-    state.edictLevel = loadCount(data.edictLevel);
-    state.memoryLevel = loadCount(data.memoryLevel);
-    state.echoLevel = loadCount(data.echoLevel, 1);
-    state.seatLevel = loadCount(data.seatLevel);
-    state.kindleLevel = loadCount(data.kindleLevel);
-    state.ashenLevel = loadCount(data.ashenLevel);
-    state.depthLevel = loadCount(data.depthLevel);
-    state.buyMode = normalizeBuyMode(data.buyMode);
-    state.buyModeHintDismissed = !!data.buyModeHintDismissed;
-    state.siphonLevel = loadCount(data.siphonLevel);
-    state.levyLevel = loadCount(data.levyLevel);
-    state.cinderLevel = loadCount(data.cinderLevel);
-    state.urnRiteLevel = loadCount(data.urnRiteLevel);
-    state.hearthRiteLevel = loadCount(data.hearthRiteLevel);
-    state.beaconRiteLevel = loadCount(data.beaconRiteLevel);
-    state.spireRiteLevel = loadCount(data.spireRiteLevel);
-    state.bindingTollLevel = loadCount(data.bindingTollLevel, BINDING_TOLL_MAX);
-    state.unlockedBindingToll = !!data.unlockedBindingToll || state.bindingTollLevel >= 1;
-    state.hollowStacks = loadCount(data.hollowStacks, HOLLOW_MAX);
-    state.hollowIdle = loadCount(data.hollowIdle);
-    state.hollowWarned = !!data.hollowWarned;
-    state.wellDraws = !!data.wellDraws;
-    state.unlockedWellDraws = !!data.unlockedWellDraws;
-    state.aspect = normalizeAspect(data.aspect);
-    state.lastTick = loadCount(data.lastTick) || Date.now();
     state.simulatedUntil = loadCount(data.simulatedUntil) || loadCount(data.lastTick) || Date.now();
-    state.chronicle = normalizeChronicle(data.chronicle);
-    state.titheLeft = loadCount(data.titheLeft);
-    state.nightLeft = loadCount(data.nightLeft);
-    state.hymnLeft = loadCount(data.hymnLeft);
-    state.veilLeft = loadCount(data.veilLeft);
-    state.tollLeft = loadCount(data.tollLeft);
-    state.wakeLeft = loadCount(data.wakeLeft);
-    state.processionLeft = loadCount(data.processionLeft);
-    state.knellLeft = loadCount(data.knellLeft);
-    if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) {
-      state.unlockedWake = true;
-    }
-    state.tithePaid = !!data.tithePaid || (loadCount(data.titheLeft) || 0) > 0;
-    state.autobind = !!data.autobind;
-    state.autobindSpirits = !!data.autobindSpirits;
-    state.autobindVessels = !!data.autobindVessels;
-    state.autobindLanterns = !!data.autobindLanterns;
-    state.autobindFetters = !!data.autobindFetters;
-    state.autobindCensers = !!data.autobindCensers;
-    state.autobindThrones = !!data.autobindThrones;
-    state.autobindPyres = !!data.autobindPyres;
-    state.autobindChalices = !!data.autobindChalices;
-    state.autobindUrns = !!data.autobindUrns;
-    state.autobindHearths = !!data.autobindHearths;
-    state.autobindBeacons = !!data.autobindBeacons;
-    state.autobindSpires = !!data.autobindSpires;
-    state.autobindObelisks = !!data.autobindObelisks;
-    state.clicksThisRun = loadCount(data.clicksThisRun);
-    if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
-    if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
-    if (
-      state.unlockedPyres ||
-      N.cmp(state.pyres, 1) >= 0 ||
-      N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 ||
-      state.wakeLeft > 0
-    ) {
-      state.unlockedWake = true;
-    }
     state.peakShades = N.max(loadNum(data.peakShades), loadNum(data.shades));
     state.peakLanterns = N.max(loadNum(data.peakLanterns), loadNum(data.lanterns));
     state.peakFetters = N.max(loadNum(data.peakFetters), loadNum(data.fetters));
@@ -5882,441 +5376,89 @@
     state.peakBeacons = N.max(loadNum(data.peakBeacons), loadNum(data.beacons));
     state.peakSpires = N.max(loadNum(data.peakSpires), loadNum(data.spires));
     state.peakObelisks = N.max(loadNum(data.peakObelisks), loadNum(data.obelisks));
-    state.bonusLifetimeSouls = !!data.bonusLifetimeSouls;
-    state.bonusPeakShades = !!data.bonusPeakShades;
-    state.bonusFirstVessel = !!data.bonusFirstVessel;
-    if (data.bonusFirstTribute == null) {
-      state.bonusFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
-    } else {
-      state.bonusFirstTribute = !!data.bonusFirstTribute;
-    }
-    state.bonusThousandSouls = !!data.bonusThousandSouls;
-    state.bonusFirstLantern = !!data.bonusFirstLantern;
-    state.bonusFirstCenser = !!data.bonusFirstCenser;
-    state.bonusFirstFetter = !!data.bonusFirstFetter;
-    state.bonusTenThousandSouls = !!data.bonusTenThousandSouls;
-    state.bonusFirstThrone = !!data.bonusFirstThrone;
-    state.crownWeight = loadCount(data.crownWeight);
-    if (data.giftCrown == null) {
-      state.giftCrown = state.crownWeight >= 1;
-    } else {
-      state.giftCrown = !!data.giftCrown;
-    }
-    if (data.giftFirstName == null) {
-      state.giftFirstName = Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 1;
-    } else {
-      state.giftFirstName = !!data.giftFirstName;
-    }
-    if (data.giftFiveTributes == null) {
-      state.giftFiveTributes = (loadCount(data.tributesLaid) || 0) >= 5;
-    } else {
-      state.giftFiveTributes = !!data.giftFiveTributes;
-    }
-    if (data.giftEightTributes == null) {
-      state.giftEightTributes = (loadCount(data.tributesLaid) || 0) >= 8;
-    } else {
-      state.giftEightTributes = !!data.giftEightTributes;
-    }
-    if (data.giftTwelveTributes == null) {
-      state.giftTwelveTributes = (loadCount(data.tributesLaid) || 0) >= 12;
-    } else {
-      state.giftTwelveTributes = !!data.giftTwelveTributes;
-    }
-    if (data.giftSixteenTributes == null) {
-      state.giftSixteenTributes = (loadCount(data.tributesLaid) || 0) >= 16;
-    } else {
-      state.giftSixteenTributes = !!data.giftSixteenTributes;
-    }
-    if (data.giftTwentyTributes == null) {
-      state.giftTwentyTributes = (loadCount(data.tributesLaid) || 0) >= 20;
-    } else {
-      state.giftTwentyTributes = !!data.giftTwentyTributes;
-    }
-    if (data.giftTwentyFourTributes == null) {
-      state.giftTwentyFourTributes =
-        hasChronicle("giftTwentyFourTributes") ||
-        (loadCount(data.tributesLaid) || 0) >= 24;
-    } else {
-      state.giftTwentyFourTributes = !!data.giftTwentyFourTributes;
-    }
-    if (data.giftTwentyEightTributes == null) {
-      state.giftTwentyEightTributes =
-        hasChronicle("giftTwentyEightTributes") ||
-        (loadCount(data.tributesLaid) || 0) >= 28;
-    } else {
-      state.giftTwentyEightTributes = !!data.giftTwentyEightTributes;
-    }
-    if (data.giftThirtyTwoTributes == null) {
-      state.giftThirtyTwoTributes =
-        hasChronicle("giftThirtyTwoTributes") ||
-        (loadCount(data.tributesLaid) || 0) >= 32;
-    } else {
-      state.giftThirtyTwoTributes = !!data.giftThirtyTwoTributes;
-    }
-    if (data.giftThirtySixTributes == null) {
-      state.giftThirtySixTributes =
-        hasChronicle("giftThirtySixTributes") ||
-        (loadCount(data.tributesLaid) || 0) >= 36;
-    } else {
-      state.giftThirtySixTributes = !!data.giftThirtySixTributes;
-    }
-    if (data.giftFortyTributes == null) {
-      state.giftFortyTributes =
-        hasChronicle("giftFortyTributes") ||
-        (loadCount(data.tributesLaid) || 0) >= 40;
-    } else {
-      state.giftFortyTributes = !!data.giftFortyTributes;
-    }
-    if (data.giftNamesComplete == null) {
-      state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 12;
-    } else {
-      state.giftNamesComplete = !!data.giftNamesComplete;
-    }
-    if (data.giftFirstVeil == null) {
-      state.giftFirstVeil = hasChronicle("veil") || (loadCount(data.veilLeft) || 0) > 0;
-    } else {
-      state.giftFirstVeil = !!data.giftFirstVeil;
-    }
-    if (data.giftFirstWake == null) {
-      state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (loadCount(data.wakeLeft) || 0) > 0;
-    } else {
-      state.giftFirstWake = !!data.giftFirstWake;
-    }
-    if (data.giftPeakLanterns == null) {
-      state.giftPeakLanterns = false;
-    } else {
-      state.giftPeakLanterns = !!data.giftPeakLanterns;
-    }
-    if (data.giftPeakFetters == null) {
-      state.giftPeakFetters = false;
-    } else {
-      state.giftPeakFetters = !!data.giftPeakFetters;
-    }
-    if (data.giftPeakCensers == null) {
-      state.giftPeakCensers = false;
-    } else {
-      state.giftPeakCensers = !!data.giftPeakCensers;
-    }
-    if (data.giftFirstPyre == null) {
-      state.giftFirstPyre =
-        hasChronicle("pyre") ||
-        hasChronicle("giftFirstPyre") ||
-        (embersStartsPyres(data.embersEdictLevel) > 0 && N.cmp(state.pyres, 1) >= 0);
-    } else {
-      state.giftFirstPyre = !!data.giftFirstPyre;
-    }
-    if (data.giftFirstUrn == null) {
-      state.giftFirstUrn =
-        hasChronicle("urn") ||
-        hasChronicle("giftFirstUrn") ||
-        (urnEdictStartsUrns(data.urnEdictLevel) > 0 && N.cmp(state.urns, 1) >= 0);
-    } else {
-      state.giftFirstUrn = !!data.giftFirstUrn;
-    }
-    if (data.giftFirstHearth == null) {
-      state.giftFirstHearth =
-        hasChronicle("hearth") ||
-        hasChronicle("giftFirstHearth") ||
-        (hearthEdictStartsHearths(data.hearthEdictLevel) > 0 && N.cmp(state.hearths, 1) >= 0);
-    } else {
-      state.giftFirstHearth = !!data.giftFirstHearth;
-    }
-    if (data.giftFirstBeacon == null) {
-      state.giftFirstBeacon =
-        hasChronicle("beacon") ||
-        hasChronicle("giftFirstBeacon") ||
-        (beaconEdictStartsBeacons(data.beaconEdictLevel) > 0 && N.cmp(state.beacons, 1) >= 0);
-    } else {
-      state.giftFirstBeacon = !!data.giftFirstBeacon;
-    }
-    if (data.giftFirstSpire == null) {
-      state.giftFirstSpire =
-        hasChronicle("spire") ||
-        hasChronicle("giftFirstSpire") ||
-        (spireEdictStartsSpires(data.spireEdictLevel) > 0 && N.cmp(state.spires, 1) >= 0);
-    } else {
-      state.giftFirstSpire = !!data.giftFirstSpire;
-    }
-    if (data.giftFirstObelisk == null) {
-      state.giftFirstObelisk =
-        hasChronicle("obelisk") ||
-        hasChronicle("giftFirstObelisk") ||
-        (obeliskEdictStartsObelisks(data.obeliskEdictLevel) > 0 && N.cmp(state.obelisks, 1) >= 0);
-    } else {
-      state.giftFirstObelisk = !!data.giftFirstObelisk;
-    }
-    if (data.giftPeakPyres == null) {
-      state.giftPeakPyres = false;
-    } else {
-      state.giftPeakPyres = !!data.giftPeakPyres;
-    }
-    if (data.giftPeakUrns == null) {
-      state.giftPeakUrns = false;
-    } else {
-      state.giftPeakUrns = !!data.giftPeakUrns;
-    }
-    if (data.giftPeakHearths == null) {
-      state.giftPeakHearths = false;
-    } else {
-      state.giftPeakHearths = !!data.giftPeakHearths;
-    }
-    if (data.giftPeakBeacons == null) {
-      state.giftPeakBeacons = false;
-    } else {
-      state.giftPeakBeacons = !!data.giftPeakBeacons;
-    }
-    if (data.giftPeakSpires == null) {
-      state.giftPeakSpires = false;
-    } else {
-      state.giftPeakSpires = !!data.giftPeakSpires;
-    }
-    if (data.giftPeakObelisks == null) {
-      state.giftPeakObelisks = false;
-    } else {
-      state.giftPeakObelisks = !!data.giftPeakObelisks;
-    }
-    if (data.giftFirstCinders == null) {
-      state.giftFirstCinders =
-        hasChronicle("giftFirstCinders") ||
-        hasChronicle("cinders") ||
-        (loadCount(data.cinderLevel) || 0) > 0;
-    } else {
-      state.giftFirstCinders = !!data.giftFirstCinders;
-    }
-    if (data.giftFirstUrnRite == null) {
-      state.giftFirstUrnRite =
-        hasChronicle("giftFirstUrnRite") ||
-        hasChronicle("urnRite") ||
-        (loadCount(data.urnRiteLevel) || 0) > 0;
-    } else {
-      state.giftFirstUrnRite = !!data.giftFirstUrnRite;
-    }
-    if (data.giftFirstHearthRite == null) {
-      state.giftFirstHearthRite =
-        hasChronicle("giftFirstHearthRite") ||
-        hasChronicle("hearthRite") ||
-        (loadCount(data.hearthRiteLevel) || 0) > 0;
-    } else {
-      state.giftFirstHearthRite = !!data.giftFirstHearthRite;
-    }
-    if (data.giftFirstBeaconRite == null) {
-      state.giftFirstBeaconRite =
-        hasChronicle("giftFirstBeaconRite") ||
-        hasChronicle("beaconRite") ||
-        (loadCount(data.beaconRiteLevel) || 0) > 0;
-    } else {
-      state.giftFirstBeaconRite = !!data.giftFirstBeaconRite;
-    }
-    if (data.giftFirstSpireRite == null) {
-      state.giftFirstSpireRite =
-        hasChronicle("giftFirstSpireRite") ||
-        hasChronicle("spireRite") ||
-        (loadCount(data.spireRiteLevel) || 0) > 0;
-    } else {
-      state.giftFirstSpireRite = !!data.giftFirstSpireRite;
-    }
-    if (data.giftFirstChalice == null) {
-      state.giftFirstChalice =
-        hasChronicle("giftFirstChalice") ||
-        hasChronicle("chalice") ||
-        (cupStartsChalices(data.cupEdictLevel) > 0 && (Number(state.chalices) || 0) >= 1);
-    } else {
-      state.giftFirstChalice = !!data.giftFirstChalice;
-    }
-    if (data.giftFullCup == null) {
-      state.giftFullCup = hasChronicle("giftFullCup");
-    } else {
-      state.giftFullCup = !!data.giftFullCup;
-    }
-    if (data.giftThreeChalices == null) {
-      state.giftThreeChalices = hasChronicle("giftThreeChalices");
-    } else {
-      state.giftThreeChalices = !!data.giftThreeChalices;
-    }
-    if (data.giftFirstOssuary == null) {
-      state.giftFirstOssuary =
-        hasChronicle("giftFirstOssuary") ||
-        hasChronicle("ossuary") ||
-        (loadCount(data.ossuaryLevel) || 0) >= 1;
-    } else {
-      state.giftFirstOssuary = !!data.giftFirstOssuary;
-    }
-    if (data.giftFullOssuary == null) {
-      state.giftFullOssuary = hasChronicle("giftFullOssuary");
-    } else {
-      state.giftFullOssuary = !!data.giftFullOssuary;
-    }
-    if (data.giftHundredDraws == null) {
-      state.giftHundredDraws = hasChronicle("giftHundredDraws");
-    } else {
-      state.giftHundredDraws = !!data.giftHundredDraws;
-    }
-    if (data.giftTwoHundredDraws == null) {
-      state.giftTwoHundredDraws = hasChronicle("giftTwoHundredDraws");
-    } else {
-      state.giftTwoHundredDraws = !!data.giftTwoHundredDraws;
-    }
-    if (data.giftThreeHundredDraws == null) {
-      state.giftThreeHundredDraws = hasChronicle("giftThreeHundredDraws");
-    } else {
-      state.giftThreeHundredDraws = !!data.giftThreeHundredDraws;
-    }
-    if (data.giftFirstEmberVow == null) {
-      state.giftFirstEmberVow = hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow");
-    } else {
-      state.giftFirstEmberVow = !!data.giftFirstEmberVow;
-    }
-    if (data.giftTwoVows == null) {
-      state.giftTwoVows = hasChronicle("giftTwoVows");
-    } else {
-      state.giftTwoVows = !!data.giftTwoVows;
-    }
-    if (data.giftThreeVows == null) {
-      state.giftThreeVows = hasChronicle("giftThreeVows");
-    } else {
-      state.giftThreeVows = !!data.giftThreeVows;
-    }
-    if (data.giftAllVows == null) {
-      state.giftAllVows = hasChronicle("giftAllVows");
-    } else {
-      state.giftAllVows = !!data.giftAllVows;
-    }
-    if (data.giftFirstProcession == null) {
-      state.giftFirstProcession =
-        hasChronicle("procession") ||
-        hasChronicle("giftFirstProcession") ||
-        (loadCount(data.processionLeft) || 0) > 0;
-    } else {
-      state.giftFirstProcession = !!data.giftFirstProcession;
-    }
-    if (data.giftFirstLongerProcession == null) {
-      state.giftFirstLongerProcession =
-        hasChronicle("giftFirstLongerProcession") ||
-        hasChronicle("longerProcession") ||
-        (loadCount(data.longerProcessionLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerProcession = !!data.giftFirstLongerProcession;
-    }
-    if (data.giftFirstDeeperToll == null) {
-      state.giftFirstDeeperToll =
-        hasChronicle("giftFirstDeeperToll") ||
-        hasChronicle("deeperToll") ||
-        (loadCount(data.deeperTollLevel) || 0) >= 1;
-    } else {
-      state.giftFirstDeeperToll = !!data.giftFirstDeeperToll;
-    }
-    if (data.giftFirstLongerWake == null) {
-      state.giftFirstLongerWake =
-        hasChronicle("giftFirstLongerWake") ||
-        hasChronicle("longerWake") ||
-        (loadCount(data.longerWakeLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerWake = !!data.giftFirstLongerWake;
-    }
-    if (data.giftFirstLongerTithe == null) {
-      state.giftFirstLongerTithe =
-        hasChronicle("giftFirstLongerTithe") ||
-        hasChronicle("longerTithe") ||
-        (loadCount(data.longerTitheLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerTithe = !!data.giftFirstLongerTithe;
-    }
-    if (data.giftFirstLongerVeil == null) {
-      state.giftFirstLongerVeil =
-        hasChronicle("giftFirstLongerVeil") ||
-        hasChronicle("longerVeil") ||
-        (loadCount(data.longerVeilLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerVeil = !!data.giftFirstLongerVeil;
-    }
-    if (data.giftFirstLongerHymn == null) {
-      state.giftFirstLongerHymn =
-        hasChronicle("giftFirstLongerHymn") ||
-        hasChronicle("longerHymn") ||
-        (loadCount(data.longerHymnLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerHymn = !!data.giftFirstLongerHymn;
-    }
-    if (data.giftFirstLongerKnell == null) {
-      state.giftFirstLongerKnell =
-        hasChronicle("giftFirstLongerKnell") ||
-        hasChronicle("longerKnell") ||
-        (loadCount(data.longerKnellLevel) || 0) >= 1;
-    } else {
-      state.giftFirstLongerKnell = !!data.giftFirstLongerKnell;
-    }
-    if (data.giftFirstToll == null) {
-      state.giftFirstToll =
-        hasChronicle("toll") ||
-        hasChronicle("giftFirstToll") ||
-        (loadCount(data.tollLeft) || 0) > 0;
-    } else {
-      state.giftFirstToll = !!data.giftFirstToll;
-    }
-    if (data.giftFirstKnell == null) {
-      state.giftFirstKnell =
-        hasChronicle("knell") ||
-        hasChronicle("giftFirstKnell") ||
-        (loadCount(data.knellLeft) || 0) > 0;
-    } else {
-      state.giftFirstKnell = !!data.giftFirstKnell;
-    }
-    state.choirLevel = loadCount(data.choirLevel, CHOIR_MAX);
-    state.unlockedChoir = !!data.unlockedChoir || state.choirLevel >= 1;
-    state.choirEdictLevel = loadCount(data.choirEdictLevel);
-    state.hymnEdictLevel = loadCount(data.hymnEdictLevel);
-    state.smokeEdictLevel = loadCount(data.smokeEdictLevel);
-    state.embersEdictLevel = loadCount(data.embersEdictLevel);
-    state.urnEdictLevel = loadCount(data.urnEdictLevel);
-    state.hearthEdictLevel = loadCount(data.hearthEdictLevel);
-    state.beaconEdictLevel = loadCount(data.beaconEdictLevel);
-    state.spireEdictLevel = loadCount(data.spireEdictLevel);
-    state.obeliskEdictLevel = loadCount(data.obeliskEdictLevel);
-    state.cinderEdictLevel = loadCount(data.cinderEdictLevel);
-    state.cutEdictLevel = loadCount(data.cutEdictLevel);
-    var tendingLoaded = data.tendingEdictLevel;
-    if (tendingLoaded == null && data.kindlingEdictLevel != null) {
-      tendingLoaded = data.kindlingEdictLevel;
-    }
-    state.tendingEdictLevel = loadCount(tendingLoaded);
-    state.gleamEdictLevel = loadCount(data.gleamEdictLevel);
-    state.riseEdictLevel = loadCount(data.riseEdictLevel);
-    state.cupEdictLevel = loadCount(data.cupEdictLevel);
-    state.draughtEdictLevel = loadCount(data.draughtEdictLevel);
-    state.wakeEdictLevel = loadCount(data.wakeEdictLevel);
-    state.processionEdictLevel = loadCount(data.processionEdictLevel);
-    state.tollEdictLevel = loadCount(data.tollEdictLevel);
-    state.veilEdictLevel = loadCount(data.veilEdictLevel);
-    state.knellEdictLevel = loadCount(data.knellEdictLevel);
-    state.nightEdictLevel = loadCount(data.nightEdictLevel);
-    state.longMemoryLevel = loadCount(data.longMemoryLevel);
-    state.quietCourtLevel = loadCount(data.quietCourtLevel);
-    state.namesBound = loadCount(data.namesBound, 12);
-    state.namesComplete = !!data.namesComplete || state.namesBound >= 12;
-    state.remembrance = loadCount(data.remembrance);
-    state.deeperNightLevel = loadCount(data.deeperNightLevel);
-    state.ashenTideLevel = loadCount(data.ashenTideLevel, ASHEN_TIDE_MAX);
-    state.ossuaryLevel = loadCount(data.ossuaryLevel, OSSUARY_MAX);
-    state.longerProcessionLevel = loadCount(data.longerProcessionLevel, LONGER_PROCESSION_MAX);
-    state.deeperTollLevel = loadCount(data.deeperTollLevel, DEEPER_TOLL_MAX);
-    state.longerWakeLevel = loadCount(data.longerWakeLevel, LONGER_WAKE_MAX);
-    state.longerTitheLevel = loadCount(data.longerTitheLevel, LONGER_TITHE_MAX);
-    state.longerVeilLevel = loadCount(data.longerVeilLevel, LONGER_VEIL_MAX);
-    state.longerHymnLevel = loadCount(data.longerHymnLevel, LONGER_HYMN_MAX);
-    state.longerKnellLevel = loadCount(data.longerKnellLevel, LONGER_KNELL_MAX);
-    state.vow = normalizeVow(data.vow);
     state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
-    state.vowsKnown = seedVowsKnown(data.vowsKnown);
-    state.runStartedAt = loadCount(data.runStartedAt) || Date.now();
-    if (data.allTimeSouls == null) {
-      state.allTimeSouls = loadNum(data.lifetimeSouls);
-    } else {
-      state.allTimeSouls = loadNum(data.allTimeSouls);
-    }
+    if (data.favorEarned == null) state.favorEarned = loadCount(data.favor);
+    if (data.allTimeSouls == null) state.allTimeSouls = loadNum(data.lifetimeSouls);
     if (N.cmp(state.allTimeSouls, 0) < 0) state.allTimeSouls = N.fromNumber(0);
-    state.tributesLaid = loadCount(data.tributesLaid);
-    state.bak1At = loadCount(data.bak1At);
-    state.bak2At = loadCount(data.bak2At);
+    var tendingLoaded = data.tendingEdictLevel;
+    if (tendingLoaded == null && data.kindlingEdictLevel != null) tendingLoaded = data.kindlingEdictLevel;
+    state.tendingEdictLevel = loadCount(tendingLoaded);
+    if ((loadCount(data.chalices) || 0) >= 1 || (loadCount(data.thrones) || 0) >= UNLOCK_CHALICES) state.unlockedChalices = true;
+    if (N.cmp(state.urns, 1) >= 0 || N.cmp(state.pyres, UNLOCK_URNS) >= 0) state.unlockedUrns = true;
+    if (N.cmp(state.hearths, 1) >= 0 || N.cmp(state.urns, UNLOCK_HEARTHS) >= 0) state.unlockedHearths = true;
+    if (N.cmp(state.beacons, 1) >= 0 || N.cmp(state.hearths, UNLOCK_BEACONS) >= 0) state.unlockedBeacons = true;
+    if (N.cmp(state.spires, 1) >= 0 || N.cmp(state.beacons, UNLOCK_SPIRES) >= 0) state.unlockedSpires = true;
+    if (N.cmp(state.obelisks, 1) >= 0 || N.cmp(state.spires, UNLOCK_OBELISKS) >= 0) state.unlockedObelisks = true;
+    if ((loadCount(data.nightLeft) || 0) > 0) state.unlockedNightTithe = true;
+    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (loadCount(data.veilLeft) || 0) > 0) state.unlockedVeil = true;
+    if (!!data.unlockedPyres || (loadCount(data.wakeLeft) || 0) > 0) state.unlockedWake = true;
+    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (loadCount(data.tollLeft) || 0) > 0) state.unlockedToll = true;
+    if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) state.unlockedWake = true;
+    if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
+    if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
+    if (state.unlockedPyres || N.cmp(state.pyres, 1) >= 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.wakeLeft > 0) state.unlockedWake = true;
+    if (state.bindingTollLevel >= 1) state.unlockedBindingToll = true;
+    if (state.choirLevel >= 1) state.unlockedChoir = true;
+    if (state.namesBound >= 12) state.namesComplete = true;
+    if ((loadCount(data.titheLeft) || 0) > 0) state.tithePaid = true;
+    if (data.bonusFirstTribute == null) state.bonusFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
+    if (data.giftCrown == null) state.giftCrown = state.crownWeight >= 1;
+    if (data.giftFirstName == null) state.giftFirstName = Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 1;
+    if (data.giftFiveTributes == null) state.giftFiveTributes = (loadCount(data.tributesLaid) || 0) >= 5;
+    if (data.giftEightTributes == null) state.giftEightTributes = (loadCount(data.tributesLaid) || 0) >= 8;
+    if (data.giftTwelveTributes == null) state.giftTwelveTributes = (loadCount(data.tributesLaid) || 0) >= 12;
+    if (data.giftSixteenTributes == null) state.giftSixteenTributes = (loadCount(data.tributesLaid) || 0) >= 16;
+    if (data.giftTwentyTributes == null) state.giftTwentyTributes = (loadCount(data.tributesLaid) || 0) >= 20;
+    if (data.giftTwentyFourTributes == null) state.giftTwentyFourTributes = hasChronicle("giftTwentyFourTributes") || (loadCount(data.tributesLaid) || 0) >= 24;
+    if (data.giftTwentyEightTributes == null) state.giftTwentyEightTributes = hasChronicle("giftTwentyEightTributes") || (loadCount(data.tributesLaid) || 0) >= 28;
+    if (data.giftThirtyTwoTributes == null) state.giftThirtyTwoTributes = hasChronicle("giftThirtyTwoTributes") || (loadCount(data.tributesLaid) || 0) >= 32;
+    if (data.giftThirtySixTributes == null) state.giftThirtySixTributes = hasChronicle("giftThirtySixTributes") || (loadCount(data.tributesLaid) || 0) >= 36;
+    if (data.giftFortyTributes == null) state.giftFortyTributes = hasChronicle("giftFortyTributes") || (loadCount(data.tributesLaid) || 0) >= 40;
+    if (data.giftNamesComplete == null) state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 12;
+    if (data.giftFirstVeil == null) state.giftFirstVeil = hasChronicle("veil") || (loadCount(data.veilLeft) || 0) > 0;
+    if (data.giftFirstWake == null) state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (loadCount(data.wakeLeft) || 0) > 0;
+    if (data.giftPeakLanterns == null) state.giftPeakLanterns = false;
+    if (data.giftPeakFetters == null) state.giftPeakFetters = false;
+    if (data.giftPeakCensers == null) state.giftPeakCensers = false;
+    if (data.giftFirstPyre == null) state.giftFirstPyre = hasChronicle("pyre") || hasChronicle("giftFirstPyre") || (embersStartsPyres(data.embersEdictLevel) > 0 && N.cmp(state.pyres, 1) >= 0);
+    if (data.giftFirstUrn == null) state.giftFirstUrn = hasChronicle("urn") || hasChronicle("giftFirstUrn") || (urnEdictStartsUrns(data.urnEdictLevel) > 0 && N.cmp(state.urns, 1) >= 0);
+    if (data.giftFirstHearth == null) state.giftFirstHearth = hasChronicle("hearth") || hasChronicle("giftFirstHearth") || (hearthEdictStartsHearths(data.hearthEdictLevel) > 0 && N.cmp(state.hearths, 1) >= 0);
+    if (data.giftFirstBeacon == null) state.giftFirstBeacon = hasChronicle("beacon") || hasChronicle("giftFirstBeacon") || (beaconEdictStartsBeacons(data.beaconEdictLevel) > 0 && N.cmp(state.beacons, 1) >= 0);
+    if (data.giftFirstSpire == null) state.giftFirstSpire = hasChronicle("spire") || hasChronicle("giftFirstSpire") || (spireEdictStartsSpires(data.spireEdictLevel) > 0 && N.cmp(state.spires, 1) >= 0);
+    if (data.giftFirstObelisk == null) state.giftFirstObelisk = hasChronicle("obelisk") || hasChronicle("giftFirstObelisk") || (obeliskEdictStartsObelisks(data.obeliskEdictLevel) > 0 && N.cmp(state.obelisks, 1) >= 0);
+    if (data.giftPeakPyres == null) state.giftPeakPyres = false;
+    if (data.giftPeakUrns == null) state.giftPeakUrns = false;
+    if (data.giftPeakHearths == null) state.giftPeakHearths = false;
+    if (data.giftPeakBeacons == null) state.giftPeakBeacons = false;
+    if (data.giftPeakSpires == null) state.giftPeakSpires = false;
+    if (data.giftPeakObelisks == null) state.giftPeakObelisks = false;
+    if (data.giftFirstCinders == null) state.giftFirstCinders = hasChronicle("giftFirstCinders") || hasChronicle("cinders") || (loadCount(data.cinderLevel) || 0) > 0;
+    if (data.giftFirstUrnRite == null) state.giftFirstUrnRite = hasChronicle("giftFirstUrnRite") || hasChronicle("urnRite") || (loadCount(data.urnRiteLevel) || 0) > 0;
+    if (data.giftFirstHearthRite == null) state.giftFirstHearthRite = hasChronicle("giftFirstHearthRite") || hasChronicle("hearthRite") || (loadCount(data.hearthRiteLevel) || 0) > 0;
+    if (data.giftFirstBeaconRite == null) state.giftFirstBeaconRite = hasChronicle("giftFirstBeaconRite") || hasChronicle("beaconRite") || (loadCount(data.beaconRiteLevel) || 0) > 0;
+    if (data.giftFirstSpireRite == null) state.giftFirstSpireRite = hasChronicle("giftFirstSpireRite") || hasChronicle("spireRite") || (loadCount(data.spireRiteLevel) || 0) > 0;
+    if (data.giftFirstChalice == null) state.giftFirstChalice = hasChronicle("giftFirstChalice") || hasChronicle("chalice") || (cupStartsChalices(data.cupEdictLevel) > 0 && (Number(state.chalices) || 0) >= 1);
+    if (data.giftFullCup == null) state.giftFullCup = hasChronicle("giftFullCup");
+    if (data.giftThreeChalices == null) state.giftThreeChalices = hasChronicle("giftThreeChalices");
+    if (data.giftFirstOssuary == null) state.giftFirstOssuary = hasChronicle("giftFirstOssuary") || hasChronicle("ossuary") || (loadCount(data.ossuaryLevel) || 0) >= 1;
+    if (data.giftFullOssuary == null) state.giftFullOssuary = hasChronicle("giftFullOssuary");
+    if (data.giftHundredDraws == null) state.giftHundredDraws = hasChronicle("giftHundredDraws");
+    if (data.giftTwoHundredDraws == null) state.giftTwoHundredDraws = hasChronicle("giftTwoHundredDraws");
+    if (data.giftThreeHundredDraws == null) state.giftThreeHundredDraws = hasChronicle("giftThreeHundredDraws");
+    if (data.giftFirstEmberVow == null) state.giftFirstEmberVow = hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow");
+    if (data.giftTwoVows == null) state.giftTwoVows = hasChronicle("giftTwoVows");
+    if (data.giftThreeVows == null) state.giftThreeVows = hasChronicle("giftThreeVows");
+    if (data.giftAllVows == null) state.giftAllVows = hasChronicle("giftAllVows");
+    if (data.giftFirstProcession == null) state.giftFirstProcession = hasChronicle("procession") || hasChronicle("giftFirstProcession") || (loadCount(data.processionLeft) || 0) > 0;
+    if (data.giftFirstLongerProcession == null) state.giftFirstLongerProcession = hasChronicle("giftFirstLongerProcession") || hasChronicle("longerProcession") || (loadCount(data.longerProcessionLevel) || 0) >= 1;
+    if (data.giftFirstDeeperToll == null) state.giftFirstDeeperToll = hasChronicle("giftFirstDeeperToll") || hasChronicle("deeperToll") || (loadCount(data.deeperTollLevel) || 0) >= 1;
+    if (data.giftFirstLongerWake == null) state.giftFirstLongerWake = hasChronicle("giftFirstLongerWake") || hasChronicle("longerWake") || (loadCount(data.longerWakeLevel) || 0) >= 1;
+    if (data.giftFirstLongerTithe == null) state.giftFirstLongerTithe = hasChronicle("giftFirstLongerTithe") || hasChronicle("longerTithe") || (loadCount(data.longerTitheLevel) || 0) >= 1;
+    if (data.giftFirstLongerVeil == null) state.giftFirstLongerVeil = hasChronicle("giftFirstLongerVeil") || hasChronicle("longerVeil") || (loadCount(data.longerVeilLevel) || 0) >= 1;
+    if (data.giftFirstLongerHymn == null) state.giftFirstLongerHymn = hasChronicle("giftFirstLongerHymn") || hasChronicle("longerHymn") || (loadCount(data.longerHymnLevel) || 0) >= 1;
+    if (data.giftFirstLongerKnell == null) state.giftFirstLongerKnell = hasChronicle("giftFirstLongerKnell") || hasChronicle("longerKnell") || (loadCount(data.longerKnellLevel) || 0) >= 1;
+    if (data.giftFirstToll == null) state.giftFirstToll = hasChronicle("toll") || hasChronicle("giftFirstToll") || (loadCount(data.tollLeft) || 0) > 0;
+    if (data.giftFirstKnell == null) state.giftFirstKnell = hasChronicle("knell") || hasChronicle("giftFirstKnell") || (loadCount(data.knellLeft) || 0) > 0;
   }
 
   function adoptSave(data) {
@@ -6986,14 +6128,7 @@
     }
   }
 
-  function layTribute() {
-    var gain = favorGain(state.lifetimeSouls);
-    if (gain < 1) return;
-    var ok = window.confirm(
-      "Empty the well?\n\nThe GodKing keeps the Favor. Reliquary stays. This gathering is forfeit."
-    );
-    if (!ok) return;
-    markChronicle("tribute");
+  function applyTributeAccountMutations(gain) {
     var firstTributeBonus = 0;
     if (!state.bonusFirstTribute) {
       state.bonusFirstTribute = true;
@@ -7002,316 +6137,86 @@
     }
     var vowBonus = vowExtraFavor(state.vow, state.vowHungerPaid);
     var extraFavor = firstTributeBonus + vowBonus;
-    var keptFavor = (Number(state.favor) || 0) + gain + extraFavor;
-    var keptEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
-    var keptEdict = state.edictLevel;
-    var keptMemory = state.memoryLevel;
-    var keptEcho = Number(state.echoLevel) || 0;
-    if (keptEcho > 1) keptEcho = 1;
-    var keptSeat = Number(state.seatLevel) || 0;
-    var keptKindle = Number(state.kindleLevel) || 0;
-    var keptAshen = Number(state.ashenLevel) || 0;
-    var keptDepth = Number(state.depthLevel) || 0;
-    var keptCrown = Number(state.crownWeight) || 0;
-    var keptLongMem = Number(state.longMemoryLevel) || 0;
-    var keptBuy = state.buyMode;
-    var keptBuyModeHintDismissed = !!state.buyModeHintDismissed;
-    var keptChronicle = (state.chronicle || []).slice();
-    var keptAllTime = N.clone(state.allTimeSouls);
-    var keptPeakShades = N.max(num(state.peakShades), num(state.shades));
-    var keptPeakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
-    var keptPeakFetters = N.max(num(state.peakFetters), num(state.fetters));
-    var keptPeakCensers = N.max(num(state.peakCensers), num(state.censers));
-    var keptPeakPyres = N.max(num(state.peakPyres), num(state.pyres));
-    var keptPeakUrns = N.max(num(state.peakUrns), num(state.urns));
-    var keptPeakHearths = N.max(num(state.peakHearths), num(state.hearths));
-    var keptPeakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
-    var keptPeakSpires = N.max(num(state.peakSpires), num(state.spires));
-    var keptPeakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
-    var keptBonusLifetimeSouls = !!state.bonusLifetimeSouls;
-    var keptBonusPeakShades = !!state.bonusPeakShades;
-    var keptBonusFirstVessel = !!state.bonusFirstVessel;
-    var keptBonusFirstTribute = true;
-    var keptBonusThousandSouls = !!state.bonusThousandSouls;
-    var keptBonusFirstLantern = !!state.bonusFirstLantern;
-    var keptBonusFirstCenser = !!state.bonusFirstCenser;
-    var keptBonusFirstFetter = !!state.bonusFirstFetter;
-    var keptBonusTenThousandSouls = !!state.bonusTenThousandSouls;
-    var keptBonusFirstThrone = !!state.bonusFirstThrone;
-    var keptGiftCrown = !!state.giftCrown;
-    var keptGiftFirstName = !!state.giftFirstName;
-    var keptGiftFiveTributes = !!state.giftFiveTributes;
-    var keptGiftNamesComplete = !!state.giftNamesComplete;
-    var keptGiftFirstVeil = !!state.giftFirstVeil;
-    var keptGiftFirstWake = !!state.giftFirstWake;
-    var keptGiftPeakLanterns = !!state.giftPeakLanterns;
-    var keptGiftPeakFetters = !!state.giftPeakFetters;
-    var keptGiftPeakCensers = !!state.giftPeakCensers;
-    var keptGiftFirstPyre = !!state.giftFirstPyre;
-    var keptGiftFirstUrn = !!state.giftFirstUrn;
-    var keptGiftFirstHearth = !!state.giftFirstHearth;
-    var keptGiftFirstBeacon = !!state.giftFirstBeacon;
-    var keptGiftFirstSpire = !!state.giftFirstSpire;
-    var keptGiftFirstObelisk = !!state.giftFirstObelisk;
-    var keptGiftEightTributes = !!state.giftEightTributes;
-    var keptGiftPeakPyres = !!state.giftPeakPyres;
-    var keptGiftPeakUrns = !!state.giftPeakUrns;
-    var keptGiftPeakHearths = !!state.giftPeakHearths;
-    var keptGiftPeakBeacons = !!state.giftPeakBeacons;
-    var keptGiftPeakSpires = !!state.giftPeakSpires;
-    var keptGiftPeakObelisks = !!state.giftPeakObelisks;
-    var keptGiftFirstCinders = !!state.giftFirstCinders;
-    var keptGiftFirstUrnRite = !!state.giftFirstUrnRite;
-    var keptGiftFirstHearthRite = !!state.giftFirstHearthRite;
-    var keptGiftFirstBeaconRite = !!state.giftFirstBeaconRite;
-    var keptGiftFirstSpireRite = !!state.giftFirstSpireRite;
-    var keptGiftFirstChalice = !!state.giftFirstChalice;
-    var keptGiftTwelveTributes = !!state.giftTwelveTributes;
-    var keptGiftSixteenTributes = !!state.giftSixteenTributes;
-    var keptGiftTwentyTributes = !!state.giftTwentyTributes;
-    var keptGiftTwentyFourTributes = !!state.giftTwentyFourTributes;
-    var keptGiftTwentyEightTributes = !!state.giftTwentyEightTributes;
-    var keptGiftThirtyTwoTributes = !!state.giftThirtyTwoTributes;
-    var keptGiftThirtySixTributes = !!state.giftThirtySixTributes;
-    var keptGiftFortyTributes = !!state.giftFortyTributes;
-    var keptGiftFullCup = !!state.giftFullCup;
-    var keptGiftThreeChalices = !!state.giftThreeChalices;
-    var keptGiftFirstOssuary = !!state.giftFirstOssuary;
-    var keptGiftFullOssuary = !!state.giftFullOssuary;
-    var keptGiftHundredDraws = !!state.giftHundredDraws;
-    var keptGiftTwoHundredDraws = !!state.giftTwoHundredDraws;
-    var keptGiftThreeHundredDraws = !!state.giftThreeHundredDraws;
-    var keptGiftFirstEmberVow = !!state.giftFirstEmberVow;
-    var keptGiftTwoVows = !!state.giftTwoVows;
-    var keptGiftThreeVows = !!state.giftThreeVows;
-    var keptGiftAllVows = !!state.giftAllVows;
-    var keptGiftFirstProcession = !!state.giftFirstProcession;
-    var keptGiftFirstLongerProcession = !!state.giftFirstLongerProcession;
-    var keptGiftFirstDeeperToll = !!state.giftFirstDeeperToll;
-    var keptGiftFirstLongerWake = !!state.giftFirstLongerWake;
-    var keptGiftFirstLongerTithe = !!state.giftFirstLongerTithe;
-    var keptGiftFirstLongerVeil = !!state.giftFirstLongerVeil;
-    var keptGiftFirstLongerHymn = !!state.giftFirstLongerHymn;
-    var keptGiftFirstLongerKnell = !!state.giftFirstLongerKnell;
-    var keptGiftFirstToll = !!state.giftFirstToll;
-    var keptGiftFirstKnell = !!state.giftFirstKnell;
-    var keptVowsKnown = normalizeVowsKnown(state.vowsKnown);
-    var keptChoirEdict = Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0));
-    var keptHymnEdict = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
-    var keptSmokeEdict = Math.max(0, Math.floor(Number(state.smokeEdictLevel) || 0));
-    var keptEmbersEdict = Math.max(0, Math.floor(Number(state.embersEdictLevel) || 0));
-    var keptUrnEdict = Math.max(0, Math.floor(Number(state.urnEdictLevel) || 0));
-    var keptHearthEdict = Math.max(0, Math.floor(Number(state.hearthEdictLevel) || 0));
-    var keptBeaconEdict = Math.max(0, Math.floor(Number(state.beaconEdictLevel) || 0));
-    var keptSpireEdict = Math.max(0, Math.floor(Number(state.spireEdictLevel) || 0));
-    var keptObeliskEdict = Math.max(0, Math.floor(Number(state.obeliskEdictLevel) || 0));
-    var keptCinderEdict = Math.max(0, Math.floor(Number(state.cinderEdictLevel) || 0));
-    var keptCutEdict = Math.max(0, Math.floor(Number(state.cutEdictLevel) || 0));
-    var keptTendingEdict = Math.max(0, Math.floor(Number(state.tendingEdictLevel) || 0));
-    var keptGleamEdict = Math.max(0, Math.floor(Number(state.gleamEdictLevel) || 0));
-    var keptRiseEdict = Math.max(0, Math.floor(Number(state.riseEdictLevel) || 0));
-    var keptCupEdict = Math.max(0, Math.floor(Number(state.cupEdictLevel) || 0));
-    var keptDraughtEdict = Math.max(0, Math.floor(Number(state.draughtEdictLevel) || 0));
-    var keptWakeEdict = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
-    var keptProcessionEdict = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
-    var keptTollEdict = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
-    var keptVeilEdict = Math.max(0, Math.floor(Number(state.veilEdictLevel) || 0));
-    var keptKnellEdict = Math.max(0, Math.floor(Number(state.knellEdictLevel) || 0));
-    var keptNightEdict = Math.max(0, Math.floor(Number(state.nightEdictLevel) || 0));
-    var keptQuietCourt = Number(state.quietCourtLevel) || 0;
-    var keptNamesBound = Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)));
-    var keptNamesComplete = !!state.namesComplete || keptNamesBound >= 12;
-    var keptRemembrance = Math.max(0, Math.floor(Number(state.remembrance) || 0));
-    var keptDeeperNight = Math.max(0, Math.floor(Number(state.deeperNightLevel) || 0));
-    var keptAshenTide = Math.max(0, Math.min(ASHEN_TIDE_MAX, Math.floor(Number(state.ashenTideLevel) || 0)));
-    var keptOssuary = Math.max(0, Math.min(OSSUARY_MAX, Math.floor(Number(state.ossuaryLevel) || 0)));
-    var keptLongerProcession = Math.max(0, Math.min(LONGER_PROCESSION_MAX, Math.floor(Number(state.longerProcessionLevel) || 0)));
-    var keptDeeperToll = Math.max(0, Math.min(DEEPER_TOLL_MAX, Math.floor(Number(state.deeperTollLevel) || 0)));
-    var keptLongerWake = Math.max(0, Math.min(LONGER_WAKE_MAX, Math.floor(Number(state.longerWakeLevel) || 0)));
-    var keptLongerTithe = Math.max(0, Math.min(LONGER_TITHE_MAX, Math.floor(Number(state.longerTitheLevel) || 0)));
-    var keptLongerVeil = Math.max(0, Math.min(LONGER_VEIL_MAX, Math.floor(Number(state.longerVeilLevel) || 0)));
-    var keptLongerHymn = Math.max(0, Math.min(LONGER_HYMN_MAX, Math.floor(Number(state.longerHymnLevel) || 0)));
-    var keptLongerKnell = Math.max(0, Math.min(LONGER_KNELL_MAX, Math.floor(Number(state.longerKnellLevel) || 0)));
-    var keptTributes = (Number(state.tributesLaid) || 0) + 1;
+    state.favor = (Number(state.favor) || 0) + gain + extraFavor;
+    state.favorEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
+    if (state.echoLevel > 1) state.echoLevel = 1;
+    state.peakShades = N.max(num(state.peakShades), num(state.shades));
+    state.peakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
+    state.peakFetters = N.max(num(state.peakFetters), num(state.fetters));
+    state.peakCensers = N.max(num(state.peakCensers), num(state.censers));
+    state.peakPyres = N.max(num(state.peakPyres), num(state.pyres));
+    state.peakUrns = N.max(num(state.peakUrns), num(state.urns));
+    state.peakHearths = N.max(num(state.peakHearths), num(state.hearths));
+    state.peakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
+    state.peakSpires = N.max(num(state.peakSpires), num(state.spires));
+    state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
+    state.tributesLaid = (Number(state.tributesLaid) || 0) + 1;
+    state.chronicle = (state.chronicle || []).slice();
+    state.vowsKnown = normalizeVowsKnown(state.vowsKnown);
+    state.namesComplete = !!state.namesComplete || (Math.max(0, Math.min(12, Math.floor(Number(state.namesBound) || 0)))) >= 12;
+    return firstTributeBonus;
+  }
+
+  function snapshotAccountFields() {
+    var snap = {};
+    for (var i = 0; i < FIELDS_KEYS.length; i++) {
+      var k = FIELDS_KEYS[i];
+      if (FIELDS[k].scope !== "account") continue;
+      var v = state[k];
+      if (v && typeof v === "object" && typeof v.m === "number") {
+        snap[k] = N.clone(v);
+      } else if (Array.isArray(v)) {
+        snap[k] = v.slice();
+      } else if (v && typeof v === "object") {
+        snap[k] = JSON.parse(JSON.stringify(v));
+      } else {
+        snap[k] = v;
+      }
+    }
+    return snap;
+  }
+
+  function restoreAccountFields(snap) {
+    var keys = Object.keys(snap);
+    for (var i = 0; i < keys.length; i++) {
+      state[keys[i]] = snap[keys[i]];
+    }
+  }
+
+  function applyTributeTimerPhases() {
+    state.nightLeft = nightLeftAfterTribute(state.nightEdictLevel);
+    if (state.nightLeft > 0) state.unlockedNightTithe = true;
+    state.hymnLeft = hymnLeftAfterTribute(state.hymnEdictLevel, state.longerHymnLevel);
+    state.veilLeft = veilLeftAfterTribute(state.veilEdictLevel);
+    if (state.veilLeft > 0) state.unlockedVeil = true;
+    state.tollLeft = tollLeftAfterTribute(state.tollEdictLevel);
+    if (state.tollLeft > 0) state.unlockedToll = true;
+    state.wakeLeft = wakeLeftAfterTribute(state.wakeEdictLevel);
+    if (state.wakeLeft > 0) state.unlockedWake = true;
+    state.processionLeft = processionLeftAfterTribute(state.processionEdictLevel);
+    state.knellLeft = knellLeftAfterTribute(state.knellEdictLevel);
+  }
+
+  function layTribute() {
+    var gain = favorGain(state.lifetimeSouls);
+    if (gain < 1) return;
+    var ok = window.confirm(
+      "Empty the well?\n\nThe GodKing keeps the Favor. Reliquary stays. This gathering is forfeit."
+    );
+    if (!ok) return;
+    markChronicle("tribute");
+    // Phase 1: mutate account-scope fields before snapshot
+    var firstTributeBonus = applyTributeAccountMutations(gain);
+    // Phase 2: snapshot all account-scope fields
+    var accountSnap = snapshotAccountFields();
+    // Phase 3: full reset
     state = freshState();
-    state.favor = keptFavor;
-    state.favorEarned = keptEarned;
-    state.edictLevel = keptEdict;
-    state.memoryLevel = keptMemory;
-    state.echoLevel = keptEcho;
-    state.seatLevel = keptSeat;
-    state.kindleLevel = keptKindle;
-    state.ashenLevel = keptAshen;
-    state.depthLevel = keptDepth;
-    state.crownWeight = keptCrown;
-    state.longMemoryLevel = keptLongMem;
-    state.buyMode = keptBuy;
-    state.buyModeHintDismissed = keptBuyModeHintDismissed;
-    state.chronicle = keptChronicle;
-    state.aspect = "";
-    state.allTimeSouls = keptAllTime;
-    state.peakShades = keptPeakShades;
-    state.peakLanterns = keptPeakLanterns;
-    state.peakFetters = keptPeakFetters;
-    state.peakCensers = keptPeakCensers;
-    state.peakPyres = keptPeakPyres;
-    state.peakUrns = keptPeakUrns;
-    state.peakHearths = keptPeakHearths;
-    state.peakBeacons = keptPeakBeacons;
-    state.peakSpires = keptPeakSpires;
-    state.peakObelisks = keptPeakObelisks;
-    state.bonusLifetimeSouls = keptBonusLifetimeSouls;
-    state.bonusPeakShades = keptBonusPeakShades;
-    state.bonusFirstVessel = keptBonusFirstVessel;
-    state.bonusFirstTribute = keptBonusFirstTribute;
-    state.bonusThousandSouls = keptBonusThousandSouls;
-    state.bonusFirstLantern = keptBonusFirstLantern;
-    state.bonusFirstCenser = keptBonusFirstCenser;
-    state.bonusFirstFetter = keptBonusFirstFetter;
-    state.bonusTenThousandSouls = keptBonusTenThousandSouls;
-    state.bonusFirstThrone = keptBonusFirstThrone;
-    state.giftCrown = keptGiftCrown;
-    state.giftFirstName = keptGiftFirstName;
-    state.giftFiveTributes = keptGiftFiveTributes;
-    state.giftNamesComplete = keptGiftNamesComplete;
-    state.giftFirstVeil = keptGiftFirstVeil;
-    state.giftFirstWake = keptGiftFirstWake;
-    state.giftPeakLanterns = keptGiftPeakLanterns;
-    state.giftPeakFetters = keptGiftPeakFetters;
-    state.giftPeakCensers = keptGiftPeakCensers;
-    state.giftFirstPyre = keptGiftFirstPyre;
-    state.giftFirstUrn = keptGiftFirstUrn;
-    state.giftFirstHearth = keptGiftFirstHearth;
-    state.giftFirstBeacon = keptGiftFirstBeacon;
-    state.giftFirstSpire = keptGiftFirstSpire;
-    state.giftFirstObelisk = keptGiftFirstObelisk;
-    state.giftEightTributes = keptGiftEightTributes;
-    state.giftPeakPyres = keptGiftPeakPyres;
-    state.giftPeakUrns = keptGiftPeakUrns;
-    state.giftPeakHearths = keptGiftPeakHearths;
-    state.giftPeakBeacons = keptGiftPeakBeacons;
-    state.giftPeakSpires = keptGiftPeakSpires;
-    state.giftPeakObelisks = keptGiftPeakObelisks;
-    state.giftFirstCinders = keptGiftFirstCinders;
-    state.giftFirstUrnRite = keptGiftFirstUrnRite;
-    state.giftFirstHearthRite = keptGiftFirstHearthRite;
-    state.giftFirstBeaconRite = keptGiftFirstBeaconRite;
-    state.giftFirstSpireRite = keptGiftFirstSpireRite;
-    state.giftFirstChalice = keptGiftFirstChalice;
-    state.giftTwelveTributes = keptGiftTwelveTributes;
-    state.giftSixteenTributes = keptGiftSixteenTributes;
-    state.giftTwentyTributes = keptGiftTwentyTributes;
-    state.giftTwentyFourTributes = keptGiftTwentyFourTributes;
-    state.giftTwentyEightTributes = keptGiftTwentyEightTributes;
-    state.giftThirtyTwoTributes = keptGiftThirtyTwoTributes;
-    state.giftThirtySixTributes = keptGiftThirtySixTributes;
-    state.giftFortyTributes = keptGiftFortyTributes;
-    state.giftFullCup = keptGiftFullCup;
-    state.giftThreeChalices = keptGiftThreeChalices;
-    state.giftFirstOssuary = keptGiftFirstOssuary;
-    state.giftFullOssuary = keptGiftFullOssuary;
-    state.giftHundredDraws = keptGiftHundredDraws;
-    state.giftTwoHundredDraws = keptGiftTwoHundredDraws;
-    state.giftThreeHundredDraws = keptGiftThreeHundredDraws;
-    state.giftFirstEmberVow = keptGiftFirstEmberVow;
-    state.giftTwoVows = keptGiftTwoVows;
-    state.giftThreeVows = keptGiftThreeVows;
-    state.giftAllVows = keptGiftAllVows;
-    state.giftFirstProcession = keptGiftFirstProcession;
-    state.giftFirstLongerProcession = keptGiftFirstLongerProcession;
-    state.giftFirstDeeperToll = keptGiftFirstDeeperToll;
-    state.giftFirstLongerWake = keptGiftFirstLongerWake;
-    state.giftFirstLongerTithe = keptGiftFirstLongerTithe;
-    state.giftFirstLongerVeil = keptGiftFirstLongerVeil;
-    state.giftFirstLongerHymn = keptGiftFirstLongerHymn;
-    state.giftFirstLongerKnell = keptGiftFirstLongerKnell;
-    state.giftFirstToll = keptGiftFirstToll;
-    state.giftFirstKnell = keptGiftFirstKnell;
-    state.vowsKnown = keptVowsKnown;
-    state.choirEdictLevel = keptChoirEdict;
-    state.hymnEdictLevel = keptHymnEdict;
-    state.smokeEdictLevel = keptSmokeEdict;
-    state.embersEdictLevel = keptEmbersEdict;
-    state.urnEdictLevel = keptUrnEdict;
-    state.hearthEdictLevel = keptHearthEdict;
-    state.beaconEdictLevel = keptBeaconEdict;
-    state.spireEdictLevel = keptSpireEdict;
-    state.obeliskEdictLevel = keptObeliskEdict;
-    state.cinderEdictLevel = keptCinderEdict;
-    state.cutEdictLevel = keptCutEdict;
-    state.tendingEdictLevel = keptTendingEdict;
-    state.gleamEdictLevel = keptGleamEdict;
-    state.riseEdictLevel = keptRiseEdict;
-    state.cupEdictLevel = keptCupEdict;
-    state.draughtEdictLevel = keptDraughtEdict;
-    state.wakeEdictLevel = keptWakeEdict;
-    state.processionEdictLevel = keptProcessionEdict;
-    state.tollEdictLevel = keptTollEdict;
-    state.veilEdictLevel = keptVeilEdict;
-    state.knellEdictLevel = keptKnellEdict;
-    state.nightEdictLevel = keptNightEdict;
-    state.quietCourtLevel = keptQuietCourt;
-    state.namesBound = keptNamesBound;
-    state.namesComplete = keptNamesComplete;
-    state.remembrance = keptRemembrance;
-    state.deeperNightLevel = keptDeeperNight;
-    state.ashenTideLevel = keptAshenTide;
-    state.ossuaryLevel = keptOssuary;
-    state.longerProcessionLevel = keptLongerProcession;
-    state.deeperTollLevel = keptDeeperToll;
-    state.longerWakeLevel = keptLongerWake;
-    state.longerTitheLevel = keptLongerTithe;
-    state.longerVeilLevel = keptLongerVeil;
-    state.longerHymnLevel = keptLongerHymn;
-    state.longerKnellLevel = keptLongerKnell;
-    state.tributesLaid = keptTributes;
-    state.titheLeft = 0;
-    state.nightLeft = nightLeftAfterTribute(keptNightEdict);
-    if (state.nightLeft > 0) {
-      state.unlockedNightTithe = true;
-    }
-    state.hymnLeft = hymnLeftAfterTribute(keptHymnEdict, keptLongerHymn);
-    state.veilLeft = veilLeftAfterTribute(keptVeilEdict);
-    if (state.veilLeft > 0) {
-      state.unlockedVeil = true;
-    }
-    state.tollLeft = tollLeftAfterTribute(keptTollEdict);
-    if (state.tollLeft > 0) {
-      state.unlockedToll = true;
-    }
-    state.wakeLeft = wakeLeftAfterTribute(keptWakeEdict);
-    if (state.wakeLeft > 0) {
-      state.unlockedWake = true;
-    }
-    state.processionLeft = processionLeftAfterTribute(keptProcessionEdict);
-    state.knellLeft = knellLeftAfterTribute(keptKnellEdict);
-    state.tithePaid = false;
-    state.autobind = false;
-    state.autobindSpirits = false;
-    state.autobindVessels = false;
-    state.autobindLanterns = false;
-    state.autobindFetters = false;
-    state.autobindCensers = false;
-    state.autobindThrones = false;
-    state.autobindPyres = false;
-    state.autobindChalices = false;
-    state.autobindUrns = false;
-    state.autobindHearths = false;
-    state.autobindBeacons = false;
-    state.autobindSpires = false;
-    state.autobindObelisks = false;
-    state.clicksThisRun = 0;
-    state.vow = "";
-    state.vowHungerPaid = false;
-    state.runStartedAt = Date.now();
-    // Tribute restore phases (AZR-171):
-    // 1) applyKeptProgression — favor/edicts/gifts/timers/autobind clears already applied above.
-    // 2) applyEdictStartingStock — shades, lanterns, fetters, pyres..obelisks, chalices, well, thrones, choir.
-    // 3) applyAutobindStarts — Quiet Court / Smoke / Cinder / Cut / Tending / Gleam / Rise / Draught
-    //    (ash unlocks must run after edict starting stock).
-    // 4) revealUnlockedCards(false) — after checkUnlock below.
+    // Phase 4: restore account-scope fields from snapshot
+    restoreAccountFields(accountSnap);
+    // Phase 5: derived timer phases
+    applyTributeTimerPhases();
+    // Phase 6 (AZR-171): edict starting stock then autobind starts
     applyEdictStartingStock(state);
-    // Ash autobind unlocks (unlockedAutobindUrns etc.) must be evaluated after Edict starting stock is applied.
     applyAutobindStarts(state);
     markChronicle("hymn");
     hideToast(true);
@@ -10802,6 +9707,10 @@
     buyBindingToll: buyBindingToll,
     serializeState: serializeState,
     layTribute: layTribute,
+    FIELDS: FIELDS,
+    FIELDS_KEYS: FIELDS_KEYS,
+    resetToScope: resetToScope,
+    SAVE_FIELDS: SAVE_FIELDS,
     SAVE_KEY: SAVE_KEY,
     SAVE_BAK1_KEY: SAVE_BAK1_KEY,
     SAVE_BAK2_KEY: SAVE_BAK2_KEY,
