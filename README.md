@@ -33,7 +33,7 @@ Save is local (`soulgather-v0`; backups `soulgather-v0.bak1` / `soulgather-v0.ba
 
 **Buy 10/Max toast.** Buy 10/Max shows a short toast with the count (AZR-111); Autobind silent.
 
-Visual direction stays locked. Footer/CSS **v6.9.1** (bug-fix wave: AZR-162 ash-rite geo costs; AZR-163 simulatedUntil settle; AZR-164 live-frame clamp + hidden heartbeat; AZR-165 load-fail keep raw; AZR-167 debounce save + drop per-click render; AZR-168 save sanitise; AZR-169 shadowed renderNames; AZR-170 reveal table; AZR-171 QC Tribute autobind dedupe; AZR-172 buy-mode 1/2/3 otherButton; AZR-173 nextGoal Favor thresholds; AZR-174 toast queue cap/coalesce/dismiss; AZR-175 Stillness Draw + vow chip + swear confirm + Ember Night/Wake; AZR-166 closed-form Max buys + throttle render). Save key stays `soulgather-v0`.
+Visual direction stays locked. Footer/CSS **v6.9.1** (bug-fix wave: AZR-162 ash-rite geo costs; AZR-163 simulatedUntil settle; AZR-164 live-frame clamp + hidden heartbeat; AZR-165 load-fail keep raw; AZR-167 debounce save + drop per-click render; AZR-168 save sanitise; AZR-169 shadowed renderNames; AZR-170 reveal table; AZR-171 QC Tribute autobind dedupe; AZR-172 buy-mode 1/2/3 otherButton; AZR-173 nextGoal Favor thresholds; AZR-174 toast queue cap/coalesce/dismiss; AZR-175 Stillness Draw + vow chip + swear confirm + Ember Night/Wake; AZR-166 closed-form Max buys + throttle render; AZR-176 test suite imports real game.js — no regex-over-source, behavioural Binding Toll 0–4 / curve invariants / Tribute restore / save round-trip / applyDt buff expiry). Save key stays `soulgather-v0`.
 
 **AZR-116.** First-run buy-mode hint for hotkeys 1/2/3; dismisses on first switch or ×; persists Tribute, wipes Reset.
 
@@ -974,6 +974,8 @@ Ash/s = `(0.01 + 0.005 * ashenTideLevel + 0.005 * choirLevel) * (shade soul prod
 
 Do not restyle the locked masthead or well sigil.
 
-Verify: `node test-economy.mjs` (expect exit 0). If node is blocked, `python3` can drive the same asserts.
+Verify: `node test-economy.mjs` (expect exit 0). `node test-load-safety.mjs` or `python3 run-tests.py` for both.
 
-Files: `index.html`, `css/style.css`, `js/num.js`, `js/format.js`, `js/game.js`, `test-economy.mjs`, `sim-firstrun.mjs`.
+**AZR-176.** `test-economy.mjs` loads the real shipped `js/game.js` under Node (boot deferred via `document.readyState = "loading"`). All formula asserts call `SoulgatherEconomy` exports — no regex matching over source text. Adds `__setStateForTest(partial)` + additional exports (pure test hooks; no gameplay or look change). Footer/CSS stays **v6.9.1**. Hold AZR-177+ / a11y 196–199.
+
+Files: `index.html`, `css/style.css`, `js/num.js`, `js/format.js`, `js/game.js`, `test-economy.mjs`, `test-load-safety.mjs`, `sim-firstrun.mjs`, `run-tests.py`.
