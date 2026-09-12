@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parent
 suites = [
     root / "test-economy.mjs",
     root / "test-load-safety.mjs",
+    root / "sim-firstrun.mjs",
 ]
 try:
     for suite in suites:

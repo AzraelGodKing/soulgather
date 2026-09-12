@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax check
+        run: node --check js/game.js && node --check js/num.js && node --check js/format.js
+
+      - name: Economy tests
+        run: node test-economy.mjs
+
+      - name: First-run simulation
+        run: node sim-firstrun.mjs
+
+      - name: Load-safety tests
+        run: node test-load-safety.mjs
+
+      - name: ESLint (no-redeclare, no-dupe-keys)
+        run: npx --yes eslint@8 js/ --no-eslintrc --env browser,es6 --parser-options ecmaVersion:2020 --rule '{"no-dupe-keys":"error","no-redeclare":"error"}'

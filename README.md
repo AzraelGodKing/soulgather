@@ -2,6 +2,12 @@
 
 Original idle/incremental game. Harvest souls from a void well for the GodKing. Not a Swarm Simulator clone.
 
+## CI
+
+GitHub Actions runs on every push and PR: syntax check, `test-economy.mjs`, `sim-firstrun.mjs`, `test-load-safety.mjs`, and ESLint `no-redeclare`/`no-dupe-keys`. Run locally with `npm test` or `python3 run-tests.py`.
+
+**Branch protection:** After this workflow lands, Azrael should enable "Require status checks to pass before merging" on `main` with the `test` job required (Settings → Branches → Branch protection rules).
+
 ## Play
 
 Live: https://azraelgodking.github.io/soulgather/
@@ -11,7 +17,7 @@ Hotkeys: Space/Enter draw, 1/2/3 buy mode, T Tithe, N Night's Tithe, V Thin the 
 
 Save is local (`soulgather-v0`; backups `soulgather-v0.bak1` / `soulgather-v0.bak2`). Footer Memory export/import. Reset wipes everything including Favor. Load failure keeps the primary key and gates autosave (AZR-165). Untrusted save fields are clamped at the load boundary; live NaN/negative core stocks freeze autosave (AZR-168).
 
-**v6.9.1.** Ash rites geometric costs (AZR-162); hidden-tab credit via `simulatedUntil` (AZR-163); live-frame clamp + 1Hz hidden heartbeat + Hollow freeze (AZR-164); load-failure keeps raw save + bak1/bak2 (AZR-165); debounce save + drop per-click full render (AZR-167); save-field sanitise + NaN tripwire (AZR-168); shadowed renderNames removed (AZR-169); unlock-card reveals unified (AZR-170); Quiet Court Tribute ash-autobind deduped after edict stock (AZR-171); buy-mode hotkeys 1/2/3 honor `otherButton` (AZR-172); nextGoal real Favor thresholds (AZR-173); toast queue cap/coalesce/dismiss (AZR-174); Stillness disables Draw + HUD vow chip + swear confirm + Ember greys Night/Wake (AZR-175); closed-form Max buys + throttle render (AZR-166). Live: https://azraelgodking.github.io/soulgather/. Footer/CSS v6.9.1. Save key `soulgather-v0`.
+**v6.9.1.** CI workflow + rewritten first-run sim against the live engine (AZR-177); `GAME_VERSION` single source; `package.json`; `no-redeclare`/`no-dupe-keys` ESLint in CI. Stay v6.9.1; hold AZR-178+. Ash rites geometric costs (AZR-162); hidden-tab credit via `simulatedUntil` (AZR-163); live-frame clamp + 1Hz hidden heartbeat + Hollow freeze (AZR-164); load-failure keeps raw save + bak1/bak2 (AZR-165); debounce save + drop per-click full render (AZR-167); save-field sanitise + NaN tripwire (AZR-168); shadowed renderNames removed (AZR-169); unlock-card reveals unified (AZR-170); Quiet Court Tribute ash-autobind deduped after edict stock (AZR-171); buy-mode hotkeys 1/2/3 honor `otherButton` (AZR-172); nextGoal real Favor thresholds (AZR-173); toast queue cap/coalesce/dismiss (AZR-174); Stillness disables Draw + HUD vow chip + swear confirm + Ember greys Night/Wake (AZR-175); closed-form Max buys + throttle render (AZR-166). Live: https://azraelgodking.github.io/soulgather/. Footer/CSS v6.9.1. Save key `soulgather-v0`.
 
 **v6.9.** Hollow Hunger — mid-run idle pressure (stacks; Autobind does not clear). Live: https://azraelgodking.github.io/soulgather/. Footer/CSS v6.9. Save key `soulgather-v0`.
 

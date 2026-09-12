@@ -3,6 +3,7 @@
 
   var N = globalThis.SoulgatherNum;
 
+  var GAME_VERSION = "6.9.1";
   var SAVE_KEY = "soulgather-v0";
   var SAVE_BAK1_KEY = "soulgather-v0.bak1";
   var SAVE_BAK2_KEY = "soulgather-v0.bak2";
@@ -8330,11 +8331,11 @@
         els.spireRiteRow.classList.toggle("is-hidden", !spireRiteOpen);
       }
       if (spireRiteOpen) {
-        var sCost = spireRiteCost(state.spireRiteLevel);
-        var sMult = spireRiteMult(state.spireRiteLevel);
-        setText(els.spireRiteEffect, "Spire \u00d7" + formatTimes(sMult));
-        setText(els.spireRiteCost, F.formatNumber(sCost) + " Ash");
-        if (els.spireRiteBuy) els.spireRiteBuy.disabled = N.cmp(state.ash, sCost) < 0;
+        var spRCost = spireRiteCost(state.spireRiteLevel);
+        var spRMult = spireRiteMult(state.spireRiteLevel);
+        setText(els.spireRiteEffect, "Spire \u00d7" + formatTimes(spRMult));
+        setText(els.spireRiteCost, F.formatNumber(spRCost) + " Ash");
+        if (els.spireRiteBuy) els.spireRiteBuy.disabled = N.cmp(state.ash, spRCost) < 0;
       }
 
       var drawsOpen = !!state.unlockedWellDraws || !!state.wellDraws;
@@ -8777,11 +8778,11 @@
         els.markHollowRow.classList.toggle("is-hidden", !state.unlockedVessels);
       }
       if (state.unlockedVessels) {
-        var hCost = markCost(state.hollowLevel);
-        var hMult = emberMult(state.hollowLevel);
-        setText(els.markHollowEffect, "Vessel house \u00d7" + formatTimes(hMult));
-        setText(els.markHollowCost, F.formatNumber(hCost) + " Ash");
-        if (els.markHollowBuy) els.markHollowBuy.disabled = N.cmp(state.ash, hCost) < 0;
+        var hlCost = markCost(state.hollowLevel);
+        var hlMult = emberMult(state.hollowLevel);
+        setText(els.markHollowEffect, "Vessel house \u00d7" + formatTimes(hlMult));
+        setText(els.markHollowCost, F.formatNumber(hlCost) + " Ash");
+        if (els.markHollowBuy) els.markHollowBuy.disabled = N.cmp(state.ash, hlCost) < 0;
       }
     }
 
@@ -10495,6 +10496,7 @@
   }
 
   globalThis.SoulgatherEconomy = {
+    GAME_VERSION: GAME_VERSION,
     shadeCost: shadeCost,
     spiritCost: spiritCost,
     vesselCost: vesselCost,
@@ -10781,6 +10783,22 @@
     tryAutobindChalices: tryAutobindChalices,
     buyShade: buyShade,
     buySpirit: buySpirit,
+    buyVessel: buyVessel,
+    buyThrone: buyThrone,
+    buyWell: buyWell,
+    buyLantern: buyLantern,
+    buyFetter: buyFetter,
+    buyCenser: buyCenser,
+    buyPyre: buyPyre,
+    buyUrn: buyUrn,
+    buyHearth: buyHearth,
+    buyBeacon: buyBeacon,
+    buySpire: buySpire,
+    buyObelisk: buyObelisk,
+    buyChalice: buyChalice,
+    buyWellDraws: buyWellDraws,
+    buySiphon: buySiphon,
+    buyLevy: buyLevy,
     buyBindingToll: buyBindingToll,
     serializeState: serializeState,
     layTribute: layTribute,

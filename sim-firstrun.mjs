@@ -1,482 +1,585 @@
 #!/usr/bin/env node
 /**
- * Soulgather v0.4 first-run simulation.
- * Formulas duplicated from js/game.js / test-economy.mjs (game files untouched).
- * Greedy human-ish strategy; favor=0, edict=0 (fresh run).
+ * Soulgather first-run simulation — drives the REAL game engine.
+ * Greedy human-ish strategy from a fresh save (favor=0, edict=0).
+ * Asserts checkpoint bands so a broken economy turns CI red.
  */
 
-const COST_BASE = 10;
-const COST_MULT = 1.15;
-const WELL_COST_BASE = 25;
-const WELL_COST_MULT = 1.5;
-const WELL_EARLY_MULT = 1.35;
-const SHADE_SOULS_PER_SEC = 1;
-const SPIRIT_SHADES_PER_SEC = 0.1;
-const VESSEL_SPIRITS_PER_SEC = 0.1;
-const UNLOCK_SHADES = 10;
-const UNLOCK_LIFETIME = 100;
-const UNLOCK_SPIRITS_FOR_VESSELS = 5;
-const UNLOCK_LIFETIME_SHADES = 50;
-const UNLOCK_VESSELS_FOR_THRONES = 1;
-const UNLOCK_LIFETIME_SPIRITS = 50;
-const UNLOCK_WELL_DRAWS_SHADES = 3;
-const WELL_DRAWS_COST = 50;
+import fs from "fs";
+import path from "path";
+import vm from "vm";
+import { fileURLToPath } from "url";
 
-const DT = 0.25;
-const T_MAX = 3600;
-const CLICKS_BEFORE_DRAWS = 2;
-const CLICKS_AFTER_DRAWS = 0; // 0 extra after Well Draws (idle); lazy alt would be 0.2
-const MAX_WELL_DEPTH = 2;
-const SIPHON_PAYBACK_S = 45;
-const SHADE_BUFFER = 5; // keep some shades for soul income after first spirit
+const root = path.dirname(fileURLToPath(import.meta.url));
 
-function producerCost(owned) {
-  const n = Math.max(0, Math.floor(owned));
-  return Math.floor(COST_BASE * Math.pow(COST_MULT, n));
-}
-function shadeCost(owned) {
-  return producerCost(owned);
-}
-function spiritCost(owned) {
-  return producerCost(owned);
-}
-function vesselCost(owned) {
-  return producerCost(owned);
-}
-function throneCost(owned) {
-  return producerCost(owned);
-}
-function wellCost(depth) {
-  const n = Math.max(0, Math.floor(depth));
-  if (n <= 5) {
-    return Math.floor(WELL_COST_BASE * Math.pow(WELL_EARLY_MULT, n));
-  }
-  return Math.floor(WELL_COST_BASE * Math.pow(WELL_COST_MULT, n));
-}
-function siphonCost(level) {
-  const n = Math.max(0, Math.floor(level));
-  return Math.floor(50 * Math.pow(3, n));
-}
-function levyCost(level) {
-  const n = Math.max(0, Math.floor(level));
-  return Math.floor(15 * Math.pow(3, n));
-}
-function siphonMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
-}
-function levyMult(level) {
-  return Math.pow(2, Math.max(0, Math.floor(Number(level) || 0)));
-}
-function prestigeMult(favorEarned) {
-  return 1 + 0.5 * (Number(favorEarned) || 0);
-}
-function prodMult(favorEarned, thrones, edictLevel) {
-  return (
-    prestigeMult(favorEarned) *
-    (1 + 0.1 * (Number(thrones) || 0)) *
-    (1 + 0.25 * (Number(edictLevel) || 0))
-  );
-}
-function favorGain(lifetimeSouls) {
-  const n = Number(lifetimeSouls) || 0;
-  if (n < 0) n = 0;
-  return Math.floor(Math.sqrt(n / 25000));
-}
-
-function fmtTime(t) {
-  if (t == null) return "FAIL";
-  const m = Math.floor(t / 60);
-  const s = t - m * 60;
-  if (m <= 0) return s.toFixed(2) + "s";
-  return m + "m " + s.toFixed(2) + "s (" + t.toFixed(2) + "s)";
-}
-
-function fmtN(n, d) {
-  if (!isFinite(n)) return String(n);
-  const p = d == null ? 2 : d;
-  if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
-  return n.toFixed(p);
-}
-
-const s = {
-  souls: 0,
-  lifetimeSouls: 0,
-  lifetimeShades: 0,
-  lifetimeSpirits: 0,
-  shades: 0,
-  spirits: 0,
-  vessels: 0,
-  thrones: 0,
-  wellDepth: 0,
-  siphonLevel: 0,
-  levyLevel: 0,
-  wellDraws: false,
-  unlockedWell: false,
-  unlockedSpirits: false,
-  unlockedVessels: false,
-  unlockedThrones: false,
-  unlockedWellDraws: false,
-  favor: 0,
-  favorEarned: 0,
-  edictLevel: 0,
-};
-
-const marks = {
-  firstShade: null,
-  firstSiphon: null,
-  wellDraws: null,
-  firstSpirit: null,
-  firstVessel: null,
-  firstThrone: null,
-  firstTribute: null,
-};
-
-const rateAt = {};
-
-function currentMult() {
-  return prodMult(s.favorEarned, s.thrones, s.edictLevel);
-}
-function clickPower() {
-  return (1 + s.wellDepth) * currentMult();
-}
-function shadeSoulsPerSec() {
-  return s.shades * SHADE_SOULS_PER_SEC * currentMult() * siphonMult(s.siphonLevel);
-}
-function soulsPerSec() {
-  let rate = shadeSoulsPerSec();
-  if (s.wellDraws) rate += clickPower();
-  return rate;
-}
-function shadesPerSec() {
-  return s.spirits * SPIRIT_SHADES_PER_SEC * currentMult() * levyMult(s.levyLevel);
-}
-function spiritsPerSec() {
-  return s.vessels * VESSEL_SPIRITS_PER_SEC * currentMult();
-}
-
-function checkUnlock() {
-  if (!s.unlockedWell && s.shades >= 1) s.unlockedWell = true;
-  if (!s.unlockedSpirits) {
-    if (s.shades >= UNLOCK_SHADES || s.lifetimeSouls >= UNLOCK_LIFETIME) {
-      s.unlockedSpirits = true;
-    }
-  }
-  if (!s.unlockedVessels) {
-    if (s.spirits >= UNLOCK_SPIRITS_FOR_VESSELS || s.lifetimeShades >= UNLOCK_LIFETIME_SHADES) {
-      s.unlockedVessels = true;
-    }
-  }
-  if (!s.unlockedThrones) {
-    if (s.vessels >= UNLOCK_VESSELS_FOR_THRONES || s.lifetimeSpirits >= UNLOCK_LIFETIME_SPIRITS) {
-      s.unlockedThrones = true;
-    }
-  }
-  if (!s.unlockedWellDraws && s.shades >= UNLOCK_WELL_DRAWS_SHADES) {
-    s.unlockedWellDraws = true;
-  }
-}
-
-function applyDt(dt) {
-  const dSouls = soulsPerSec() * dt;
-  s.souls += dSouls;
-  s.lifetimeSouls += dSouls;
-
-  const dShades = shadesPerSec() * dt;
-  s.shades += dShades;
-  s.lifetimeShades += dShades;
-
-  const dSpirits = spiritsPerSec() * dt;
-  s.spirits += dSpirits;
-  s.lifetimeSpirits += dSpirits;
-
-  checkUnlock();
-}
-
-function harvest(n) {
-  if (n <= 0) return;
-  const power = clickPower() * n;
-  s.souls += power;
-  s.lifetimeSouls += power;
-  checkUnlock();
-}
-
-function buyShade() {
-  const cost = shadeCost(s.shades);
-  if (s.souls < cost) return false;
-  s.souls -= cost;
-  s.shades += 1;
-  s.lifetimeShades += 1;
-  checkUnlock();
-  return true;
-}
-function buySpirit() {
-  if (!s.unlockedSpirits) return false;
-  const cost = spiritCost(s.spirits);
-  if (s.shades < cost) return false;
-  s.shades -= cost;
-  s.spirits += 1;
-  s.lifetimeSpirits += 1;
-  checkUnlock();
-  return true;
-}
-function buyVessel() {
-  if (!s.unlockedVessels) return false;
-  const cost = vesselCost(s.vessels);
-  if (s.spirits < cost) return false;
-  s.spirits -= cost;
-  s.vessels += 1;
-  checkUnlock();
-  return true;
-}
-function buyThrone() {
-  if (!s.unlockedThrones) return false;
-  const cost = throneCost(s.thrones);
-  if (s.vessels < cost) return false;
-  s.vessels -= cost;
-  s.thrones += 1;
-  return true;
-}
-function buyWell() {
-  if (!s.unlockedWell) return false;
-  const cost = wellCost(s.wellDepth);
-  if (s.souls < cost) return false;
-  s.souls -= cost;
-  s.wellDepth += 1;
-  return true;
-}
-function buySiphon() {
-  const cost = siphonCost(s.siphonLevel);
-  if (s.souls < cost) return false;
-  s.souls -= cost;
-  s.siphonLevel += 1;
-  return true;
-}
-function buyLevy() {
-  if (!s.unlockedSpirits) return false;
-  const cost = levyCost(s.levyLevel);
-  if (s.shades < cost) return false;
-  s.shades -= cost;
-  s.levyLevel += 1;
-  return true;
-}
-function buyWellDraws() {
-  if (s.wellDraws) return false;
-  if (!s.unlockedWellDraws && s.shades < UNLOCK_WELL_DRAWS_SHADES) return false;
-  if (s.souls < WELL_DRAWS_COST) return false;
-  s.souls -= WELL_DRAWS_COST;
-  s.wellDraws = true;
-  s.unlockedWellDraws = true;
-  return true;
-}
-
-function siphonPaysBack() {
-  const cost = siphonCost(s.siphonLevel);
-  if (s.souls < cost) return false;
-  if (s.siphonLevel === 0) return s.shades >= 3;
-  const extra = shadeSoulsPerSec();
-  if (extra <= 0) return false;
-  return cost / extra <= SIPHON_PAYBACK_S;
-}
-
-function levyIsCheapVsShades() {
-  if (!s.unlockedSpirits) return false;
-  if (s.spirits < 1) return false;
-  const lCost = levyCost(s.levyLevel);
-  if (s.shades < lCost) return false;
-  // Keep a soul-income buffer after spending shades on levy.
-  if (s.shades - lCost < SHADE_BUFFER && s.spirits < 4) return false;
-  const nextSpirit = spiritCost(s.spirits);
-  // Levy doubles ALL spirit shade-output. Worth it once it is not
-  // wildly more expensive than another Bound Spirit, or we already
-  // have several spirits so doubling is huge.
-  if (s.spirits >= 3) return lCost <= nextSpirit * 3 || s.shades >= lCost + SHADE_BUFFER;
-  return lCost <= nextSpirit * 1.5;
-}
-
-function clickStillMatters() {
-  return !s.wellDraws;
-}
-
-function greedyBuy(t) {
-  // 1. First shade as soon as 10 souls.
-  if (s.shades < 1 && s.lifetimeShades < 1 && s.souls >= shadeCost(0)) {
-    if (buyShade() && marks.firstShade == null) marks.firstShade = t;
-    return;
-  }
-
-  // 5. Well Draws at 3 shades when 50 souls available (prefer over next shade).
-  if (!s.wellDraws && (s.unlockedWellDraws || s.shades >= UNLOCK_WELL_DRAWS_SHADES) && s.souls >= WELL_DRAWS_COST) {
-    if (buyWellDraws() && marks.wellDraws == null) marks.wellDraws = t;
-    return;
-  }
-
-  // 4. Rite of Siphon when it pays back (souls >= cost and shades >= 3 for first).
-  if (siphonPaysBack()) {
-    const was = s.siphonLevel;
-    if (buySiphon() && was === 0 && marks.firstSiphon == null) marks.firstSiphon = t;
-    return;
-  }
-
-  // 2. Well Depth when affordable if click still matters (cap 1–2).
-  if (
-    clickStillMatters() &&
-    s.unlockedWell &&
-    s.wellDepth < MAX_WELL_DEPTH &&
-    s.souls >= wellCost(s.wellDepth)
-  ) {
-    // Do not spend the Well Draws pile if we are already at 3 shades and close.
-    const savingForDraws =
-      !s.wellDraws &&
-      s.shades >= UNLOCK_WELL_DRAWS_SHADES &&
-      s.souls + 1 >= WELL_DRAWS_COST * 0.6;
-    if (!savingForDraws) {
-      buyWell();
-      return;
-    }
-  }
-
-  // 7b. Thrones at 1 vessel (unlock); purchase when throne cost is met.
-  if (s.unlockedThrones && s.vessels >= throneCost(s.thrones)) {
-    if (buyThrone() && marks.firstThrone == null) marks.firstThrone = t;
-    return;
-  }
-
-  // 7a. Vessels at 5 spirits.
-  if (s.unlockedVessels && s.spirits >= vesselCost(s.vessels)) {
-    // First vessel: buy at 5 spirits as instructed.
-    // Later: keep a small spirit leftover if production is still thin.
-    const cost = vesselCost(s.vessels);
-    const first = s.vessels < 1;
-    if (first || s.spirits - cost >= 1 || s.vessels >= 3) {
-      if (buyVessel() && marks.firstVessel == null) marks.firstVessel = t;
-      return;
-    }
-  }
-
-  // 6. Bound Spirits at 10 shades; Levy when cheap vs buying more shades.
-  if (levyIsCheapVsShades()) {
-    buyLevy();
-    return;
-  }
-  if (s.unlockedSpirits && s.shades >= spiritCost(s.spirits)) {
-    const cost = spiritCost(s.spirits);
-    const first = s.spirits < 1 && s.lifetimeSpirits < 1;
-    // First spirit at the 10-shade unlock. Later keep a shade buffer
-    // so soul income does not dump to zero.
-    if (first || s.shades - cost >= SHADE_BUFFER) {
-      if (buySpirit() && marks.firstSpirit == null) marks.firstSpirit = t;
-      return;
-    }
-  }
-
-  // 3. Shades 1-by-1 when affordable.
-  if (s.souls >= shadeCost(s.shades)) {
-    buyShade();
-  }
-}
-
-function snapshot(t) {
+// ─── Sandbox: load real game.js (boot deferred) ────────────────────────────────
+function createStorage() {
+  const map = new Map();
   return {
-    t,
-    souls: s.souls,
-    shades: s.shades,
-    spirits: s.spirits,
-    vessels: s.vessels,
-    thrones: s.thrones,
-    wellDepth: s.wellDepth,
-    siphonLevel: s.siphonLevel,
-    levyLevel: s.levyLevel,
-    wellDraws: s.wellDraws,
-    lifetimeSouls: s.lifetimeSouls,
-    lifetimeShades: s.lifetimeShades,
-    lifetimeSpirits: s.lifetimeSpirits,
-    soulsPerSec: soulsPerSec(),
-    clickPower: clickPower(),
-    prodMult: currentMult(),
+    getItem(k) { return map.has(k) ? map.get(k) : null; },
+    setItem(k, v) { map.set(String(k), String(v)); },
+    removeItem(k) { map.delete(k); },
+    clear() { map.clear(); },
+    _map: map
   };
 }
 
-// Fractional clicks per tick (2/s until draws). Equivalent to 0.5 click / 0.25s.
-let t = 0;
-const wantRate = [60, 300, 600];
+function makeEl(id) {
+  return {
+    id, value: "", disabled: false,
+    classList: {
+      _set: new Set(id === "load-fail-notice" ? ["is-hidden"] : []),
+      add(c) { this._set.add(c); },
+      remove(c) { this._set.delete(c); },
+      contains(c) { return this._set.has(c); }
+    },
+    style: {}, dataset: {}, textContent: "", innerHTML: "", open: false,
+    focus() {}, select() {},
+    setAttribute() {}, getAttribute() { return null; },
+    addEventListener() {}, removeEventListener() {},
+    querySelectorAll() { return []; },
+    querySelector() { return null; },
+    closest() { return null; }
+  };
+}
 
-while (t < T_MAX && favorGain(s.lifetimeSouls) < 1) {
-  const clicksPerSec = s.wellDraws ? CLICKS_AFTER_DRAWS : CLICKS_BEFORE_DRAWS;
-  harvest(clicksPerSec * DT);
-  applyDt(DT);
-  greedyBuy(t + DT);
+const elsById = {};
+[
+  "load-fail-notice", "load-fail-raw", "load-fail-export",
+  "load-fail-restore", "load-fail-fresh", "toast",
+  "memory-panel", "memory-text", "memory-export", "memory-import",
+  "reset-btn", "gather-btn", "souls-count", "souls-rate",
+  "hollow-status", "souls-ash", "souls-favor", "souls-hymn",
+  "souls-wake", "souls-knell", "next-goal", "buy-mode",
+  "buy-mode-hint", "buy-mode-hint-dismiss", "chronicle-list",
+  "names-bound", "names-bound-list", "vow-status"
+].forEach((id) => { elsById[id] = makeEl(id); });
 
-  t += DT;
-  t = Math.round(t * 1000) / 1000;
+const documentMock = {
+  readyState: "loading",
+  hidden: false,
+  body: makeEl("body"),
+  documentElement: makeEl("html"),
+  getElementById(id) {
+    if (!elsById[id]) elsById[id] = makeEl(id);
+    return elsById[id];
+  },
+  querySelector() { return null; },
+  querySelectorAll() { return []; },
+  addEventListener() {},
+  removeEventListener() {},
+  createElement() { return makeEl("anon"); },
+  execCommand() { return false; }
+};
 
-  for (let i = 0; i < wantRate.length; i++) {
-    const sec = wantRate[i];
-    if (rateAt[sec] == null && t + 1e-9 >= sec) {
-      rateAt[sec] = { soulsPerSec: soulsPerSec(), snap: snapshot(t) };
+const sandbox = {
+  console, Date, Math, JSON, Number, String, Boolean, Array, Object,
+  Error, TypeError, RegExp, parseInt, parseFloat, isFinite, isNaN,
+  Infinity, NaN, undefined, Map, Set,
+  localStorage: createStorage(),
+  document: documentMock,
+  navigator: {},
+  confirm() { return true; },
+  prompt() { return null; },
+  setTimeout() { return 0; },
+  clearTimeout() {},
+  setInterval() { return 0; },
+  clearInterval() {},
+  requestAnimationFrame() { return 0; },
+  addEventListener() {},
+  removeEventListener() {},
+  getComputedStyle() { return {}; }
+};
+sandbox.window = sandbox;
+sandbox.globalThis = sandbox;
+vm.createContext(sandbox);
+
+function loadScript(rel) {
+  const code = fs.readFileSync(path.join(root, rel), "utf8");
+  vm.runInContext(code, sandbox, { filename: rel });
+}
+
+loadScript("js/num.js");
+loadScript("js/format.js");
+loadScript("js/game.js");
+
+const N = sandbox.SoulgatherNum;
+const G = sandbox.SoulgatherEconomy;
+
+const VERSION = G.GAME_VERSION;
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+function num(v) {
+  if (v && typeof v === "object" && typeof v.m === "number") return N.toNumber(v);
+  return Number(v) || 0;
+}
+
+function st() { return G.getState(); }
+
+function fmtTime(t) {
+  if (t == null) return "NEVER";
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  if (m <= 0) return s.toFixed(1) + "s";
+  return m + "m " + s.toFixed(1) + "s (" + t.toFixed(1) + "s)";
+}
+
+// ─── Sim parameters ─────────────────────────────────────────────────────────────
+const DT_FINE   = 0.25;
+const DT_COARSE = 2.0;
+const COARSE_AFTER = 600;
+const T_MAX = 36000;
+const CLICKS_PER_SEC = 2;
+const CLICKS_IDLE = 0;
+const FAVOR_TARGET = 10;
+
+// ─── Init fresh state ───────────────────────────────────────────────────────────
+G.__setStateForTest(G.freshState());
+st().buyMode = "1";
+
+const checkpoints = {};
+
+function mark(name, t) {
+  if (checkpoints[name] == null) checkpoints[name] = t;
+}
+
+function favorNow() {
+  return G.favorGain(st().lifetimeSouls);
+}
+
+// ─── Greedy buy strategy ────────────────────────────────────────────────────────
+function greedyBuy(t) {
+  const s = st();
+
+  // First shade
+  if (num(s.shades) < 1 && num(s.lifetimeShades) < 1) {
+    const cost = G.shadeCost(s.shades);
+    if (N.cmp(s.souls, cost) >= 0) {
+      G.buyShade();
+      mark("first_shade", t);
+      return;
     }
   }
 
-  if (marks.firstTribute == null && favorGain(s.lifetimeSouls) >= 1) {
-    marks.firstTribute = t;
+  // Well Draws (idle-mode souls)
+  if (!s.wellDraws) {
+    if ((s.unlockedWellDraws || N.cmp(s.shades, 3) >= 0) && N.cmp(s.souls, 50) >= 0) {
+      G.buyWellDraws();
+      return;
+    }
+  }
+
+  // Siphon (boost shade→soul rate)
+  if (s.siphonLevel < 4 && num(s.shades) >= 3) {
+    const cost = G.siphonCost(s.siphonLevel);
+    if (N.cmp(s.souls, cost) >= 0) {
+      G.buySiphon();
+      return;
+    }
+  }
+
+  // Well Depth early (click power before draws)
+  if (!s.wellDraws && s.unlockedWell && s.wellDepth < 2) {
+    const cost = G.wellCost(s.wellDepth);
+    if (N.cmp(s.souls, cost) >= 0) {
+      G.buyWell();
+      return;
+    }
+  }
+
+  // ── Ash chain (spend ash currencies) ──
+
+  // Binding Toll when unlocked (ash → rate boost)
+  if (s.unlockedBindingToll && s.bindingTollLevel < (G.BINDING_TOLL_MAX || 4)) {
+    const cost = G.bindingTollCost(s.bindingTollLevel);
+    if (N.cmp(s.ash, cost) >= 0) {
+      G.buyBindingToll();
+      mark("first_binding_toll", t);
+      return;
+    }
+  }
+
+  // Chalices (ash → +8% prod each)
+  if (s.unlockedChalices && s.chalices < 12) {
+    const cost = G.chaliceCost(s.chalices);
+    if (N.cmp(s.ash, cost) >= 0) {
+      G.buyChalice();
+      mark("first_chalice", t);
+      return;
+    }
+  }
+
+  // ── Core vessel→censer→pyre chain ──
+
+  // Pyres (consume censers)
+  if (s.unlockedPyres) {
+    const cost = G.pyreCost(s.pyres);
+    if (N.cmp(s.censers, cost) >= 0) {
+      G.buyPyre();
+      mark("first_pyre", t);
+      return;
+    }
+  }
+
+  // Censers (consume vessels)
+  if (s.unlockedCensers) {
+    const cost = G.censerCost(s.censers);
+    if (N.cmp(s.vessels, cost) >= 0) {
+      G.buyCenser();
+      return;
+    }
+  }
+
+  // ── Extended ash chain ──
+
+  // Obelisks (spire → obelisk)
+  if (s.unlockedObelisks) {
+    const cost = G.obeliskCost(s.obelisks);
+    if (N.cmp(s.spires, cost) >= 0) {
+      G.buyObelisk();
+      return;
+    }
+  }
+  if (s.unlockedSpires) {
+    const cost = G.spireCost(s.spires);
+    if (N.cmp(s.beacons, cost) >= 0) { G.buySpire(); return; }
+  }
+  if (s.unlockedBeacons) {
+    const cost = G.beaconCost(s.beacons);
+    if (N.cmp(s.hearths, cost) >= 0) { G.buyBeacon(); return; }
+  }
+  if (s.unlockedHearths) {
+    const cost = G.hearthCost(s.hearths);
+    if (N.cmp(s.urns, cost) >= 0) { G.buyHearth(); return; }
+  }
+  if (s.unlockedUrns) {
+    const cost = G.urnCost(s.urns);
+    if (N.cmp(s.pyres, cost) >= 0) { G.buyUrn(); return; }
+  }
+
+  // ── Production chain: vessels → spirits → shades ──
+
+  // Vessels
+  if (s.unlockedVessels) {
+    const cost = G.vesselCost(s.vessels);
+    if (N.cmp(s.spirits, cost) >= 0) {
+      G.buyVessel();
+      return;
+    }
+  }
+
+  // Thrones (after enough censers, spend excess vessels on thrones for prod mult)
+  if (s.unlockedThrones && num(s.censers) >= 3) {
+    const cost = G.throneCost(s.thrones);
+    if (N.cmp(s.vessels, cost) >= 0) {
+      G.buyThrone();
+      return;
+    }
+  }
+
+  // Levy when cheap (shades→spirits boost)
+  if (s.unlockedSpirits && num(s.spirits) >= 1 && s.levyLevel < 3) {
+    const cost = G.levyCost(s.levyLevel);
+    if (N.cmp(s.shades, cost) >= 0) {
+      G.buyLevy();
+      return;
+    }
+  }
+
+  // Spirits (consume shades)
+  if (s.unlockedSpirits) {
+    const cost = G.spiritCost(s.spirits);
+    if (N.cmp(s.shades, cost) >= 0) {
+      G.buySpirit();
+      return;
+    }
+  }
+
+  // Fetters (consume shades, boost shades/s — cap early)
+  if (s.unlockedFetters && num(s.fetters) < 8) {
+    const cost = G.fetterCost(s.fetters);
+    if (N.cmp(s.shades, cost) >= 0) {
+      G.buyFetter();
+      return;
+    }
+  }
+
+  // Lanterns (consume souls — cap early to not starve shades)
+  if (s.unlockedLanterns && num(s.lanterns) < 10) {
+    const cost = G.lanternCost(s.lanterns);
+    if (N.cmp(s.souls, cost) >= 0) {
+      G.buyLantern();
+      return;
+    }
+  }
+
+  // Shades (consume souls)
+  const shadeCst = G.shadeCost(s.shades);
+  if (N.cmp(s.souls, shadeCst) >= 0) {
+    G.buyShade();
   }
 }
 
-const end = snapshot(t);
-const tributeOk = marks.firstTribute != null;
+// ─── Autobind management ────────────────────────────────────────────────────────
+function enableAutobinds() {
+  const s = st();
+  if (s.unlockedAutobind && !s.autobind) s.autobind = true;
+  if (s.unlockedAutobindSpirits && !s.autobindSpirits) s.autobindSpirits = true;
+  if (s.unlockedAutobindVessels && !s.autobindVessels) s.autobindVessels = true;
+  if (s.unlockedAutobindLanterns && !s.autobindLanterns) s.autobindLanterns = true;
+  if (s.unlockedAutobindFetters && !s.autobindFetters) s.autobindFetters = true;
+  if (s.unlockedAutobindCensers && !s.autobindCensers) s.autobindCensers = true;
+  if (s.unlockedAutobindThrones && !s.autobindThrones) s.autobindThrones = true;
+  if (s.unlockedAutobindPyres && !s.autobindPyres) s.autobindPyres = true;
+  if (s.unlockedAutobindUrns && !s.autobindUrns) s.autobindUrns = true;
+  if (s.unlockedAutobindHearths && !s.autobindHearths) s.autobindHearths = true;
+  if (s.unlockedAutobindBeacons && !s.autobindBeacons) s.autobindBeacons = true;
+  if (s.unlockedAutobindSpires && !s.autobindSpires) s.autobindSpires = true;
+  if (s.unlockedAutobindObelisks && !s.autobindObelisks) s.autobindObelisks = true;
+  if (s.unlockedAutobindChalices && !s.autobindChalices) s.autobindChalices = true;
+}
 
-function verdict(sec) {
-  if (sec == null) return "FAIL (not by 60 min)";
-  if (sec <= 20 * 60) {
-    if (sec <= 15 * 60) return "good (under ~15 min)";
-    return "good (under ~20 min)";
+function runAutobinds() {
+  G.tryAutobind();
+  G.tryAutobindSpirits();
+  G.tryAutobindVessels();
+  G.tryAutobindLanterns();
+  G.tryAutobindFetters();
+  G.tryAutobindCensers();
+  G.tryAutobindThrones();
+  G.tryAutobindPyres();
+  G.tryAutobindUrns();
+  G.tryAutobindHearths();
+  G.tryAutobindBeacons();
+  G.tryAutobindSpires();
+  G.tryAutobindObelisks();
+  G.tryAutobindChalices();
+}
+
+// ─── Tribute + post-tribute Reliquary spending ──────────────────────────────────
+function tributeAndSpend(t) {
+  const gain = favorNow();
+  if (gain < 1) return false;
+  mark("first_tribute", t);
+
+  const prevEarned = Number(st().favorEarned) || 0;
+  G.layTribute();
+
+  // After layTribute, internal state is a new object — re-fetch
+  const s = st();
+  s.buyMode = "1";
+  const earned = Number(s.favorEarned) || 0;
+  // Mark all intermediate favor checkpoints
+  for (let f = prevEarned + 1; f <= earned; f++) {
+    mark("favor_" + f, t);
   }
-  if (sec <= 40 * 60) return "slow (20–40 min)";
-  return "a problem (>40 min)";
+
+  // Spend favor on Reliquary upgrades (prioritized for fast restarts)
+  let spent = true;
+  while (spent) {
+    spent = false;
+
+    // Echo first (well draws at start = massive acceleration)
+    if ((Number(s.echoLevel) || 0) < 1) {
+      const echCost = G.echoCost(s.echoLevel);
+      if (isFinite(echCost) && s.favor >= echCost) {
+        s.favor -= echCost;
+        s.echoLevel = 1;
+        spent = true;
+        continue;
+      }
+    }
+
+    // Edict (prod mult +25% each)
+    const eCost = G.edictCost(s.edictLevel);
+    if (s.favor >= eCost) {
+      s.favor -= eCost;
+      s.edictLevel += 1;
+      spent = true;
+      continue;
+    }
+
+    // Memory (starting shades)
+    const mCost = G.memoryCost(s.memoryLevel);
+    if (isFinite(mCost) && s.favor >= mCost) {
+      s.favor -= mCost;
+      s.memoryLevel += 1;
+      spent = true;
+      continue;
+    }
+
+    // Kindle (starting lanterns)
+    const kCost = G.kindleCost(s.kindleLevel);
+    if (isFinite(kCost) && s.favor >= kCost) {
+      s.favor -= kCost;
+      s.kindleLevel += 1;
+      spent = true;
+      continue;
+    }
+
+    // Ashen (starting ash)
+    const aCost = G.ashenCost(s.ashenLevel);
+    if (isFinite(aCost) && s.favor >= aCost) {
+      s.favor -= aCost;
+      s.ashenLevel += 1;
+      spent = true;
+      continue;
+    }
+
+    // Seat (starting thrones)
+    const sCost = G.seatCost(s.seatLevel);
+    if (isFinite(sCost) && s.favor >= sCost) {
+      s.favor -= sCost;
+      s.seatLevel += 1;
+      spent = true;
+      continue;
+    }
+
+    // Depth (starting well depth)
+    const dCost = G.depthCost(s.depthLevel);
+    if (isFinite(dCost) && s.favor >= dCost) {
+      s.favor -= dCost;
+      s.depthLevel += 1;
+      spent = true;
+      continue;
+    }
+  }
+
+  // Apply edict starting stock for the new run
+  G.applyEdictStartingStock(s);
+  G.applyAutobindStarts(s);
+  return true;
 }
 
-console.log("=== Soulgather v0.4 first-run sim ===");
-console.log("tick=" + DT + "s  clicks=" + CLICKS_BEFORE_DRAWS + "/s until Well Draws, then " + CLICKS_AFTER_DRAWS + "/s");
-console.log("favor=0 edict=0  strategy=greedy human  stop=tribute or " + T_MAX + "s");
+// ─── Main simulation loop ───────────────────────────────────────────────────────
+console.log("=== Soulgather v" + VERSION + " first-run sim ===");
+console.log("T_MAX=" + T_MAX + "s  favor_target=" + FAVOR_TARGET);
 console.log("");
-console.log("Timeline:");
-console.log("  first shade   : " + fmtTime(marks.firstShade));
-console.log("  first siphon  : " + fmtTime(marks.firstSiphon));
-console.log("  well draws    : " + fmtTime(marks.wellDraws));
-console.log("  first spirit  : " + fmtTime(marks.firstSpirit));
-console.log("  first vessel  : " + fmtTime(marks.firstVessel));
-console.log("  first throne  : " + fmtTime(marks.firstThrone));
-console.log("  first tribute : " + (tributeOk ? fmtTime(marks.firstTribute) : "FAIL"));
-console.log("");
-console.log("souls/s (game idle rate, well-draws included, manual clicks not):");
-console.log("  t=1 min  : " + (rateAt[60] ? fmtN(rateAt[60].soulsPerSec, 3) : "n/a (run ended earlier)"));
-console.log("  t=5 min  : " + (rateAt[300] ? fmtN(rateAt[300].soulsPerSec, 3) : "n/a (run ended earlier)"));
-console.log("  t=10 min : " + (rateAt[600] ? fmtN(rateAt[600].soulsPerSec, 3) : "n/a (run ended earlier)"));
-if (rateAt[60]) {
-  const a = rateAt[60].snap;
-  console.log("    at 1m  shades=" + fmtN(a.shades, 2) + " siphon=" + a.siphonLevel + " depth=" + a.wellDepth + " draws=" + a.wellDraws + " spirits=" + fmtN(a.spirits, 2));
+
+let t = 0;
+let autobindAcc = 0;
+let pyreDevRun = false;
+const startWall = Date.now();
+
+while (t < T_MAX) {
+  const dt = t < COARSE_AFTER ? DT_FINE : DT_COARSE;
+  const s = st();
+  const clicksPerSec = s.wellDraws ? CLICKS_IDLE : CLICKS_PER_SEC;
+
+  if (clicksPerSec > 0) {
+    const clicks = clicksPerSec * dt;
+    for (let c = 0; c < clicks; c++) G.harvest();
+  }
+
+  G.applyDt(dt, false);
+
+  autobindAcc += dt;
+  if (autobindAcc >= 1) {
+    autobindAcc -= 1;
+    enableAutobinds();
+    runAutobinds();
+  }
+
+  greedyBuy(t + dt);
+
+  t += dt;
+  t = Math.round(t * 1000) / 1000;
+
+  // Track checkpoints
+  const sc = st();
+  if (checkpoints.first_shade == null && num(sc.shades) >= 1) mark("first_shade", t);
+  if (checkpoints.first_ash == null && N.cmp(sc.ash, 1) >= 0) mark("first_ash", t);
+  if (checkpoints.first_pyre == null && N.cmp(sc.pyres, 1) >= 0) mark("first_pyre", t);
+
+  // Tribute when ready
+  const pendingFavor = favorNow();
+  if (pendingFavor >= 1) {
+    const sc2 = st();
+    const earned = Number(sc2.favorEarned) || 0;
+
+    // After a few tributes, hold ONE long run to develop censers/pyres
+    let shouldTribute = true;
+    if (checkpoints.first_pyre == null && earned >= 3 && !pyreDevRun) {
+      pyreDevRun = true;
+      shouldTribute = false;
+    } else if (pyreDevRun && checkpoints.first_pyre == null) {
+      shouldTribute = false;
+    } else if (pyreDevRun) {
+      pyreDevRun = false;
+    }
+
+    if (shouldTribute) {
+      if (!tributeAndSpend(t)) break;
+      autobindAcc = 0;
+      if ((Number(st().favorEarned) || 0) >= FAVOR_TARGET) break;
+    }
+  }
 }
-if (rateAt[300]) {
-  const a = rateAt[300].snap;
-  console.log("    at 5m  shades=" + fmtN(a.shades, 2) + " siphon=" + a.siphonLevel + " depth=" + a.wellDepth + " draws=" + a.wellDraws + " spirits=" + fmtN(a.spirits, 2) + " vessels=" + fmtN(a.vessels, 2));
+
+const wallMs = Date.now() - startWall;
+
+// ─── Print checkpoints ──────────────────────────────────────────────────────────
+console.log("Checkpoints:");
+const cpNames = [
+  "first_shade", "first_ash", "first_pyre", "first_tribute",
+  "first_binding_toll", "first_chalice",
+  "favor_2", "favor_5", "favor_10"
+];
+for (const name of cpNames) {
+  const val = checkpoints[name];
+  console.log("  CHECKPOINT " + name + " " + (val != null ? val.toFixed(1) + "s" : "NEVER"));
 }
-if (rateAt[600]) {
-  const a = rateAt[600].snap;
-  console.log("    at 10m shades=" + fmtN(a.shades, 2) + " siphon=" + a.siphonLevel + " depth=" + a.wellDepth + " draws=" + a.wellDraws + " spirits=" + fmtN(a.spirits, 2) + " vessels=" + fmtN(a.vessels, 2) + " thrones=" + a.thrones);
+
+const fin = st();
+console.log("");
+console.log("Final state (t=" + fmtTime(t) + "):");
+console.log("  favorEarned=" + (Number(fin.favorEarned) || 0));
+console.log("  favor=" + (Number(fin.favor) || 0));
+console.log("  edictLevel=" + fin.edictLevel + "  memoryLevel=" + fin.memoryLevel);
+console.log("  echoLevel=" + (Number(fin.echoLevel) || 0) + "  seatLevel=" + (Number(fin.seatLevel) || 0));
+console.log("  kindleLevel=" + (Number(fin.kindleLevel) || 0) + "  ashenLevel=" + (Number(fin.ashenLevel) || 0));
+console.log("  depthLevel=" + (Number(fin.depthLevel) || 0));
+console.log("  wall time: " + (wallMs / 1000).toFixed(1) + "s");
+console.log("");
+
+// ─── Assert bands ───────────────────────────────────────────────────────────────
+let failures = 0;
+
+function assertBand(name, lo, hi) {
+  const val = checkpoints[name];
+  if (val == null) {
+    console.error("BAND FAIL: " + name + " never reached (expected " + lo + "–" + hi + "s)");
+    failures++;
+    return;
+  }
+  if (val < lo || val > hi) {
+    console.error("BAND FAIL: " + name + " = " + val.toFixed(1) + "s (expected " + lo + "–" + hi + "s)");
+    failures++;
+    return;
+  }
+  console.log("BAND OK:   " + name + " = " + val.toFixed(1) + "s  [" + lo + ", " + hi + "]");
 }
-console.log("");
-console.log("Counts at " + (tributeOk ? "tribute" : "t=" + fmtTime(t)) + ":");
-console.log("  souls=" + fmtN(end.souls, 2) + "  lifetimeSouls=" + fmtN(end.lifetimeSouls, 2));
-console.log("  shades=" + fmtN(end.shades, 2) + "  lifetimeShades=" + fmtN(end.lifetimeShades, 2));
-console.log("  spirits=" + fmtN(end.spirits, 2) + "  lifetimeSpirits=" + fmtN(end.lifetimeSpirits, 2));
-console.log("  vessels=" + fmtN(end.vessels, 2) + "  thrones=" + fmtN(end.thrones, 2));
-console.log("  wellDepth=" + end.wellDepth + "  siphonLevel=" + end.siphonLevel + "  levyLevel=" + end.levyLevel + "  wellDraws=" + end.wellDraws);
-console.log("  souls/s=" + fmtN(end.soulsPerSec, 3) + "  prodMult=" + fmtN(end.prodMult, 3) + "  clickPower=" + fmtN(end.clickPower, 3));
-console.log("  favorGain=" + favorGain(end.lifetimeSouls));
-console.log("");
-console.log("Verdict: first tribute is " + verdict(marks.firstTribute));
-if (tributeOk) {
-  const mins = marks.firstTribute / 60;
-  console.log("  reached in " + mins.toFixed(2) + " min simulated.");
+
+console.log("Band assertions:");
+
+assertBand("first_shade",   1,    30);
+assertBand("first_ash",     10,   1200);
+assertBand("first_pyre",    60,   7200);
+assertBand("first_tribute", 60,   1200);
+assertBand("favor_2",       120,  3600);
+assertBand("favor_5",       300,  14400);
+
+if (checkpoints.favor_10 != null) {
+  assertBand("favor_10", 600, T_MAX);
 } else {
-  console.log("  still at " + fmtN(end.lifetimeSouls, 1) + " / 25000 lifetime souls after 60 min.");
+  console.error("BAND FAIL: favor_10 never reached within T_MAX=" + T_MAX + "s");
+  failures++;
+}
+
+console.log("");
+if (failures > 0) {
+  console.error(failures + " band assertion(s) FAILED.");
+  process.exit(1);
+} else {
+  console.log("All band assertions passed.");
 }
