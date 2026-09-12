@@ -137,16 +137,37 @@
   "wellDraws": true,
   "unlockedWellDraws": true,
   "aspect": "harvest",
-  "lastTick": 1789246796108,
+  "lastTick": 1789247891036,
   "simulatedUntil": 1700000000000,
   "chronicle": [
-    "tribute",
-    "giftTribute",
-    "veil",
-    "wake",
-    "toll",
-    "knell",
-    "procession"
+    {
+      "id": "tribute",
+      "at": 99999
+    },
+    {
+      "id": "giftTribute",
+      "at": 99999
+    },
+    {
+      "id": "veil",
+      "at": 50000
+    },
+    {
+      "id": "wake",
+      "at": 40000
+    },
+    {
+      "id": "toll",
+      "at": 30000
+    },
+    {
+      "id": "knell",
+      "at": 20000
+    },
+    {
+      "id": "procession",
+      "at": 10000
+    }
   ],
   "titheLeft": 30,
   "nightLeft": 45,

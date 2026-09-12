@@ -355,8 +355,16 @@ st.vow = "stillness";
 st.vowHungerPaid = false;
 st.buyModeHintDismissed = true;
 
-// Chronicle
-st.chronicle = ["tribute", "giftTribute", "veil", "wake", "toll", "knell", "procession"];
+// Chronicle (objects with {id, at} as the engine expects)
+st.chronicle = [
+  { id: "tribute", at: 99999 },
+  { id: "giftTribute", at: 99999 },
+  { id: "veil", at: 50000 },
+  { id: "wake", at: 40000 },
+  { id: "toll", at: 30000 },
+  { id: "knell", at: 20000 },
+  { id: "procession", at: 10000 }
+];
 
 // vowsKnown
 st.vowsKnown = { ember: true, stillness: true, hunger: false, harvest: false };
