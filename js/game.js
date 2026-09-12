@@ -63,6 +63,8 @@
   var UNLOCK_CENSERS_LIFETIME_SPIRITS = 25;
   var WELL_DRAWS_COST = 50;
   var BULK_CAP = 10000;
+  var RENDER_HZ = 12;
+  var RENDER_MS = 1000 / RENDER_HZ;
   var AUTOSAVE_MS = 5000;
   var MAX_DT = 8 * 60 * 60;
   var AUTOBIND_INTERVAL = 1;
@@ -192,6 +194,22 @@
     return Number(v) || 0;
   }
 
+  var setTextWriteCount = 0;
+
+  function setText(el, str) {
+    if (!el) return false;
+    str = str == null ? "" : String(str);
+    if (el.textContent === str) return false;
+    el.textContent = str;
+    setTextWriteCount += 1;
+    return true;
+  }
+
+  var _dirty = true;
+  var _lastRenderTime = 0;
+
+  function markDirty() { _dirty = true; }
+
   function addOwned(owned, i) {
     i = Number(i) || 0;
     if (owned && typeof owned === "object" && typeof owned.m === "number") {
@@ -272,7 +290,7 @@
     return N.cost(WELL_COST_BASE, WELL_COST_MULT, d);
   }
 
-  function wellBulkCost(owned, k) {
+  function wellBulkCostLoop(owned, k) {
     var n = Math.max(0, Math.floor(k));
     if (n > BULK_CAP) n = BULK_CAP;
     var total = N.fromNumber(0);
@@ -284,7 +302,7 @@
     return total;
   }
 
-  function wellMaxAffordable(owned, currency) {
+  function wellMaxAffordableLoop(owned, currency) {
     var remaining = num(currency);
     var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
     var k = 0;
@@ -295,6 +313,86 @@
       k += 1;
     }
     return k;
+  }
+
+  function _geoSum(base, multVal, startIdx, count) {
+    if (count <= 0) return N.fromNumber(0);
+    var first = N.cost(base, multVal, startIdx);
+    if (count === 1) return first;
+    var multN = N.fromNumber(multVal);
+    var multK = N.pow(multN, count);
+    var num1 = N.sub(multK, 1);
+    var den1 = N.fromNumber(multVal - 1);
+    return N.floor(N.mul(first, N.div(num1, den1)));
+  }
+
+  function wellBulkCost(owned, k) {
+    var n = Math.max(0, Math.floor(k));
+    if (n > BULK_CAP) n = BULK_CAP;
+    if (n <= 0) return N.fromNumber(0);
+    var d = Math.max(0, Math.floor(Number(owned) || 0));
+    if (d >= 6) {
+      return _geoSum(WELL_COST_BASE, WELL_COST_MULT, d, n);
+    }
+    var earlyRemain = Math.max(0, 6 - d);
+    if (n <= earlyRemain) {
+      return _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, n);
+    }
+    var earlyPart = _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, earlyRemain);
+    var latePart = _geoSum(WELL_COST_BASE, WELL_COST_MULT, 6, n - earlyRemain);
+    return N.add(earlyPart, latePart);
+  }
+
+  function _geoMaxAffordable(base, multVal, startIdx, currency, cap) {
+    var first = N.cost(base, multVal, startIdx);
+    if (N.cmp(currency, first) < 0) return 0;
+    var m1 = multVal - 1;
+    var curN = N.toNumber(currency);
+    var firstN = N.toNumber(first);
+    var k;
+    if (isFinite(curN) && isFinite(firstN) && firstN > 0 && curN < 1e300) {
+      k = Math.floor(Math.log(1 + curN * m1 / firstN) / Math.log(multVal));
+    } else {
+      var ratio = N.div(N.mul(currency, N.fromNumber(m1)), first);
+      var logArg = N.add(ratio, 1);
+      var logArgN = N.toNumber(logArg);
+      if (!isFinite(logArgN) || logArgN <= 0) {
+        k = cap;
+      } else {
+        var log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
+        k = Math.floor(log10Arg / (Math.log(multVal) / Math.LN10));
+      }
+    }
+    if (k < 0) k = 0;
+    if (k > cap) k = cap;
+    var cost_k = _geoSum(base, multVal, startIdx, k);
+    while (k > 0 && N.cmp(cost_k, currency) > 0) {
+      k -= 1;
+      cost_k = _geoSum(base, multVal, startIdx, k);
+    }
+    var cost_k1 = _geoSum(base, multVal, startIdx, k + 1);
+    while (k < cap && N.cmp(cost_k1, currency) <= 0) {
+      k += 1;
+      cost_k1 = _geoSum(base, multVal, startIdx, k + 1);
+    }
+    return k;
+  }
+
+  function wellMaxAffordable(owned, currency) {
+    var cur = num(currency);
+    if (N.cmp(cur, 0) <= 0) return 0;
+    var d = Math.max(0, Math.floor(Number(owned) || 0));
+    if (d >= 6) {
+      return _geoMaxAffordable(WELL_COST_BASE, WELL_COST_MULT, d, cur, BULK_CAP);
+    }
+    var earlyRemain = 6 - d;
+    var earlyK = _geoMaxAffordable(WELL_COST_BASE, WELL_EARLY_MULT, d, cur, earlyRemain);
+    if (earlyK < earlyRemain) return earlyK;
+    var earlyCost = _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, earlyRemain);
+    var leftover = N.sub(cur, earlyCost);
+    if (N.cmp(leftover, 0) <= 0) return earlyRemain;
+    var lateK = _geoMaxAffordable(WELL_COST_BASE, WELL_COST_MULT, 6, leftover, BULK_CAP - earlyRemain);
+    return earlyRemain + lateK;
   }
 
   function wellPurchasePlan(owned, currency) {
@@ -318,7 +416,7 @@
     return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
   }
 
-  function bulkCost(base, owned, k, mult, extraMult) {
+  function bulkCostLoop(base, owned, k, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
     if (mult == null) mult = COST_MULT;
@@ -336,7 +434,7 @@
     return total;
   }
 
-  function maxAffordable(base, owned, currency, mult, extraMult) {
+  function maxAffordableLoop(base, owned, currency, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
     if (mult == null) mult = COST_MULT;
@@ -350,6 +448,75 @@
       if (N.cmp(remaining, c) < 0) break;
       remaining = N.sub(remaining, c);
       k += 1;
+    }
+    return k;
+  }
+
+  function bulkCost(base, owned, k, mult, extraMult) {
+    var b = Number(base);
+    if (!isFinite(b) || b <= 0) b = COST_BASE;
+    if (mult == null) mult = COST_MULT;
+    var em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
+    var n = Math.max(0, Math.floor(k));
+    if (n > BULK_CAP) n = BULK_CAP;
+    if (n <= 0) return N.fromNumber(0);
+    var o = (typeof owned === "object" && typeof owned.m === "number")
+      ? N.toNumber(N.floor(N.max(owned, 0)))
+      : Math.max(0, Math.floor(Number(owned) || 0));
+    var first = N.cost(b, mult, o);
+    if (em !== 1) first = N.mul(first, em);
+    if (n === 1) return first;
+    var multN = N.fromNumber(mult);
+    var multK = N.pow(multN, n);
+    var num1 = N.sub(multK, 1);
+    var den1 = N.fromNumber(mult - 1);
+    var total = N.floor(N.mul(first, N.div(num1, den1)));
+    return total;
+  }
+
+  function maxAffordable(base, owned, currency, mult, extraMult) {
+    var b = Number(base);
+    if (!isFinite(b) || b <= 0) b = COST_BASE;
+    if (mult == null) mult = COST_MULT;
+    var em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
+    var cur = num(currency);
+    if (N.cmp(cur, 0) <= 0) return 0;
+    var o = (typeof owned === "object" && typeof owned.m === "number")
+      ? N.toNumber(N.floor(N.max(owned, 0)))
+      : Math.max(0, Math.floor(Number(owned) || 0));
+    var first = N.cost(b, mult, o);
+    if (em !== 1) first = N.mul(first, em);
+    if (N.cmp(cur, first) < 0) return 0;
+    var m1 = mult - 1;
+    var curN = N.toNumber(cur);
+    var firstN = N.toNumber(first);
+    var k;
+    if (isFinite(curN) && isFinite(firstN) && firstN > 0 && curN < 1e300) {
+      k = Math.floor(Math.log(1 + curN * m1 / firstN) / Math.log(mult));
+    } else {
+      var ratio = N.div(N.mul(cur, N.fromNumber(m1)), first);
+      var logArg = N.add(ratio, 1);
+      var logArgN = N.toNumber(logArg);
+      if (!isFinite(logArgN) || logArgN <= 0) {
+        k = BULK_CAP;
+      } else {
+        var log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
+        k = Math.floor(log10Arg / (Math.log(mult) / Math.LN10));
+      }
+    }
+    if (k < 0) k = 0;
+    if (k > BULK_CAP) k = BULK_CAP;
+    var cost_k = bulkCost(b, owned, k, mult, em);
+    while (k > 0 && N.cmp(cost_k, cur) > 0) {
+      k -= 1;
+      cost_k = bulkCost(b, owned, k, mult, em);
+    }
+    var cost_k1 = bulkCost(b, owned, k + 1, mult, em);
+    while (k < BULK_CAP && N.cmp(cost_k1, cur) <= 0) {
+      k += 1;
+      cost_k1 = bulkCost(b, owned, k + 1, mult, em);
     }
     return k;
   }
@@ -2360,13 +2527,14 @@
     );
   }
 
-  function shadeSoulsPerSec() {
+  function shadeSoulsPerSec(cachedRm) {
+    var rm = cachedRm != null ? cachedRm : rateMult();
     var base = N.mul(
       N.mul(
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.shades, SHADE_SOULS_PER_SEC), rateMult()),
+              N.mul(N.mul(state.shades, SHADE_SOULS_PER_SEC), rm),
               siphonMult(state.siphonLevel)
             ),
             harvestMult(normalizeAspect(state.aspect) === "harvest")
@@ -2381,18 +2549,19 @@
     return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
-  function soulsPerSec() {
-    var rate = shadeSoulsPerSec();
+  function soulsPerSec(cachedRm) {
+    var rate = shadeSoulsPerSec(cachedRm);
     if (state.wellDraws) rate = N.add(rate, clickPower());
     return rate;
   }
 
-  function shadesPerSec() {
+  function shadesPerSec(cachedRm) {
+    var rm = cachedRm != null ? cachedRm : rateMult();
     var base = N.mul(
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.spirits, SPIRIT_SHADES_PER_SEC), rateMult()),
+            N.mul(N.mul(state.spirits, SPIRIT_SHADES_PER_SEC), rm),
             levyMult(state.levyLevel)
           ),
           bindingMult(normalizeAspect(state.aspect) === "binding")
@@ -2405,19 +2574,21 @@
     return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
-  function spiritsPerSec() {
+  function spiritsPerSec(cachedRm) {
+    var rm = cachedRm != null ? cachedRm : rateMult();
     return N.mul(
-      N.mul(N.mul(state.vessels, VESSEL_SPIRITS_PER_SEC), rateMult()),
+      N.mul(N.mul(state.vessels, VESSEL_SPIRITS_PER_SEC), rm),
       emberMult(state.hollowLevel)
     );
   }
 
-  function ashPerSec() {
-    var fromShades = N.mul(shadeSoulsPerSec(), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
+  function ashPerSec(cachedRm) {
+    var rm = cachedRm != null ? cachedRm : rateMult();
+    var fromShades = N.mul(shadeSoulsPerSec(cachedRm), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
     var fromCensers = N.mul(
       N.mul(
         N.mul(
-          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
+          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rm),
           nightMult(nightActive())
         ),
         hymnMult(hymnActive())
@@ -2428,7 +2599,7 @@
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rm),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -2441,7 +2612,7 @@
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.urns, URN_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.urns, URN_ASH_PER_SEC), rm),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -2454,7 +2625,7 @@
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.hearths, HEARTH_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.hearths, HEARTH_ASH_PER_SEC), rm),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -2467,7 +2638,7 @@
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rm),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -2480,7 +2651,7 @@
       N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.spires, SPIRE_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.spires, SPIRE_ASH_PER_SEC), rm),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -2492,7 +2663,7 @@
     var fromObelisks = N.mul(
       N.mul(
         N.mul(
-          N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rateMult()),
+          N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rm),
           nightMult(nightActive())
         ),
         hymnMult(hymnActive())
@@ -2555,6 +2726,7 @@
     dt = clamp(dt, 0, MAX_DT);
     tripwireSanity();
     if (loadFailed) return;
+    markDirty();
 
     var remaining = dt;
     while (remaining > 0) {
@@ -2867,6 +3039,7 @@
     save();
     pulseGather();
     spawnRipple(power);
+    markDirty();
     render();
   }
 
@@ -7643,18 +7816,19 @@
   function render() {
     var F = SoulgatherFormat;
     if (!els.soulsCount) return;
+    setTextWriteCount = 0;
 
     var mult = rateMult();
     var gain = favorGain(state.lifetimeSouls);
 
-    els.soulsCount.textContent = F.formatNumber(state.souls);
-    els.soulsRate.textContent = F.formatRate(soulsPerSec());
+    setText(els.soulsCount, F.formatNumber(state.souls));
+    setText(els.soulsRate, F.formatRate(soulsPerSec(mult)));
 
     if (els.hollowStatus) {
       var hs = Math.max(0, Math.floor(Number(state.hollowStacks) || 0));
       if (hs >= 1) {
         var pct = Math.round(HOLLOW_PENALTY * hs * 100);
-        els.hollowStatus.textContent = "Hollow \u00d7" + hs + " (\u2212" + pct + "%)";
+        setText(els.hollowStatus, "Hollow \u00d7" + hs + " (\u2212" + pct + "%)");
         els.hollowStatus.classList.remove("is-hidden");
       } else {
         els.hollowStatus.classList.add("is-hidden");
@@ -7666,17 +7840,17 @@
       els.gatherBtn.disabled = still;
       els.gatherBtn.setAttribute("aria-disabled", still ? "true" : "false");
       els.gatherBtn.setAttribute("aria-label", still ? "The well is still." : "Draw from the Well");
-      if (els.gatherVerb) els.gatherVerb.textContent = still ? "The well" : "Draw from";
-      if (els.gatherNoun) els.gatherNoun.textContent = still ? "is still." : "the Well";
+      setText(els.gatherVerb, still ? "The well" : "Draw from");
+      setText(els.gatherNoun, still ? "is still." : "the Well");
     }
 
     if (els.vowStatus) {
       var hudVow = normalizeVow(state.vow);
       if (hudVow && VOW_HUD_STRINGS[hudVow]) {
-        els.vowStatus.textContent = VOW_HUD_STRINGS[hudVow];
+        setText(els.vowStatus, VOW_HUD_STRINGS[hudVow]);
         els.vowStatus.classList.remove("is-hidden");
       } else {
-        els.vowStatus.textContent = "";
+        setText(els.vowStatus, "");
         els.vowStatus.classList.add("is-hidden");
       }
     }
@@ -7700,7 +7874,7 @@
         N.cmp(state.hearths, 0) > 0 ||
         N.cmp(state.beacons, 0) > 0;
       if (showAsh) {
-        els.soulsAsh.textContent = "Ash " + F.formatNumber(state.ash);
+        setText(els.soulsAsh, "Ash " + F.formatNumber(state.ash));
         els.soulsAsh.classList.remove("is-hidden");
       } else {
         els.soulsAsh.classList.add("is-hidden");
@@ -7709,7 +7883,7 @@
 
     if (els.soulsFavor) {
       if (mult > 1) {
-        els.soulsFavor.textContent = "Blessing " + formatMult(mult);
+        setText(els.soulsFavor, "Blessing " + formatMult(mult));
         els.soulsFavor.classList.remove("is-hidden");
       } else {
         els.soulsFavor.classList.add("is-hidden");
@@ -7719,7 +7893,7 @@
     if (els.soulsHymn) {
       if (hymnActive()) {
         var hLeft = Number(state.hymnLeft) || 0;
-        els.soulsHymn.textContent = "Hymn ×1.25 — " + Math.ceil(hLeft) + "s";
+        setText(els.soulsHymn, "Hymn ×1.25 — " + Math.ceil(hLeft) + "s");
         els.soulsHymn.classList.remove("is-hidden");
       } else {
         els.soulsHymn.classList.add("is-hidden");
@@ -7729,7 +7903,7 @@
     if (els.soulsWake) {
       if (wakeActive()) {
         var wHud = Number(state.wakeLeft) || 0;
-        els.soulsWake.textContent = "Wake ×2 — " + Math.ceil(wHud) + "s";
+        setText(els.soulsWake, "Wake ×2 — " + Math.ceil(wHud) + "s");
         els.soulsWake.classList.remove("is-hidden");
       } else {
         els.soulsWake.classList.add("is-hidden");
@@ -7739,7 +7913,7 @@
     if (els.soulsKnell) {
       if (knellActive()) {
         var kHud = Number(state.knellLeft) || 0;
-        els.soulsKnell.textContent = "Knell ×2 — " + Math.ceil(kHud) + "s";
+        setText(els.soulsKnell, "Knell ×2 — " + Math.ceil(kHud) + "s");
         els.soulsKnell.classList.remove("is-hidden");
       } else {
         els.soulsKnell.classList.add("is-hidden");
@@ -7767,12 +7941,12 @@
       var wellPlan = wellPurchasePlan(state.wellDepth, state.souls);
       var canWell = wellPlan.can;
       var power = clickPower();
-      els.wellOwned.textContent = F.formatNumber(state.wellDepth);
-      els.wellPower.textContent =
-        F.formatNumber(power) + (N.cmp(power, 1) === 0 ? " soul / click" : " souls / click");
-      els.wellCost.textContent = F.formatNumber(wellPlan.cost) + " Souls";
+      setText(els.wellOwned, F.formatNumber(state.wellDepth));
+      setText(els.wellPower,
+        F.formatNumber(power) + (N.cmp(power, 1) === 0 ? " soul / click" : " souls / click"));
+      setText(els.wellCost, F.formatNumber(wellPlan.cost) + " Souls");
       els.wellBuy.disabled = !canWell;
-      els.wellBuy.textContent = bindLabel("Deepen the Well", "Deepen", wellPlan.k, "level", "levels");
+      setText(els.wellBuy, bindLabel("Deepen the Well", "Deepen", wellPlan.k, "level", "levels"));
       els.wellCard.classList.toggle("can-buy", canWell);
     }
 
@@ -7784,12 +7958,12 @@
       bindingTollCostMult(state.bindingTollLevel)
     );
     var canShade = shadePlan.can;
-    els.shadeOwned.textContent = F.formatNumber(state.shades);
-    els.shadeProd.textContent =
-      F.formatNumber(shadeSoulsPerSec()) + " souls / sec";
-    els.shadeCost.textContent = F.formatNumber(shadePlan.cost) + " Souls";
+    setText(els.shadeOwned, F.formatNumber(state.shades));
+    setText(els.shadeProd,
+      F.formatNumber(shadeSoulsPerSec(mult)) + " souls / sec");
+    setText(els.shadeCost, F.formatNumber(shadePlan.cost) + " Souls");
     els.shadeBuy.disabled = !canShade;
-    els.shadeBuy.textContent = bindLabel("Bind a Shade", "Bind", shadePlan.k, "Shade", "Shades");
+    setText(els.shadeBuy, bindLabel("Bind a Shade", "Bind", shadePlan.k, "Shade", "Shades"));
     els.shadeCard.classList.toggle("can-buy", canShade);
     els.shadeCard.classList.toggle("is-dormant", N.cmp(state.lifetimeSouls, 1) < 0);
 
@@ -7797,11 +7971,11 @@
       var lanternPlan = purchasePlan(state.lanterns, state.souls, LANTERN_COST_BASE, LANTERN_COST_MULT);
       var lMult = lanternMult(state.lanterns);
       var canLantern = lanternPlan.can;
-      els.lanternOwned.textContent = F.formatNumber(state.lanterns);
-      els.lanternProd.textContent = "Shade souls \u00d7" + formatTimes(lMult);
-      els.lanternCost.textContent = F.formatNumber(lanternPlan.cost) + " Souls";
+      setText(els.lanternOwned, F.formatNumber(state.lanterns));
+      setText(els.lanternProd, "Shade souls \u00d7" + formatTimes(lMult));
+      setText(els.lanternCost, F.formatNumber(lanternPlan.cost) + " Souls");
       els.lanternBuy.disabled = !canLantern;
-      els.lanternBuy.textContent = bindLabel("Kindle a Lantern", "Kindle", lanternPlan.k, "Lantern", "Lanterns");
+      setText(els.lanternBuy, bindLabel("Kindle a Lantern", "Kindle", lanternPlan.k, "Lantern", "Lanterns"));
       els.lanternCard.classList.toggle("can-buy", canLantern);
     }
 
@@ -7813,12 +7987,12 @@
         COST_MULT,
         bindingTollCostMult(state.bindingTollLevel)
       );
-      els.spiritOwned.textContent = F.formatNumber(state.spirits);
-      els.spiritProd.textContent =
-        F.formatNumber(shadesPerSec()) + " shades / sec";
-      els.spiritCost.textContent = F.formatNumber(spiritPlan.cost) + " Shades";
+      setText(els.spiritOwned, F.formatNumber(state.spirits));
+      setText(els.spiritProd,
+        F.formatNumber(shadesPerSec(mult)) + " shades / sec");
+      setText(els.spiritCost, F.formatNumber(spiritPlan.cost) + " Shades");
       els.spiritBuy.disabled = !spiritPlan.can;
-      els.spiritBuy.textContent = bindLabel("Bind a Spirit", "Bind", spiritPlan.k, "Spirit", "Spirits");
+      setText(els.spiritBuy, bindLabel("Bind a Spirit", "Bind", spiritPlan.k, "Spirit", "Spirits"));
       els.spiritCard.classList.toggle("can-buy", spiritPlan.can);
     }
 
@@ -7826,24 +8000,24 @@
       var fetterPlan = purchasePlan(state.fetters, state.shades, FETTER_COST_BASE, FETTER_COST_MULT);
       var fMult = fetterMult(state.fetters);
       var canFetter = fetterPlan.can;
-      if (els.fetterOwned) els.fetterOwned.textContent = F.formatNumber(state.fetters);
-      if (els.fetterProd) els.fetterProd.textContent = "Spirit shades \u00d7" + formatTimes(fMult);
-      if (els.fetterCost) els.fetterCost.textContent = F.formatNumber(fetterPlan.cost) + " Shades";
+      setText(els.fetterOwned, F.formatNumber(state.fetters));
+      setText(els.fetterProd, "Spirit shades \u00d7" + formatTimes(fMult));
+      setText(els.fetterCost, F.formatNumber(fetterPlan.cost) + " Shades");
       if (els.fetterBuy) {
         els.fetterBuy.disabled = !canFetter;
-        els.fetterBuy.textContent = bindLabel("Bind a Fetter", "Bind", fetterPlan.k, "Fetter", "Fetters");
+        setText(els.fetterBuy, bindLabel("Bind a Fetter", "Bind", fetterPlan.k, "Fetter", "Fetters"));
       }
       if (els.fetterCard) els.fetterCard.classList.toggle("can-buy", canFetter);
     }
 
     if (state.unlockedVessels) {
       var vesselPlan = purchasePlan(state.vessels, state.spirits);
-      els.vesselOwned.textContent = F.formatNumber(state.vessels);
-      els.vesselProd.textContent =
-        F.formatNumber(spiritsPerSec()) + " spirits / sec";
-      els.vesselCost.textContent = F.formatNumber(vesselPlan.cost) + " Spirits";
+      setText(els.vesselOwned, F.formatNumber(state.vessels));
+      setText(els.vesselProd,
+        F.formatNumber(spiritsPerSec(mult)) + " spirits / sec");
+      setText(els.vesselCost, F.formatNumber(vesselPlan.cost) + " Spirits");
       els.vesselBuy.disabled = !vesselPlan.can;
-      els.vesselBuy.textContent = bindLabel("Bind a Vessel", "Bind", vesselPlan.k, "Vessel", "Vessels");
+      setText(els.vesselBuy, bindLabel("Bind a Vessel", "Bind", vesselPlan.k, "Vessel", "Vessels"));
       els.vesselCard.classList.toggle("can-buy", vesselPlan.can);
     }
 
@@ -7852,7 +8026,7 @@
       var censerRate = N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), mult),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
@@ -7860,11 +8034,11 @@
         wakeMult(wakeActive())
       );
       var canCenser = censerPlan.can;
-      els.censerOwned.textContent = F.formatNumber(state.censers);
-      els.censerProd.textContent = F.formatNumber(censerRate) + " ash / sec";
-      els.censerCost.textContent = F.formatNumber(censerPlan.cost) + " Vessels";
+      setText(els.censerOwned, F.formatNumber(state.censers));
+      setText(els.censerProd, F.formatNumber(censerRate) + " ash / sec");
+      setText(els.censerCost, F.formatNumber(censerPlan.cost) + " Vessels");
       els.censerBuy.disabled = !canCenser;
-      els.censerBuy.textContent = bindLabel("Raise a Censer", "Raise", censerPlan.k, "Censer", "Censers");
+      setText(els.censerBuy, bindLabel("Raise a Censer", "Raise", censerPlan.k, "Censer", "Censers"));
       els.censerCard.classList.toggle("can-buy", canCenser);
     }
 
@@ -7874,7 +8048,7 @@
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rateMult()),
+              N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), mult),
               nightMult(nightActive())
             ),
             hymnMult(hymnActive())
@@ -7883,12 +8057,12 @@
         ),
         wakeMult(wakeActive())
       );
-      if (els.pyreOwned) els.pyreOwned.textContent = F.formatNumber(state.pyres);
-      if (els.pyreProd) els.pyreProd.textContent = F.formatNumber(pyreRate) + " ash / sec";
-      if (els.pyreCost) els.pyreCost.textContent = F.formatNumber(pyrePlan.cost) + " Censers";
+      setText(els.pyreOwned, F.formatNumber(state.pyres));
+      setText(els.pyreProd, F.formatNumber(pyreRate) + " ash / sec");
+      setText(els.pyreCost, F.formatNumber(pyrePlan.cost) + " Censers");
       if (els.pyreBuy) {
         els.pyreBuy.disabled = !pyrePlan.can;
-        els.pyreBuy.textContent = bindLabel("Raise a Pyre", "Raise", pyrePlan.k, "Pyre", "Pyres");
+        setText(els.pyreBuy, bindLabel("Raise a Pyre", "Raise", pyrePlan.k, "Pyre", "Pyres"));
       }
       if (els.pyreCard) els.pyreCard.classList.toggle("can-buy", pyrePlan.can);
     }
@@ -7899,7 +8073,7 @@
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.urns, URN_ASH_PER_SEC), rateMult()),
+              N.mul(N.mul(state.urns, URN_ASH_PER_SEC), mult),
               nightMult(nightActive())
             ),
             hymnMult(hymnActive())
@@ -7908,12 +8082,12 @@
         ),
         wakeMult(wakeActive())
       );
-      if (els.urnOwned) els.urnOwned.textContent = F.formatNumber(state.urns);
-      if (els.urnProd) els.urnProd.textContent = F.formatNumber(urnRate) + " ash / sec";
-      if (els.urnCost) els.urnCost.textContent = F.formatNumber(urnPlan.cost) + " Pyres";
+      setText(els.urnOwned, F.formatNumber(state.urns));
+      setText(els.urnProd, F.formatNumber(urnRate) + " ash / sec");
+      setText(els.urnCost, F.formatNumber(urnPlan.cost) + " Pyres");
       if (els.urnBuy) {
         els.urnBuy.disabled = !urnPlan.can;
-        els.urnBuy.textContent = bindLabel("Raise an Urn", "Raise", urnPlan.k, "Urn", "Urns");
+        setText(els.urnBuy, bindLabel("Raise an Urn", "Raise", urnPlan.k, "Urn", "Urns"));
       }
       if (els.urnCard) els.urnCard.classList.toggle("can-buy", urnPlan.can);
     }
@@ -7924,7 +8098,7 @@
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.hearths, HEARTH_ASH_PER_SEC), rateMult()),
+              N.mul(N.mul(state.hearths, HEARTH_ASH_PER_SEC), mult),
               nightMult(nightActive())
             ),
             hymnMult(hymnActive())
@@ -7933,12 +8107,12 @@
         ),
         wakeMult(wakeActive())
       );
-      if (els.hearthOwned) els.hearthOwned.textContent = F.formatNumber(state.hearths);
-      if (els.hearthProd) els.hearthProd.textContent = F.formatNumber(hearthRate) + " ash / sec";
-      if (els.hearthCost) els.hearthCost.textContent = F.formatNumber(hearthPlan.cost) + " Urns";
+      setText(els.hearthOwned, F.formatNumber(state.hearths));
+      setText(els.hearthProd, F.formatNumber(hearthRate) + " ash / sec");
+      setText(els.hearthCost, F.formatNumber(hearthPlan.cost) + " Urns");
       if (els.hearthBuy) {
         els.hearthBuy.disabled = !hearthPlan.can;
-        els.hearthBuy.textContent = bindLabel("Kindle a Hearth", "Kindle", hearthPlan.k, "Hearth", "Hearths");
+        setText(els.hearthBuy, bindLabel("Kindle a Hearth", "Kindle", hearthPlan.k, "Hearth", "Hearths"));
       }
       if (els.hearthCard) els.hearthCard.classList.toggle("can-buy", hearthPlan.can);
     }
@@ -7949,7 +8123,7 @@
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rateMult()),
+              N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), mult),
               nightMult(nightActive())
             ),
             hymnMult(hymnActive())
@@ -7958,12 +8132,12 @@
         ),
         wakeMult(wakeActive())
       );
-      if (els.beaconOwned) els.beaconOwned.textContent = F.formatNumber(state.beacons);
-      if (els.beaconProd) els.beaconProd.textContent = F.formatNumber(beaconRate) + " ash / sec";
-      if (els.beaconCost) els.beaconCost.textContent = F.formatNumber(beaconPlan.cost) + " Hearths";
+      setText(els.beaconOwned, F.formatNumber(state.beacons));
+      setText(els.beaconProd, F.formatNumber(beaconRate) + " ash / sec");
+      setText(els.beaconCost, F.formatNumber(beaconPlan.cost) + " Hearths");
       if (els.beaconBuy) {
         els.beaconBuy.disabled = !beaconPlan.can;
-        els.beaconBuy.textContent = bindLabel("Raise a Beacon", "Raise", beaconPlan.k, "Beacon", "Beacons");
+        setText(els.beaconBuy, bindLabel("Raise a Beacon", "Raise", beaconPlan.k, "Beacon", "Beacons"));
       }
       if (els.beaconCard) els.beaconCard.classList.toggle("can-buy", beaconPlan.can);
     }
@@ -7974,7 +8148,7 @@
         N.mul(
           N.mul(
             N.mul(
-              N.mul(N.mul(state.spires, SPIRE_ASH_PER_SEC), rateMult()),
+              N.mul(N.mul(state.spires, SPIRE_ASH_PER_SEC), mult),
               nightMult(nightActive())
             ),
             hymnMult(hymnActive())
@@ -7983,12 +8157,12 @@
         ),
         wakeMult(wakeActive())
       );
-      if (els.spireOwned) els.spireOwned.textContent = F.formatNumber(state.spires);
-      if (els.spireProd) els.spireProd.textContent = F.formatNumber(spireRate) + " ash / sec";
-      if (els.spireCost) els.spireCost.textContent = F.formatNumber(spirePlan.cost) + " Beacons";
+      setText(els.spireOwned, F.formatNumber(state.spires));
+      setText(els.spireProd, F.formatNumber(spireRate) + " ash / sec");
+      setText(els.spireCost, F.formatNumber(spirePlan.cost) + " Beacons");
       if (els.spireBuy) {
         els.spireBuy.disabled = !spirePlan.can;
-        els.spireBuy.textContent = bindLabel("Raise a Spire", "Raise", spirePlan.k, "Spire", "Spires");
+        setText(els.spireBuy, bindLabel("Raise a Spire", "Raise", spirePlan.k, "Spire", "Spires"));
       }
       if (els.spireCard) els.spireCard.classList.toggle("can-buy", spirePlan.can);
     }
@@ -7998,19 +8172,19 @@
       var obeliskRate = N.mul(
         N.mul(
           N.mul(
-            N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rateMult()),
+            N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), mult),
             nightMult(nightActive())
           ),
           hymnMult(hymnActive())
         ),
         wakeMult(wakeActive())
       );
-      if (els.obeliskOwned) els.obeliskOwned.textContent = F.formatNumber(state.obelisks);
-      if (els.obeliskProd) els.obeliskProd.textContent = F.formatNumber(obeliskRate) + " ash / sec";
-      if (els.obeliskCost) els.obeliskCost.textContent = F.formatNumber(obeliskPlan.cost) + " Spires";
+      setText(els.obeliskOwned, F.formatNumber(state.obelisks));
+      setText(els.obeliskProd, F.formatNumber(obeliskRate) + " ash / sec");
+      setText(els.obeliskCost, F.formatNumber(obeliskPlan.cost) + " Spires");
       if (els.obeliskBuy) {
         els.obeliskBuy.disabled = !obeliskPlan.can;
-        els.obeliskBuy.textContent = bindLabel("Raise an Obelisk", "Raise", obeliskPlan.k, "Obelisk", "Obelisks");
+        setText(els.obeliskBuy, bindLabel("Raise an Obelisk", "Raise", obeliskPlan.k, "Obelisk", "Obelisks"));
       }
       if (els.obeliskCard) els.obeliskCard.classList.toggle("can-buy", obeliskPlan.can);
     }
@@ -8020,29 +8194,29 @@
       var thronePct = Math.round(
         (normalizeAspect(state.aspect) === "dominion" ? 15 : 10) * state.thrones
       );
-      els.throneOwned.textContent = F.formatNumber(state.thrones);
-      els.throneProd.textContent = "+" + thronePct + "% production";
-      els.throneCost.textContent = F.formatNumber(thronePlan.cost) + " Vessels";
+      setText(els.throneOwned, F.formatNumber(state.thrones));
+      setText(els.throneProd, "+" + thronePct + "% production");
+      setText(els.throneCost, F.formatNumber(thronePlan.cost) + " Vessels");
       var throneBlocked = normalizeVow(state.vow) === "poverty";
       els.throneBuy.disabled = !thronePlan.can || throneBlocked;
-      els.throneBuy.textContent = bindLabel("Raise a Throne", "Raise", thronePlan.k, "Throne", "Thrones");
+      setText(els.throneBuy, bindLabel("Raise a Throne", "Raise", thronePlan.k, "Throne", "Thrones"));
       els.throneCard.classList.toggle("can-buy", thronePlan.can && !throneBlocked);
     }
 
     if (state.unlockedChalices) {
       var cupPlan = chalicePlan();
       var chalicePct = Math.round(8 * (Number(state.chalices) || 0));
-      if (els.chaliceOwned) els.chaliceOwned.textContent = F.formatNumber(state.chalices);
-      if (els.chaliceProd) els.chaliceProd.textContent = "+" + chalicePct + "% production";
+      setText(els.chaliceOwned, F.formatNumber(state.chalices));
+      setText(els.chaliceProd, "+" + chalicePct + "% production");
       if (els.chaliceCost) {
-        els.chaliceCost.textContent = cupPlan.capped ? "\u2014" : F.formatNumber(cupPlan.cost) + " Ash";
+        setText(els.chaliceCost, cupPlan.capped ? "\u2014" : F.formatNumber(cupPlan.cost) + " Ash");
       }
       if (els.chaliceBuy) {
         els.chaliceBuy.disabled = !cupPlan.can;
         if (cupPlan.capped) {
-          els.chaliceBuy.textContent = "Raise a Chalice";
+          setText(els.chaliceBuy, "Raise a Chalice");
         } else {
-          els.chaliceBuy.textContent = bindLabel("Raise a Chalice", "Raise", cupPlan.k, "Chalice", "Chalices");
+          setText(els.chaliceBuy, bindLabel("Raise a Chalice", "Raise", cupPlan.k, "Chalice", "Chalices"));
         }
       }
       if (els.chaliceCard) els.chaliceCard.classList.toggle("can-buy", cupPlan.can);
@@ -8055,8 +8229,8 @@
     if (ritesOpen) {
       var sCost = siphonCost(state.siphonLevel);
       var sMult = siphonMult(state.siphonLevel);
-      if (els.siphonEffect) els.siphonEffect.textContent = "Siphon \u00d7" + formatTimes(sMult);
-      if (els.siphonCost) els.siphonCost.textContent = F.formatNumber(sCost) + " Souls";
+      setText(els.siphonEffect, "Siphon \u00d7" + formatTimes(sMult));
+      setText(els.siphonCost, F.formatNumber(sCost) + " Souls");
       if (els.siphonBuy) els.siphonBuy.disabled = N.cmp(state.souls, sCost) < 0;
 
       if (els.levyRow) {
@@ -8065,8 +8239,8 @@
       if (state.unlockedSpirits) {
         var lCost = levyCost(state.levyLevel);
         var levyM = levyMult(state.levyLevel);
-        if (els.levyEffect) els.levyEffect.textContent = "Levy \u00d7" + formatTimes(levyM);
-        if (els.levyCost) els.levyCost.textContent = F.formatNumber(lCost) + " Shades";
+        setText(els.levyEffect, "Levy \u00d7" + formatTimes(levyM));
+        setText(els.levyCost, F.formatNumber(lCost) + " Shades");
         if (els.levyBuy) els.levyBuy.disabled = N.cmp(state.shades, lCost) < 0;
       }
 
@@ -8082,7 +8256,7 @@
         var btCost = bindingTollCost(btLevel);
         var btAtCap = btLevel >= BINDING_TOLL_MAX;
         if (els.bindingTollEffect) {
-          els.bindingTollEffect.textContent =
+          setText(els.bindingTollEffect,
             "Shade/Spirit \u00d7" +
             formatTimes(btRate) +
             " \u00b7 costs +" +
@@ -8090,10 +8264,10 @@
             "% \u00b7 " +
             btLevel +
             "/" +
-            BINDING_TOLL_MAX;
+            BINDING_TOLL_MAX);
         }
         if (els.bindingTollCost) {
-          els.bindingTollCost.textContent = btAtCap ? "\u2014" : F.formatNumber(btCost) + " Ash";
+          setText(els.bindingTollCost, btAtCap ? "\u2014" : F.formatNumber(btCost) + " Ash");
         }
         if (els.bindingTollBuy) {
           els.bindingTollBuy.disabled = btAtCap || N.cmp(state.ash, btCost) < 0;
@@ -8107,8 +8281,8 @@
       if (cinderOpen) {
         var cCost = cinderCost(state.cinderLevel);
         var cMult = cinderMult(state.cinderLevel);
-        if (els.cinderEffect) els.cinderEffect.textContent = "Cinders \u00d7" + formatTimes(cMult);
-        if (els.cinderCost) els.cinderCost.textContent = F.formatNumber(cCost) + " Ash";
+        setText(els.cinderEffect, "Cinders \u00d7" + formatTimes(cMult));
+        setText(els.cinderCost, F.formatNumber(cCost) + " Ash");
         if (els.cinderBuy) els.cinderBuy.disabled = N.cmp(state.ash, cCost) < 0;
       }
 
@@ -8119,8 +8293,8 @@
       if (urnRiteOpen) {
         var uCost = urnRiteCost(state.urnRiteLevel);
         var uMult = urnRiteMult(state.urnRiteLevel);
-        if (els.urnRiteEffect) els.urnRiteEffect.textContent = "Urn \u00d7" + formatTimes(uMult);
-        if (els.urnRiteCost) els.urnRiteCost.textContent = F.formatNumber(uCost) + " Ash";
+        setText(els.urnRiteEffect, "Urn \u00d7" + formatTimes(uMult));
+        setText(els.urnRiteCost, F.formatNumber(uCost) + " Ash");
         if (els.urnRiteBuy) els.urnRiteBuy.disabled = N.cmp(state.ash, uCost) < 0;
       }
 
@@ -8131,8 +8305,8 @@
       if (hearthRiteOpen) {
         var hCost = hearthRiteCost(state.hearthRiteLevel);
         var hMult = hearthRiteMult(state.hearthRiteLevel);
-        if (els.hearthRiteEffect) els.hearthRiteEffect.textContent = "Hearth \u00d7" + formatTimes(hMult);
-        if (els.hearthRiteCost) els.hearthRiteCost.textContent = F.formatNumber(hCost) + " Ash";
+        setText(els.hearthRiteEffect, "Hearth \u00d7" + formatTimes(hMult));
+        setText(els.hearthRiteCost, F.formatNumber(hCost) + " Ash");
         if (els.hearthRiteBuy) els.hearthRiteBuy.disabled = N.cmp(state.ash, hCost) < 0;
       }
 
@@ -8143,8 +8317,8 @@
       if (beaconRiteOpen) {
         var bCost = beaconRiteCost(state.beaconRiteLevel);
         var bMult = beaconRiteMult(state.beaconRiteLevel);
-        if (els.beaconRiteEffect) els.beaconRiteEffect.textContent = "Beacon \u00d7" + formatTimes(bMult);
-        if (els.beaconRiteCost) els.beaconRiteCost.textContent = F.formatNumber(bCost) + " Ash";
+        setText(els.beaconRiteEffect, "Beacon \u00d7" + formatTimes(bMult));
+        setText(els.beaconRiteCost, F.formatNumber(bCost) + " Ash");
         if (els.beaconRiteBuy) els.beaconRiteBuy.disabled = N.cmp(state.ash, bCost) < 0;
       }
 
@@ -8155,8 +8329,8 @@
       if (spireRiteOpen) {
         var sCost = spireRiteCost(state.spireRiteLevel);
         var sMult = spireRiteMult(state.spireRiteLevel);
-        if (els.spireRiteEffect) els.spireRiteEffect.textContent = "Spire \u00d7" + formatTimes(sMult);
-        if (els.spireRiteCost) els.spireRiteCost.textContent = F.formatNumber(sCost) + " Ash";
+        setText(els.spireRiteEffect, "Spire \u00d7" + formatTimes(sMult));
+        setText(els.spireRiteCost, F.formatNumber(sCost) + " Ash");
         if (els.spireRiteBuy) els.spireRiteBuy.disabled = N.cmp(state.ash, sCost) < 0;
       }
 
@@ -8166,20 +8340,20 @@
       }
       if (drawsOpen) {
         if (state.wellDraws) {
-          if (els.wellDrawsEffect) els.wellDrawsEffect.textContent = "The well draws";
-          if (els.wellDrawsCost) els.wellDrawsCost.textContent = "\u2014";
+          setText(els.wellDrawsEffect, "The well draws");
+          setText(els.wellDrawsCost, "\u2014");
           if (els.wellDrawsBuy) {
             els.wellDrawsBuy.disabled = true;
-            els.wellDrawsBuy.textContent = "The well draws";
+            setText(els.wellDrawsBuy, "The well draws");
           }
         } else {
-          if (els.wellDrawsEffect) els.wellDrawsEffect.textContent = "Idle draw";
+          setText(els.wellDrawsEffect, "Idle draw");
           if (els.wellDrawsCost) {
-            els.wellDrawsCost.textContent = F.formatNumber(WELL_DRAWS_COST) + " Souls";
+            setText(els.wellDrawsCost, F.formatNumber(WELL_DRAWS_COST) + " Souls");
           }
           if (els.wellDrawsBuy) {
             els.wellDrawsBuy.disabled = N.cmp(state.souls, WELL_DRAWS_COST) < 0;
-            els.wellDrawsBuy.textContent = "Let the Well Draw";
+            setText(els.wellDrawsBuy, "Let the Well Draw");
           }
         }
       }
@@ -8193,18 +8367,18 @@
         var tLeft = Number(state.titheLeft) || 0;
         var tCost = currentTitheCost();
         if (els.titheEffect) {
-          els.titheEffect.textContent = titheActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidTitheSecs(state.longerTitheLevel) + "s";
+          setText(els.titheEffect, titheActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidTitheSecs(state.longerTitheLevel) + "s");
         }
         if (els.titheCost) {
-          els.titheCost.textContent = F.formatNumber(tCost) + " Souls";
+          setText(els.titheCost, F.formatNumber(tCost) + " Souls");
         }
         if (els.titheBuy) {
           if (titheActive()) {
             els.titheBuy.disabled = true;
-            els.titheBuy.textContent = "The tithe burns \u2014 " + Math.ceil(tLeft) + "s";
+            setText(els.titheBuy, "The tithe burns \u2014 " + Math.ceil(tLeft) + "s");
           } else {
             els.titheBuy.disabled = N.cmp(state.souls, tCost) < 0;
-            els.titheBuy.textContent = "Pay the Tithe";
+            setText(els.titheBuy, "Pay the Tithe");
           }
         }
       }
@@ -8218,24 +8392,24 @@
         var nLeft = Number(state.nightLeft) || 0;
         var nCost = nightTitheCost(state.ash);
         if (els.nightTitheEffect) {
-          els.nightTitheEffect.textContent = nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 " + nightSecs(state.deeperNightLevel) + "s";
+          setText(els.nightTitheEffect, nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 " + nightSecs(state.deeperNightLevel) + "s");
         }
         if (els.nightTitheCost) {
-          els.nightTitheCost.textContent = F.formatNumber(nCost) + " Ash";
+          setText(els.nightTitheCost, F.formatNumber(nCost) + " Ash");
         }
         if (els.nightTitheBuy) {
           var emberNight = normalizeVow(state.vow) === "ember" && !nightActive();
           if (nightActive()) {
             els.nightTitheBuy.disabled = true;
-            els.nightTitheBuy.textContent = "Night burns \u2014 " + Math.ceil(nLeft) + "s";
+            setText(els.nightTitheBuy, "Night burns \u2014 " + Math.ceil(nLeft) + "s");
           } else if (emberNight) {
             els.nightTitheBuy.disabled = true;
             els.nightTitheBuy.setAttribute("aria-disabled", "true");
-            els.nightTitheBuy.textContent = "Ember holds the night.";
+            setText(els.nightTitheBuy, "Ember holds the night.");
           } else {
             els.nightTitheBuy.disabled = N.cmp(state.ash, NIGHT_TITHE_MIN) < 0;
             els.nightTitheBuy.removeAttribute("aria-disabled");
-            els.nightTitheBuy.textContent = "Pay the Night's Tithe";
+            setText(els.nightTitheBuy, "Pay the Night's Tithe");
           }
         }
       }
@@ -8249,24 +8423,24 @@
         var wLeft = Number(state.wakeLeft) || 0;
         var wCost = N.fromNumber(WAKE_COST);
         if (els.wakeEffect) {
-          els.wakeEffect.textContent = wakeActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidWakeSecs(state.longerWakeLevel) + "s";
+          setText(els.wakeEffect, wakeActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidWakeSecs(state.longerWakeLevel) + "s");
         }
         if (els.wakeCost) {
-          els.wakeCost.textContent = F.formatNumber(wCost) + " Ash";
+          setText(els.wakeCost, F.formatNumber(wCost) + " Ash");
         }
         if (els.wakeBuy) {
           var emberWake = normalizeVow(state.vow) === "ember" && !wakeActive();
           if (wakeActive()) {
             els.wakeBuy.disabled = true;
-            els.wakeBuy.textContent = "The wake burns \u2014 " + Math.ceil(wLeft) + "s";
+            setText(els.wakeBuy, "The wake burns \u2014 " + Math.ceil(wLeft) + "s");
           } else if (emberWake) {
             els.wakeBuy.disabled = true;
             els.wakeBuy.setAttribute("aria-disabled", "true");
-            els.wakeBuy.textContent = "Ember holds the wake.";
+            setText(els.wakeBuy, "Ember holds the wake.");
           } else {
             els.wakeBuy.disabled = N.cmp(state.ash, wCost) < 0;
             els.wakeBuy.removeAttribute("aria-disabled");
-            els.wakeBuy.textContent = "Keep the Wake";
+            setText(els.wakeBuy, "Keep the Wake");
           }
         }
       }
@@ -8280,18 +8454,18 @@
         var vLeft = Number(state.veilLeft) || 0;
         var vCost = veilCost(state.ash);
         if (els.veilEffect) {
-          els.veilEffect.textContent = veilActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidVeilSecs(state.longerVeilLevel) + "s";
+          setText(els.veilEffect, veilActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidVeilSecs(state.longerVeilLevel) + "s");
         }
         if (els.veilCost) {
-          els.veilCost.textContent = F.formatNumber(vCost) + " Ash";
+          setText(els.veilCost, F.formatNumber(vCost) + " Ash");
         }
         if (els.veilBuy) {
           if (veilActive()) {
             els.veilBuy.disabled = true;
-            els.veilBuy.textContent = "The veil thins \u2014 " + Math.ceil(vLeft) + "s";
+            setText(els.veilBuy, "The veil thins \u2014 " + Math.ceil(vLeft) + "s");
           } else {
             els.veilBuy.disabled = N.cmp(state.ash, VEIL_MIN) < 0;
-            els.veilBuy.textContent = "Thin the Veil";
+            setText(els.veilBuy, "Thin the Veil");
           }
         }
       }
@@ -8305,18 +8479,18 @@
         var oLeft = Number(state.tollLeft) || 0;
         var oCost = N.fromNumber(TOLL_COST);
         if (els.tollEffect) {
-          els.tollEffect.textContent = tollActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidTollSecs(state.deeperTollLevel) + "s";
+          setText(els.tollEffect, tollActive() ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidTollSecs(state.deeperTollLevel) + "s");
         }
         if (els.tollCost) {
-          els.tollCost.textContent = F.formatNumber(oCost) + " Souls";
+          setText(els.tollCost, F.formatNumber(oCost) + " Souls");
         }
         if (els.tollBuy) {
           if (tollActive()) {
             els.tollBuy.disabled = true;
-            els.tollBuy.textContent = "The toll sounds \u2014 " + Math.ceil(oLeft) + "s";
+            setText(els.tollBuy, "The toll sounds \u2014 " + Math.ceil(oLeft) + "s");
           } else {
             els.tollBuy.disabled = N.cmp(state.souls, oCost) < 0;
-            els.tollBuy.textContent = "Sound the Toll";
+            setText(els.tollBuy, "Sound the Toll");
           }
         }
       }
@@ -8328,11 +8502,11 @@
       }
       if (autoOpen) {
         if (els.autobindEffect) {
-          els.autobindEffect.textContent = state.autobind ? "The well binds" : "Idle bind";
+          setText(els.autobindEffect, state.autobind ? "The well binds" : "Idle bind");
         }
         if (els.autobindBuy) {
           els.autobindBuy.disabled = false;
-          els.autobindBuy.textContent = "Autobind Shades";
+          setText(els.autobindBuy, "Autobind Shades");
           els.autobindBuy.setAttribute("aria-pressed", state.autobind ? "true" : "false");
         }
       }
@@ -8344,11 +8518,11 @@
       }
       if (autoSpiritOpen) {
         if (els.autobindSpiritsEffect) {
-          els.autobindSpiritsEffect.textContent = state.autobindSpirits ? "The shackled bind" : "Idle bind";
+          setText(els.autobindSpiritsEffect, state.autobindSpirits ? "The shackled bind" : "Idle bind");
         }
         if (els.autobindSpiritsBuy) {
           els.autobindSpiritsBuy.disabled = false;
-          els.autobindSpiritsBuy.textContent = "Autobind Spirits";
+          setText(els.autobindSpiritsBuy, "Autobind Spirits");
           els.autobindSpiritsBuy.setAttribute("aria-pressed", state.autobindSpirits ? "true" : "false");
         }
       }
@@ -8360,11 +8534,11 @@
       }
       if (autoVesselOpen) {
         if (els.autobindVesselsEffect) {
-          els.autobindVesselsEffect.textContent = state.autobindVessels ? "The hollow fills" : "Idle bind";
+          setText(els.autobindVesselsEffect, state.autobindVessels ? "The hollow fills" : "Idle bind");
         }
         if (els.autobindVesselsBuy) {
           els.autobindVesselsBuy.disabled = false;
-          els.autobindVesselsBuy.textContent = "Autobind Vessels";
+          setText(els.autobindVesselsBuy, "Autobind Vessels");
           els.autobindVesselsBuy.setAttribute("aria-pressed", state.autobindVessels ? "true" : "false");
         }
       }
@@ -8376,11 +8550,11 @@
       }
       if (autoLanternOpen) {
         if (els.autobindLanternsEffect) {
-          els.autobindLanternsEffect.textContent = state.autobindLanterns ? "The lights kindle" : "Idle bind";
+          setText(els.autobindLanternsEffect, state.autobindLanterns ? "The lights kindle" : "Idle bind");
         }
         if (els.autobindLanternsBuy) {
           els.autobindLanternsBuy.disabled = false;
-          els.autobindLanternsBuy.textContent = "Autobind Lanterns";
+          setText(els.autobindLanternsBuy, "Autobind Lanterns");
           els.autobindLanternsBuy.setAttribute("aria-pressed", state.autobindLanterns ? "true" : "false");
         }
       }
@@ -8392,11 +8566,11 @@
       }
       if (autoFetterOpen) {
         if (els.autobindFettersEffect) {
-          els.autobindFettersEffect.textContent = state.autobindFetters ? "The chain learns" : "Idle bind";
+          setText(els.autobindFettersEffect, state.autobindFetters ? "The chain learns" : "Idle bind");
         }
         if (els.autobindFettersBuy) {
           els.autobindFettersBuy.disabled = false;
-          els.autobindFettersBuy.textContent = "Autobind Fetters";
+          setText(els.autobindFettersBuy, "Autobind Fetters");
           els.autobindFettersBuy.setAttribute("aria-pressed", state.autobindFetters ? "true" : "false");
         }
       }
@@ -8408,11 +8582,11 @@
       }
       if (autoCenserOpen) {
         if (els.autobindCensersEffect) {
-          els.autobindCensersEffect.textContent = state.autobindCensers ? "The smoke tends" : "Idle bind";
+          setText(els.autobindCensersEffect, state.autobindCensers ? "The smoke tends" : "Idle bind");
         }
         if (els.autobindCensersBuy) {
           els.autobindCensersBuy.disabled = false;
-          els.autobindCensersBuy.textContent = "Autobind Censers";
+          setText(els.autobindCensersBuy, "Autobind Censers");
           els.autobindCensersBuy.setAttribute("aria-pressed", state.autobindCensers ? "true" : "false");
         }
       }
@@ -8424,11 +8598,11 @@
       }
       if (autoThroneOpen) {
         if (els.autobindThronesEffect) {
-          els.autobindThronesEffect.textContent = state.autobindThrones ? "The seat claims" : "Idle bind";
+          setText(els.autobindThronesEffect, state.autobindThrones ? "The seat claims" : "Idle bind");
         }
         if (els.autobindThronesBuy) {
           els.autobindThronesBuy.disabled = false;
-          els.autobindThronesBuy.textContent = "Autobind Thrones";
+          setText(els.autobindThronesBuy, "Autobind Thrones");
           els.autobindThronesBuy.setAttribute("aria-pressed", state.autobindThrones ? "true" : "false");
         }
       }
@@ -8440,11 +8614,11 @@
       }
       if (autoPyreOpen) {
         if (els.autobindPyresEffect) {
-          els.autobindPyresEffect.textContent = state.autobindPyres ? "The coals tend" : "Idle bind";
+          setText(els.autobindPyresEffect, state.autobindPyres ? "The coals tend" : "Idle bind");
         }
         if (els.autobindPyresBuy) {
           els.autobindPyresBuy.disabled = false;
-          els.autobindPyresBuy.textContent = "Autobind Pyres";
+          setText(els.autobindPyresBuy, "Autobind Pyres");
           els.autobindPyresBuy.setAttribute("aria-pressed", state.autobindPyres ? "true" : "false");
         }
       }
@@ -8456,11 +8630,11 @@
       }
       if (autoUrnOpen) {
         if (els.autobindUrnsEffect) {
-          els.autobindUrnsEffect.textContent = state.autobindUrns ? "The vessel fills" : "Idle bind";
+          setText(els.autobindUrnsEffect, state.autobindUrns ? "The vessel fills" : "Idle bind");
         }
         if (els.autobindUrnsBuy) {
           els.autobindUrnsBuy.disabled = false;
-          els.autobindUrnsBuy.textContent = "Autobind Urns";
+          setText(els.autobindUrnsBuy, "Autobind Urns");
           els.autobindUrnsBuy.setAttribute("aria-pressed", state.autobindUrns ? "true" : "false");
         }
       }
@@ -8472,11 +8646,11 @@
       }
       if (autoHearthOpen) {
         if (els.autobindHearthsEffect) {
-          els.autobindHearthsEffect.textContent = state.autobindHearths ? "The hearth kindles" : "Idle bind";
+          setText(els.autobindHearthsEffect, state.autobindHearths ? "The hearth kindles" : "Idle bind");
         }
         if (els.autobindHearthsBuy) {
           els.autobindHearthsBuy.disabled = false;
-          els.autobindHearthsBuy.textContent = "Autobind Hearths";
+          setText(els.autobindHearthsBuy, "Autobind Hearths");
           els.autobindHearthsBuy.setAttribute("aria-pressed", state.autobindHearths ? "true" : "false");
         }
       }
@@ -8488,11 +8662,11 @@
       }
       if (autoBeaconOpen) {
         if (els.autobindBeaconsEffect) {
-          els.autobindBeaconsEffect.textContent = state.autobindBeacons ? "The beacon kindles" : "Idle bind";
+          setText(els.autobindBeaconsEffect, state.autobindBeacons ? "The beacon kindles" : "Idle bind");
         }
         if (els.autobindBeaconsBuy) {
           els.autobindBeaconsBuy.disabled = false;
-          els.autobindBeaconsBuy.textContent = "Autobind Beacons";
+          setText(els.autobindBeaconsBuy, "Autobind Beacons");
           els.autobindBeaconsBuy.setAttribute("aria-pressed", state.autobindBeacons ? "true" : "false");
         }
       }
@@ -8504,11 +8678,11 @@
       }
       if (autoSpireOpen) {
         if (els.autobindSpiresEffect) {
-          els.autobindSpiresEffect.textContent = state.autobindSpires ? "The spire rises" : "Idle bind";
+          setText(els.autobindSpiresEffect, state.autobindSpires ? "The spire rises" : "Idle bind");
         }
         if (els.autobindSpiresBuy) {
           els.autobindSpiresBuy.disabled = false;
-          els.autobindSpiresBuy.textContent = "Autobind Spires";
+          setText(els.autobindSpiresBuy, "Autobind Spires");
           els.autobindSpiresBuy.setAttribute("aria-pressed", state.autobindSpires ? "true" : "false");
         }
       }
@@ -8520,11 +8694,11 @@
       }
       if (autoObeliskOpen) {
         if (els.autobindObelisksEffect) {
-          els.autobindObelisksEffect.textContent = state.autobindObelisks ? "The obelisk rises" : "Idle bind";
+          setText(els.autobindObelisksEffect, state.autobindObelisks ? "The obelisk rises" : "Idle bind");
         }
         if (els.autobindObelisksBuy) {
           els.autobindObelisksBuy.disabled = false;
-          els.autobindObelisksBuy.textContent = "Autobind Obelisks";
+          setText(els.autobindObelisksBuy, "Autobind Obelisks");
           els.autobindObelisksBuy.setAttribute("aria-pressed", state.autobindObelisks ? "true" : "false");
         }
       }
@@ -8536,11 +8710,11 @@
       }
       if (autoChaliceOpen) {
         if (els.autobindChalicesEffect) {
-          els.autobindChalicesEffect.textContent = state.autobindChalices ? "The cup fills" : "Idle bind";
+          setText(els.autobindChalicesEffect, state.autobindChalices ? "The cup fills" : "Idle bind");
         }
         if (els.autobindChalicesBuy) {
           els.autobindChalicesBuy.disabled = false;
-          els.autobindChalicesBuy.textContent = "Autobind Chalices";
+          setText(els.autobindChalicesBuy, "Autobind Chalices");
           els.autobindChalicesBuy.setAttribute("aria-pressed", state.autobindChalices ? "true" : "false");
         }
       }
@@ -8556,19 +8730,19 @@
         var choirPctStr =
           Math.abs(choirPct - Math.round(choirPct)) < 0.05 ? String(Math.round(choirPct)) : choirPct.toFixed(1);
         if (els.choirEffect) {
-          els.choirEffect.textContent = "Ash from shades " + choirPctStr + "%";
+          setText(els.choirEffect, "Ash from shades " + choirPctStr + "%");
         }
         if (choirN >= CHOIR_MAX) {
-          if (els.choirCost) els.choirCost.textContent = "\u2014";
+          setText(els.choirCost, "\u2014");
           if (els.choirBuy) {
             els.choirBuy.disabled = true;
-            els.choirBuy.textContent = "The choir is full.";
+            setText(els.choirBuy, "The choir is full.");
           }
         } else {
-          if (els.choirCost) els.choirCost.textContent = F.formatNumber(CHOIR_LANTERN_COST) + " Lanterns";
+          setText(els.choirCost, F.formatNumber(CHOIR_LANTERN_COST) + " Lanterns");
           if (els.choirBuy) {
             els.choirBuy.disabled = N.cmp(state.lanterns, CHOIR_LANTERN_COST) < 0;
-            els.choirBuy.textContent = "Raise the Choir";
+            setText(els.choirBuy, "Raise the Choir");
           }
         }
       }
@@ -8581,8 +8755,8 @@
     if (marksOpen) {
       var eCost = markCost(state.emberLevel);
       var eMult = emberMult(state.emberLevel);
-      if (els.markEmberEffect) els.markEmberEffect.textContent = "Shade souls \u00d7" + formatTimes(eMult);
-      if (els.markEmberCost) els.markEmberCost.textContent = F.formatNumber(eCost) + " Ash";
+      setText(els.markEmberEffect, "Shade souls \u00d7" + formatTimes(eMult));
+      setText(els.markEmberCost, F.formatNumber(eCost) + " Ash");
       if (els.markEmberBuy) els.markEmberBuy.disabled = N.cmp(state.ash, eCost) < 0;
 
       if (els.markChainRow) {
@@ -8591,8 +8765,8 @@
       if (state.unlockedSpirits) {
         var chCost = markCost(state.chainLevel);
         var chMult = chainMult(state.chainLevel);
-        if (els.markChainEffect) els.markChainEffect.textContent = "Spirit levy \u00d7" + formatTimes(chMult);
-        if (els.markChainCost) els.markChainCost.textContent = F.formatNumber(chCost) + " Ash";
+        setText(els.markChainEffect, "Spirit levy \u00d7" + formatTimes(chMult));
+        setText(els.markChainCost, F.formatNumber(chCost) + " Ash");
         if (els.markChainBuy) els.markChainBuy.disabled = N.cmp(state.ash, chCost) < 0;
       }
 
@@ -8602,8 +8776,8 @@
       if (state.unlockedVessels) {
         var hCost = markCost(state.hollowLevel);
         var hMult = emberMult(state.hollowLevel);
-        if (els.markHollowEffect) els.markHollowEffect.textContent = "Vessel house \u00d7" + formatTimes(hMult);
-        if (els.markHollowCost) els.markHollowCost.textContent = F.formatNumber(hCost) + " Ash";
+        setText(els.markHollowEffect, "Vessel house \u00d7" + formatTimes(hMult));
+        setText(els.markHollowCost, F.formatNumber(hCost) + " Ash");
         if (els.markHollowBuy) els.markHollowBuy.disabled = N.cmp(state.ash, hCost) < 0;
       }
     }
@@ -8618,7 +8792,7 @@
     if (aspectsOpen) {
       if (els.aspectsSworn) {
         if (sworn) {
-          els.aspectsSworn.textContent = "This emptying: " + (ASPECT_NAMES[sworn] || sworn) + ".";
+          setText(els.aspectsSworn, "This emptying: " + (ASPECT_NAMES[sworn] || sworn) + ".");
           els.aspectsSworn.classList.remove("is-hidden");
         } else {
           els.aspectsSworn.classList.add("is-hidden");
@@ -8657,7 +8831,7 @@
     if (vowsOpen) {
       if (els.vowsSworn) {
         if (swornVow) {
-          els.vowsSworn.textContent = "This emptying: " + (VOW_NAMES[swornVow] || swornVow) + ".";
+          setText(els.vowsSworn, "This emptying: " + (VOW_NAMES[swornVow] || swornVow) + ".");
           els.vowsSworn.classList.remove("is-hidden");
         } else {
           els.vowsSworn.classList.add("is-hidden");
@@ -8701,21 +8875,19 @@
     if (tributeReady) {
       if (els.tributeFavor) {
         if (state.favor !== state.favorEarned) {
-          els.tributeFavor.textContent =
+          setText(els.tributeFavor,
             F.formatNumber(state.favor) +
             " (" +
             F.formatNumber(state.favorEarned) +
-            " earned)";
+            " earned)");
         } else {
-          els.tributeFavor.textContent = F.formatNumber(state.favor);
+          setText(els.tributeFavor, F.formatNumber(state.favor));
         }
       }
-      if (els.tributeGain) els.tributeGain.textContent = F.formatNumber(tributeOffer) + " Favor";
-      if (els.tributeMult) {
-        els.tributeMult.textContent = formatMult(
-          prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete, cupStartsChalices(state.cupEdictLevel), state.ossuaryLevel)
-        );
-      }
+      setText(els.tributeGain, F.formatNumber(tributeOffer) + " Favor");
+      setText(els.tributeMult, formatMult(
+        prodMult(state.favorEarned + tributeOffer, state.seatLevel, state.edictLevel, null, state.crownWeight, state.namesComplete, cupStartsChalices(state.cupEdictLevel), state.ossuaryLevel)
+      ));
     }
 
     var reliquaryOpen = state.favorEarned >= 1;
@@ -8723,13 +8895,13 @@
       els.reliquaryPanel.classList.toggle("is-hidden", !reliquaryOpen);
     }
     if (reliquaryOpen) {
-      if (els.reliquaryFavor) els.reliquaryFavor.textContent = F.formatNumber(state.favor);
-      if (els.reliquaryEarned) els.reliquaryEarned.textContent = F.formatNumber(state.favorEarned);
+      setText(els.reliquaryFavor, F.formatNumber(state.favor));
+      setText(els.reliquaryEarned, F.formatNumber(state.favorEarned));
 
       var edCost = edictCost(state.edictLevel);
       var ePct = Math.round(25 * state.edictLevel);
-      if (els.edictEffect) els.edictEffect.textContent = "+" + ePct + "% production";
-      if (els.edictCost) els.edictCost.textContent = F.formatNumber(edCost) + " Favor";
+      setText(els.edictEffect, "+" + ePct + "% production");
+      setText(els.edictCost, F.formatNumber(edCost) + " Favor");
       if (els.edictBuy) {
         els.edictBuy.disabled = state.favor < edCost;
       }
@@ -8737,42 +8909,42 @@
       var mCost = memoryCost(state.memoryLevel);
       var memN = state.memoryLevel;
       if (els.memoryEffect) {
-        els.memoryEffect.textContent =
+        setText(els.memoryEffect,
           "+" +
           F.formatNumber(memN) +
-          (memN === 1 ? " Shade at tribute" : " Shades at tribute");
+          (memN === 1 ? " Shade at tribute" : " Shades at tribute"));
       }
-      if (els.memoryCost) els.memoryCost.textContent = F.formatNumber(mCost) + " Favor";
+      setText(els.memoryCost, F.formatNumber(mCost) + " Favor");
       if (els.memoryBuy) {
         els.memoryBuy.disabled = state.favor < mCost;
       }
 
       if (state.echoLevel >= 1) {
-        if (els.echoEffect) els.echoEffect.textContent = "The Well Draws at tribute";
-        if (els.echoCost) els.echoCost.textContent = "\u2014";
+        setText(els.echoEffect, "The Well Draws at tribute");
+        setText(els.echoCost, "\u2014");
         if (els.echoBuy) {
           els.echoBuy.disabled = true;
-          els.echoBuy.textContent = "The well remembers.";
+          setText(els.echoBuy, "The well remembers.");
         }
       } else {
         var xCost = echoCost(state.echoLevel);
-        if (els.echoEffect) els.echoEffect.textContent = "The Well Draws at tribute";
-        if (els.echoCost) els.echoCost.textContent = F.formatNumber(xCost) + " Favor";
+        setText(els.echoEffect, "The Well Draws at tribute");
+        setText(els.echoCost, F.formatNumber(xCost) + " Favor");
         if (els.echoBuy) {
           els.echoBuy.disabled = !isFinite(xCost) || state.favor < xCost;
-          els.echoBuy.textContent = "Speak the Echo";
+          setText(els.echoBuy, "Speak the Echo");
         }
       }
 
       var stCost = seatCost(state.seatLevel);
       var seatN = state.seatLevel;
       if (els.seatEffect) {
-        els.seatEffect.textContent =
+        setText(els.seatEffect,
           "+" +
           F.formatNumber(seatN) +
-          (seatN === 1 ? " Throne at tribute" : " Thrones at tribute");
+          (seatN === 1 ? " Throne at tribute" : " Thrones at tribute"));
       }
-      if (els.seatCost) els.seatCost.textContent = F.formatNumber(stCost) + " Favor";
+      setText(els.seatCost, F.formatNumber(stCost) + " Favor");
       if (els.seatBuy) {
         els.seatBuy.disabled = state.favor < stCost;
       }
@@ -8780,12 +8952,12 @@
       var kCost = kindleCost(state.kindleLevel);
       var kindleN = state.kindleLevel;
       if (els.kindleEffect) {
-        els.kindleEffect.textContent =
+        setText(els.kindleEffect,
           "+" +
           F.formatNumber(kindleN) +
-          (kindleN === 1 ? " Lantern at tribute" : " Lanterns at tribute");
+          (kindleN === 1 ? " Lantern at tribute" : " Lanterns at tribute"));
       }
-      if (els.kindleCost) els.kindleCost.textContent = F.formatNumber(kCost) + " Favor";
+      setText(els.kindleCost, F.formatNumber(kCost) + " Favor");
       if (els.kindleBuy) {
         els.kindleBuy.disabled = state.favor < kCost;
       }
@@ -8793,12 +8965,12 @@
       var aCost = ashenCost(state.ashenLevel);
       var ashenN = 10 * (Number(state.ashenLevel) || 0);
       if (els.ashenEffect) {
-        els.ashenEffect.textContent =
+        setText(els.ashenEffect,
           "+" +
           F.formatNumber(ashenN) +
-          " Ash at tribute";
+          " Ash at tribute");
       }
-      if (els.ashenCost) els.ashenCost.textContent = F.formatNumber(aCost) + " Favor";
+      setText(els.ashenCost, F.formatNumber(aCost) + " Favor");
       if (els.ashenBuy) {
         els.ashenBuy.disabled = state.favor < aCost;
       }
@@ -8806,12 +8978,12 @@
       var dCost = depthCost(state.depthLevel);
       var depthN = Number(state.depthLevel) || 0;
       if (els.depthEffect) {
-        els.depthEffect.textContent =
+        setText(els.depthEffect,
           "+" +
           F.formatNumber(depthN) +
-          " Well Depth at tribute";
+          " Well Depth at tribute");
       }
-      if (els.depthCost) els.depthCost.textContent = F.formatNumber(dCost) + " Favor";
+      setText(els.depthCost, F.formatNumber(dCost) + " Favor");
       if (els.depthBuy) {
         els.depthBuy.disabled = state.favor < dCost;
       }
@@ -8819,12 +8991,12 @@
       var ceCost = choirEdictCost(state.choirEdictLevel);
       var choirEdictN = Math.min(CHOIR_MAX, Math.max(0, Math.floor(Number(state.choirEdictLevel) || 0)));
       if (els.choirEdictEffect) {
-        els.choirEdictEffect.textContent =
+        setText(els.choirEdictEffect,
           "+" +
           F.formatNumber(choirEdictN) +
-          (choirEdictN === 1 ? " Choir at tribute" : " Choir at tribute");
+          (choirEdictN === 1 ? " Choir at tribute" : " Choir at tribute"));
       }
-      if (els.choirEdictCost) els.choirEdictCost.textContent = F.formatNumber(ceCost) + " Favor";
+      setText(els.choirEdictCost, F.formatNumber(ceCost) + " Favor");
       if (els.choirEdictBuy) {
         els.choirEdictBuy.disabled = !isFinite(ceCost) || state.favor < ceCost;
       }
@@ -8833,18 +9005,18 @@
       var hymnEdictN = Math.max(0, Math.floor(Number(state.hymnEdictLevel) || 0));
       var hymnDur = hymnSecs(hymnEdictN);
       if (els.hymnEdictEffect) {
-        els.hymnEdictEffect.textContent = "Hymn " + hymnDur + "s at tribute";
+        setText(els.hymnEdictEffect, "Hymn " + hymnDur + "s at tribute");
       }
-      if (els.hymnEdictCost) els.hymnEdictCost.textContent = F.formatNumber(heCost) + " Favor";
+      setText(els.hymnEdictCost, F.formatNumber(heCost) + " Favor");
       if (els.hymnEdictBuy) {
         els.hymnEdictBuy.disabled = !isFinite(heCost) || state.favor < heCost;
       }
 
       var smCost = smokeEdictCost(state.smokeEdictLevel);
       if (els.smokeEffect) {
-        els.smokeEffect.textContent = "Autobind Censers at tribute";
+        setText(els.smokeEffect, "Autobind Censers at tribute");
       }
-      if (els.smokeCost) els.smokeCost.textContent = F.formatNumber(smCost) + " Favor";
+      setText(els.smokeCost, F.formatNumber(smCost) + " Favor");
       if (els.smokeBuy) {
         els.smokeBuy.disabled = !isFinite(smCost) || state.favor < smCost;
       }
@@ -8852,12 +9024,12 @@
       var emCost = embersEdictCost(state.embersEdictLevel);
       var embersN = embersStartsPyres(state.embersEdictLevel);
       if (els.embersEffect) {
-        els.embersEffect.textContent =
+        setText(els.embersEffect,
           "+" +
           F.formatNumber(embersN) +
-          (embersN === 1 ? " Pyre at tribute" : " Pyres at tribute");
+          (embersN === 1 ? " Pyre at tribute" : " Pyres at tribute"));
       }
-      if (els.embersCost) els.embersCost.textContent = F.formatNumber(emCost) + " Favor";
+      setText(els.embersCost, F.formatNumber(emCost) + " Favor");
       if (els.embersBuy) {
         els.embersBuy.disabled = !isFinite(emCost) || state.favor < emCost;
       }
@@ -8865,12 +9037,12 @@
       var urnECost = urnEdictCost(state.urnEdictLevel);
       var urnsN = urnEdictStartsUrns(state.urnEdictLevel);
       if (els.urnEdictEffect) {
-        els.urnEdictEffect.textContent =
+        setText(els.urnEdictEffect,
           "+" +
           F.formatNumber(urnsN) +
-          (urnsN === 1 ? " Urn at tribute" : " Urns at tribute");
+          (urnsN === 1 ? " Urn at tribute" : " Urns at tribute"));
       }
-      if (els.urnEdictCost) els.urnEdictCost.textContent = F.formatNumber(urnECost) + " Favor";
+      setText(els.urnEdictCost, F.formatNumber(urnECost) + " Favor");
       if (els.urnEdictBuy) {
         els.urnEdictBuy.disabled = !isFinite(urnECost) || state.favor < urnECost;
       }
@@ -8878,12 +9050,12 @@
       var hearthECost = hearthEdictCost(state.hearthEdictLevel);
       var hearthsN = hearthEdictStartsHearths(state.hearthEdictLevel);
       if (els.hearthEdictEffect) {
-        els.hearthEdictEffect.textContent =
+        setText(els.hearthEdictEffect,
           "+" +
           F.formatNumber(hearthsN) +
-          (hearthsN === 1 ? " Hearth at tribute" : " Hearths at tribute");
+          (hearthsN === 1 ? " Hearth at tribute" : " Hearths at tribute"));
       }
-      if (els.hearthEdictCost) els.hearthEdictCost.textContent = F.formatNumber(hearthECost) + " Favor";
+      setText(els.hearthEdictCost, F.formatNumber(hearthECost) + " Favor");
       if (els.hearthEdictBuy) {
         els.hearthEdictBuy.disabled = !isFinite(hearthECost) || state.favor < hearthECost;
       }
@@ -8891,12 +9063,12 @@
       var beaconECost = beaconEdictCost(state.beaconEdictLevel);
       var beaconsN = beaconEdictStartsBeacons(state.beaconEdictLevel);
       if (els.beaconEdictEffect) {
-        els.beaconEdictEffect.textContent =
+        setText(els.beaconEdictEffect,
           "+" +
           F.formatNumber(beaconsN) +
-          (beaconsN === 1 ? " Beacon at tribute" : " Beacons at tribute");
+          (beaconsN === 1 ? " Beacon at tribute" : " Beacons at tribute"));
       }
-      if (els.beaconEdictCost) els.beaconEdictCost.textContent = F.formatNumber(beaconECost) + " Favor";
+      setText(els.beaconEdictCost, F.formatNumber(beaconECost) + " Favor");
       if (els.beaconEdictBuy) {
         els.beaconEdictBuy.disabled = !isFinite(beaconECost) || state.favor < beaconECost;
       }
@@ -8904,12 +9076,12 @@
       var spireECost = spireEdictCost(state.spireEdictLevel);
       var spiresN = spireEdictStartsSpires(state.spireEdictLevel);
       if (els.spireEdictEffect) {
-        els.spireEdictEffect.textContent =
+        setText(els.spireEdictEffect,
           "+" +
           F.formatNumber(spiresN) +
-          (spiresN === 1 ? " Spire at tribute" : " Spires at tribute");
+          (spiresN === 1 ? " Spire at tribute" : " Spires at tribute"));
       }
-      if (els.spireEdictCost) els.spireEdictCost.textContent = F.formatNumber(spireECost) + " Favor";
+      setText(els.spireEdictCost, F.formatNumber(spireECost) + " Favor");
       if (els.spireEdictBuy) {
         els.spireEdictBuy.disabled = !isFinite(spireECost) || state.favor < spireECost;
       }
@@ -8917,57 +9089,57 @@
       var obeliskECost = obeliskEdictCost(state.obeliskEdictLevel);
       var obelisksN = obeliskEdictStartsObelisks(state.obeliskEdictLevel);
       if (els.obeliskEdictEffect) {
-        els.obeliskEdictEffect.textContent =
+        setText(els.obeliskEdictEffect,
           "+" +
           F.formatNumber(obelisksN) +
-          (obelisksN === 1 ? " Obelisk at tribute" : " Obelisks at tribute");
+          (obelisksN === 1 ? " Obelisk at tribute" : " Obelisks at tribute"));
       }
-      if (els.obeliskEdictCost) els.obeliskEdictCost.textContent = F.formatNumber(obeliskECost) + " Favor";
+      setText(els.obeliskEdictCost, F.formatNumber(obeliskECost) + " Favor");
       if (els.obeliskEdictBuy) {
         els.obeliskEdictBuy.disabled = !isFinite(obeliskECost) || state.favor < obeliskECost;
       }
 
       var cinECost = cinderEdictCost(state.cinderEdictLevel);
       if (els.cinderEdictEffect) {
-        els.cinderEdictEffect.textContent = "Autobind Pyres at tribute";
+        setText(els.cinderEdictEffect, "Autobind Pyres at tribute");
       }
-      if (els.cinderEdictCost) els.cinderEdictCost.textContent = F.formatNumber(cinECost) + " Favor";
+      setText(els.cinderEdictCost, F.formatNumber(cinECost) + " Favor");
       if (els.cinderEdictBuy) {
         els.cinderEdictBuy.disabled = !isFinite(cinECost) || state.favor < cinECost;
       }
 
       var cutECost = cutEdictCost(state.cutEdictLevel);
       if (els.cutEdictEffect) {
-        els.cutEdictEffect.textContent = "Autobind Urns at tribute";
+        setText(els.cutEdictEffect, "Autobind Urns at tribute");
       }
-      if (els.cutEdictCost) els.cutEdictCost.textContent = F.formatNumber(cutECost) + " Favor";
+      setText(els.cutEdictCost, F.formatNumber(cutECost) + " Favor");
       if (els.cutEdictBuy) {
         els.cutEdictBuy.disabled = !isFinite(cutECost) || state.favor < cutECost;
       }
 
       var tendingECost = tendingEdictCost(state.tendingEdictLevel);
       if (els.tendingEdictEffect) {
-        els.tendingEdictEffect.textContent = "Autobind Hearths at tribute";
+        setText(els.tendingEdictEffect, "Autobind Hearths at tribute");
       }
-      if (els.tendingEdictCost) els.tendingEdictCost.textContent = F.formatNumber(tendingECost) + " Favor";
+      setText(els.tendingEdictCost, F.formatNumber(tendingECost) + " Favor");
       if (els.tendingEdictBuy) {
         els.tendingEdictBuy.disabled = !isFinite(tendingECost) || state.favor < tendingECost;
       }
 
       var gleamECost = gleamEdictCost(state.gleamEdictLevel);
       if (els.gleamEdictEffect) {
-        els.gleamEdictEffect.textContent = "Autobind Beacons at tribute";
+        setText(els.gleamEdictEffect, "Autobind Beacons at tribute");
       }
-      if (els.gleamEdictCost) els.gleamEdictCost.textContent = F.formatNumber(gleamECost) + " Favor";
+      setText(els.gleamEdictCost, F.formatNumber(gleamECost) + " Favor");
       if (els.gleamEdictBuy) {
         els.gleamEdictBuy.disabled = !isFinite(gleamECost) || state.favor < gleamECost;
       }
 
       var riseECost = riseEdictCost(state.riseEdictLevel);
       if (els.riseEdictEffect) {
-        els.riseEdictEffect.textContent = "Autobind Spires at tribute";
+        setText(els.riseEdictEffect, "Autobind Spires at tribute");
       }
-      if (els.riseEdictCost) els.riseEdictCost.textContent = F.formatNumber(riseECost) + " Favor";
+      setText(els.riseEdictCost, F.formatNumber(riseECost) + " Favor");
       if (els.riseEdictBuy) {
         els.riseEdictBuy.disabled = !isFinite(riseECost) || state.favor < riseECost;
       }
@@ -8975,21 +9147,21 @@
       var cupECost = cupEdictCost(state.cupEdictLevel);
       var cupN = cupStartsChalices(state.cupEdictLevel);
       if (els.cupEffect) {
-        els.cupEffect.textContent =
+        setText(els.cupEffect,
           "+" +
           F.formatNumber(cupN) +
-          (cupN === 1 ? " Chalice at tribute" : " Chalices at tribute");
+          (cupN === 1 ? " Chalice at tribute" : " Chalices at tribute"));
       }
-      if (els.cupCost) els.cupCost.textContent = F.formatNumber(cupECost) + " Favor";
+      setText(els.cupCost, F.formatNumber(cupECost) + " Favor");
       if (els.cupBuy) {
         els.cupBuy.disabled = !isFinite(cupECost) || state.favor < cupECost;
       }
 
       var drECost = draughtEdictCost(state.draughtEdictLevel);
       if (els.draughtEdictEffect) {
-        els.draughtEdictEffect.textContent = "Autobind Chalices at tribute";
+        setText(els.draughtEdictEffect, "Autobind Chalices at tribute");
       }
-      if (els.draughtEdictCost) els.draughtEdictCost.textContent = F.formatNumber(drECost) + " Favor";
+      setText(els.draughtEdictCost, F.formatNumber(drECost) + " Favor");
       if (els.draughtEdictBuy) {
         els.draughtEdictBuy.disabled = !isFinite(drECost) || state.favor < drECost;
       }
@@ -8998,9 +9170,9 @@
       var wakeEdictN = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
       var wakeDur = wakeEdictStartsWake(wakeEdictN) ? wakeSecs(wakeEdictN) : 0;
       if (els.wakeEdictEffect) {
-        els.wakeEdictEffect.textContent = "Wake " + wakeDur + "s at tribute";
+        setText(els.wakeEdictEffect, "Wake " + wakeDur + "s at tribute");
       }
-      if (els.wakeEdictCost) els.wakeEdictCost.textContent = F.formatNumber(weCost) + " Favor";
+      setText(els.wakeEdictCost, F.formatNumber(weCost) + " Favor");
       if (els.wakeEdictBuy) {
         els.wakeEdictBuy.disabled = !isFinite(weCost) || state.favor < weCost;
       }
@@ -9009,9 +9181,9 @@
       var processionEdictN = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
       var processionDur = processionEdictStartsProcession(processionEdictN) ? processionSecs(processionEdictN) : 0;
       if (els.processionEdictEffect) {
-        els.processionEdictEffect.textContent = "Procession " + processionDur + "s at tribute";
+        setText(els.processionEdictEffect, "Procession " + processionDur + "s at tribute");
       }
-      if (els.processionEdictCost) els.processionEdictCost.textContent = F.formatNumber(peCost) + " Favor";
+      setText(els.processionEdictCost, F.formatNumber(peCost) + " Favor");
       if (els.processionEdictBuy) {
         els.processionEdictBuy.disabled = !isFinite(peCost) || state.favor < peCost;
       }
@@ -9020,9 +9192,9 @@
       var tollEdictN = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
       var tollDur = tollEdictStartsToll(tollEdictN) ? tollSecs(tollEdictN) : 0;
       if (els.tollEdictEffect) {
-        els.tollEdictEffect.textContent = "Toll " + tollDur + "s at tribute";
+        setText(els.tollEdictEffect, "Toll " + tollDur + "s at tribute");
       }
-      if (els.tollEdictCost) els.tollEdictCost.textContent = F.formatNumber(teCost) + " Favor";
+      setText(els.tollEdictCost, F.formatNumber(teCost) + " Favor");
       if (els.tollEdictBuy) {
         els.tollEdictBuy.disabled = !isFinite(teCost) || state.favor < teCost;
       }
@@ -9031,9 +9203,9 @@
       var veilEdictN = Math.max(0, Math.floor(Number(state.veilEdictLevel) || 0));
       var veilDur = veilEdictStartsVeil(veilEdictN) ? veilSecs(veilEdictN) : 0;
       if (els.veilEdictEffect) {
-        els.veilEdictEffect.textContent = "Veil " + veilDur + "s at tribute";
+        setText(els.veilEdictEffect, "Veil " + veilDur + "s at tribute");
       }
-      if (els.veilEdictCost) els.veilEdictCost.textContent = F.formatNumber(veCost) + " Favor";
+      setText(els.veilEdictCost, F.formatNumber(veCost) + " Favor");
       if (els.veilEdictBuy) {
         els.veilEdictBuy.disabled = !isFinite(veCost) || state.favor < veCost;
       }
@@ -9042,9 +9214,9 @@
       var knellEdictN = Math.max(0, Math.floor(Number(state.knellEdictLevel) || 0));
       var knellDur = knellEdictStartsKnell(knellEdictN) ? knellSecs(knellEdictN) : 0;
       if (els.knellEdictEffect) {
-        els.knellEdictEffect.textContent = "Knell " + knellDur + "s at tribute";
+        setText(els.knellEdictEffect, "Knell " + knellDur + "s at tribute");
       }
-      if (els.knellEdictCost) els.knellEdictCost.textContent = F.formatNumber(keCost) + " Favor";
+      setText(els.knellEdictCost, F.formatNumber(keCost) + " Favor");
       if (els.knellEdictBuy) {
         els.knellEdictBuy.disabled = !isFinite(keCost) || state.favor < keCost;
       }
@@ -9053,9 +9225,9 @@
       var nightEdictN = Math.max(0, Math.floor(Number(state.nightEdictLevel) || 0));
       var nightDur = nightEdictStartsNight(nightEdictN) ? nightEdictSecs(nightEdictN) : 0;
       if (els.nightEdictEffect) {
-        els.nightEdictEffect.textContent = "Night " + nightDur + "s at tribute";
+        setText(els.nightEdictEffect, "Night " + nightDur + "s at tribute");
       }
-      if (els.nightEdictCost) els.nightEdictCost.textContent = F.formatNumber(neCost) + " Favor";
+      setText(els.nightEdictCost, F.formatNumber(neCost) + " Favor");
       if (els.nightEdictBuy) {
         els.nightEdictBuy.disabled = !isFinite(neCost) || state.favor < neCost;
       }
@@ -9066,12 +9238,12 @@
       els.crownPanel.classList.toggle("is-hidden", !crownOpen);
     }
     if (crownOpen) {
-      if (els.crownFavor) els.crownFavor.textContent = F.formatNumber(state.favor);
+      setText(els.crownFavor, F.formatNumber(state.favor));
 
       var cwCost = crownCost(state.crownWeight);
       var cwPct = Math.round(10 * (Number(state.crownWeight) || 0));
-      if (els.crownWeightEffect) els.crownWeightEffect.textContent = "+" + cwPct + "% production";
-      if (els.crownWeightCost) els.crownWeightCost.textContent = F.formatNumber(cwCost) + " Favor";
+      setText(els.crownWeightEffect, "+" + cwPct + "% production");
+      setText(els.crownWeightCost, F.formatNumber(cwCost) + " Favor");
       if (els.crownWeightBuy) {
         els.crownWeightBuy.disabled = state.favor < cwCost;
       }
@@ -9079,12 +9251,12 @@
       var lmCost = longMemCost(state.longMemoryLevel);
       var lmN = Number(state.longMemoryLevel) || 0;
       if (els.crownMemoryEffect) {
-        els.crownMemoryEffect.textContent =
+        setText(els.crownMemoryEffect,
           "+" +
           F.formatNumber(lmN) +
-          (lmN === 1 ? " Fetter at tribute" : " Fetters at tribute");
+          (lmN === 1 ? " Fetter at tribute" : " Fetters at tribute"));
       }
-      if (els.crownMemoryCost) els.crownMemoryCost.textContent = F.formatNumber(lmCost) + " Favor";
+      setText(els.crownMemoryCost, F.formatNumber(lmCost) + " Favor");
       if (els.crownMemoryBuy) {
         els.crownMemoryBuy.disabled = state.favor < lmCost;
       }
@@ -9092,12 +9264,12 @@
       var qcCost = quietCourtCost(state.quietCourtLevel);
       var qcN = Number(state.quietCourtLevel) || 0;
       if (els.crownCourtEffect) {
-        els.crownCourtEffect.textContent =
+        setText(els.crownCourtEffect,
           quietCourtStartsUrnAutobind(qcN)
             ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute"
-            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute";
+            : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute");
       }
-      if (els.crownCourtCost) els.crownCourtCost.textContent = F.formatNumber(qcCost) + " Favor";
+      setText(els.crownCourtCost, F.formatNumber(qcCost) + " Favor");
       if (els.crownCourtBuy) {
         els.crownCourtBuy.disabled = state.favor < qcCost;
       }
@@ -9111,7 +9283,7 @@
         }
       }
       if (els.crownRemembranceCount) {
-        els.crownRemembranceCount.textContent = F.formatNumber(Number(state.remembrance) || 0);
+        setText(els.crownRemembranceCount, F.formatNumber(Number(state.remembrance) || 0));
       }
       if (els.remembranceLayRow) els.remembranceLayRow.classList.toggle("is-hidden", !remOpen);
       if (els.deeperNightRow) els.deeperNightRow.classList.toggle("is-hidden", !remOpen);
@@ -9128,7 +9300,7 @@
       if (els.longerKnellRow) els.longerKnellRow.classList.toggle("is-hidden", !remOpen);
       if (remOpen) {
         var rCost = remembranceFavorCost();
-        if (els.remembranceLayCost) els.remembranceLayCost.textContent = F.formatNumber(rCost) + " Favor";
+        setText(els.remembranceLayCost, F.formatNumber(rCost) + " Favor");
         if (els.remembranceLayBuy) {
           els.remembranceLayBuy.disabled = state.favor < rCost;
         }
@@ -9136,9 +9308,9 @@
         var dnCost = deeperNightCost(state.deeperNightLevel);
         var dnSecs = nightSecs(state.deeperNightLevel);
         if (els.deeperNightEffect) {
-          els.deeperNightEffect.textContent = "Night's Tithe " + dnSecs + "s";
+          setText(els.deeperNightEffect, "Night's Tithe " + dnSecs + "s");
         }
-        if (els.deeperNightCost) els.deeperNightCost.textContent = F.formatNumber(dnCost) + " Remembrance";
+        setText(els.deeperNightCost, F.formatNumber(dnCost) + " Remembrance");
         if (els.deeperNightBuy) {
           els.deeperNightBuy.disabled = !isFinite(dnCost) || (Number(state.remembrance) || 0) < dnCost;
         }
@@ -9150,19 +9322,19 @@
           Math.abs(atPct - Math.round(atPct)) < 0.05 ? String(Math.round(atPct)) : atPct.toFixed(1);
         var atCost = ashenTideCost(atLevel);
         if (els.ashenTideEffect) {
-          els.ashenTideEffect.textContent = "Ash from shades " + atPctStr + "%";
+          setText(els.ashenTideEffect, "Ash from shades " + atPctStr + "%");
         }
         if (atLevel >= ASHEN_TIDE_MAX) {
-          if (els.ashenTideCost) els.ashenTideCost.textContent = "\u2014";
+          setText(els.ashenTideCost, "\u2014");
           if (els.ashenTideBuy) {
             els.ashenTideBuy.disabled = true;
-            els.ashenTideBuy.textContent = "The tide is full.";
+            setText(els.ashenTideBuy, "The tide is full.");
           }
         } else {
-          if (els.ashenTideCost) els.ashenTideCost.textContent = F.formatNumber(atCost) + " Remembrance";
+          setText(els.ashenTideCost, F.formatNumber(atCost) + " Remembrance");
           if (els.ashenTideBuy) {
             els.ashenTideBuy.disabled = !isFinite(atCost) || (Number(state.remembrance) || 0) < atCost;
-            els.ashenTideBuy.textContent = "Raise the Tide";
+            setText(els.ashenTideBuy, "Raise the Tide");
           }
         }
 
@@ -9170,19 +9342,19 @@
         var ossPct = Math.round(5 * ossLevel);
         var ossCost = ossuaryCost(ossLevel);
         if (els.ossuaryEffect) {
-          els.ossuaryEffect.textContent = "+" + ossPct + "% production";
+          setText(els.ossuaryEffect, "+" + ossPct + "% production");
         }
         if (ossLevel >= OSSUARY_MAX) {
-          if (els.ossuaryCost) els.ossuaryCost.textContent = "\u2014";
+          setText(els.ossuaryCost, "\u2014");
           if (els.ossuaryBuy) {
             els.ossuaryBuy.disabled = true;
-            els.ossuaryBuy.textContent = "The ossuary is full.";
+            setText(els.ossuaryBuy, "The ossuary is full.");
           }
         } else {
-          if (els.ossuaryCost) els.ossuaryCost.textContent = F.formatNumber(ossCost) + " Remembrance";
+          setText(els.ossuaryCost, F.formatNumber(ossCost) + " Remembrance");
           if (els.ossuaryBuy) {
             els.ossuaryBuy.disabled = !isFinite(ossCost) || (Number(state.remembrance) || 0) < ossCost;
-            els.ossuaryBuy.textContent = "Lay the Bone";
+            setText(els.ossuaryBuy, "Lay the Bone");
           }
         }
 
@@ -9191,18 +9363,18 @@
         var paidSecs = paidProcessionSecs(state.longerProcessionLevel);
         if (els.processionRow) els.processionRow.classList.toggle("is-burning", pOn);
         if (els.processionEffect) {
-          els.processionEffect.textContent = pOn ? "\u00d71.2 production" : "\u00d71.2 production \u00b7 " + paidSecs + "s";
+          setText(els.processionEffect, pOn ? "\u00d71.2 production" : "\u00d71.2 production \u00b7 " + paidSecs + "s");
         }
         if (els.processionCost) {
-          els.processionCost.textContent = F.formatNumber(PROCESSION_COST) + " Remembrance";
+          setText(els.processionCost, F.formatNumber(PROCESSION_COST) + " Remembrance");
         }
         if (els.processionBuy) {
           if (pOn) {
             els.processionBuy.disabled = true;
-            els.processionBuy.textContent = "They walk \u2014 " + Math.ceil(pLeft) + "s";
+            setText(els.processionBuy, "They walk \u2014 " + Math.ceil(pLeft) + "s");
           } else {
             els.processionBuy.disabled = (Number(state.remembrance) || 0) < PROCESSION_COST;
-            els.processionBuy.textContent = "Begin the Procession";
+            setText(els.processionBuy, "Begin the Procession");
           }
         }
 
@@ -9210,18 +9382,18 @@
         var kOn = knellActive();
         if (els.knellRow) els.knellRow.classList.toggle("is-burning", kOn);
         if (els.knellEffect) {
-          els.knellEffect.textContent = kOn ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidKnellSecs(state.longerKnellLevel) + "s";
+          setText(els.knellEffect, kOn ? "Burst \u00d72" : "Burst \u00d72 \u00b7 " + paidKnellSecs(state.longerKnellLevel) + "s");
         }
         if (els.knellCost) {
-          els.knellCost.textContent = F.formatNumber(KNELL_COST) + " Remembrance";
+          setText(els.knellCost, F.formatNumber(KNELL_COST) + " Remembrance");
         }
         if (els.knellBuy) {
           if (kOn) {
             els.knellBuy.disabled = true;
-            els.knellBuy.textContent = "The knell sounds \u2014 " + Math.ceil(kLeft) + "s";
+            setText(els.knellBuy, "The knell sounds \u2014 " + Math.ceil(kLeft) + "s");
           } else {
             els.knellBuy.disabled = (Number(state.remembrance) || 0) < KNELL_COST;
-            els.knellBuy.textContent = "Sound the Knell";
+            setText(els.knellBuy, "Sound the Knell");
           }
         }
 
@@ -9229,19 +9401,19 @@
         var lpCost = longerProcessionCost(lpLevel);
         var lpSecs = paidProcessionSecs(lpLevel);
         if (els.longerProcessionEffect) {
-          els.longerProcessionEffect.textContent = "Procession " + lpSecs + "s";
+          setText(els.longerProcessionEffect, "Procession " + lpSecs + "s");
         }
         if (lpLevel >= LONGER_PROCESSION_MAX) {
-          if (els.longerProcessionCost) els.longerProcessionCost.textContent = "\u2014";
+          setText(els.longerProcessionCost, "\u2014");
           if (els.longerProcessionBuy) {
             els.longerProcessionBuy.disabled = true;
-            els.longerProcessionBuy.textContent = "The hall is longest.";
+            setText(els.longerProcessionBuy, "The hall is longest.");
           }
         } else {
-          if (els.longerProcessionCost) els.longerProcessionCost.textContent = F.formatNumber(lpCost) + " Remembrance";
+          setText(els.longerProcessionCost, F.formatNumber(lpCost) + " Remembrance");
           if (els.longerProcessionBuy) {
             els.longerProcessionBuy.disabled = !isFinite(lpCost) || (Number(state.remembrance) || 0) < lpCost;
-            els.longerProcessionBuy.textContent = "Lengthen the Walk";
+            setText(els.longerProcessionBuy, "Lengthen the Walk");
           }
         }
 
@@ -9249,19 +9421,19 @@
         var dtCost = deeperTollCost(dtLevel);
         var dtSecs = paidTollSecs(dtLevel);
         if (els.deeperTollEffect) {
-          els.deeperTollEffect.textContent = "Toll " + dtSecs + "s";
+          setText(els.deeperTollEffect, "Toll " + dtSecs + "s");
         }
         if (dtLevel >= DEEPER_TOLL_MAX) {
-          if (els.deeperTollCost) els.deeperTollCost.textContent = "\u2014";
+          setText(els.deeperTollCost, "\u2014");
           if (els.deeperTollBuy) {
             els.deeperTollBuy.disabled = true;
-            els.deeperTollBuy.textContent = "The answer lingers longest.";
+            setText(els.deeperTollBuy, "The answer lingers longest.");
           }
         } else {
-          if (els.deeperTollCost) els.deeperTollCost.textContent = F.formatNumber(dtCost) + " Remembrance";
+          setText(els.deeperTollCost, F.formatNumber(dtCost) + " Remembrance");
           if (els.deeperTollBuy) {
             els.deeperTollBuy.disabled = !isFinite(dtCost) || (Number(state.remembrance) || 0) < dtCost;
-            els.deeperTollBuy.textContent = "Lengthen the Toll";
+            setText(els.deeperTollBuy, "Lengthen the Toll");
           }
         }
 
@@ -9269,19 +9441,19 @@
         var lwCost = longerWakeCost(lwLevel);
         var lwSecs = paidWakeSecs(lwLevel);
         if (els.longerWakeEffect) {
-          els.longerWakeEffect.textContent = "Wake " + lwSecs + "s";
+          setText(els.longerWakeEffect, "Wake " + lwSecs + "s");
         }
         if (lwLevel >= LONGER_WAKE_MAX) {
-          if (els.longerWakeCost) els.longerWakeCost.textContent = "\u2014";
+          setText(els.longerWakeCost, "\u2014");
           if (els.longerWakeBuy) {
             els.longerWakeBuy.disabled = true;
-            els.longerWakeBuy.textContent = "The fire lingers longest.";
+            setText(els.longerWakeBuy, "The fire lingers longest.");
           }
         } else {
-          if (els.longerWakeCost) els.longerWakeCost.textContent = F.formatNumber(lwCost) + " Remembrance";
+          setText(els.longerWakeCost, F.formatNumber(lwCost) + " Remembrance");
           if (els.longerWakeBuy) {
             els.longerWakeBuy.disabled = !isFinite(lwCost) || (Number(state.remembrance) || 0) < lwCost;
-            els.longerWakeBuy.textContent = "Lengthen the Wake";
+            setText(els.longerWakeBuy, "Lengthen the Wake");
           }
         }
 
@@ -9289,19 +9461,19 @@
         var ltCost = longerTitheCost(ltLevel);
         var ltSecs = paidTitheSecs(ltLevel);
         if (els.longerTitheEffect) {
-          els.longerTitheEffect.textContent = "Tithe " + ltSecs + "s";
+          setText(els.longerTitheEffect, "Tithe " + ltSecs + "s");
         }
         if (ltLevel >= LONGER_TITHE_MAX) {
-          if (els.longerTitheCost) els.longerTitheCost.textContent = "\u2014";
+          setText(els.longerTitheCost, "\u2014");
           if (els.longerTitheBuy) {
             els.longerTitheBuy.disabled = true;
-            els.longerTitheBuy.textContent = "The cut lingers longest.";
+            setText(els.longerTitheBuy, "The cut lingers longest.");
           }
         } else {
-          if (els.longerTitheCost) els.longerTitheCost.textContent = F.formatNumber(ltCost) + " Remembrance";
+          setText(els.longerTitheCost, F.formatNumber(ltCost) + " Remembrance");
           if (els.longerTitheBuy) {
             els.longerTitheBuy.disabled = !isFinite(ltCost) || (Number(state.remembrance) || 0) < ltCost;
-            els.longerTitheBuy.textContent = "Lengthen the Tithe";
+            setText(els.longerTitheBuy, "Lengthen the Tithe");
           }
         }
 
@@ -9309,19 +9481,19 @@
         var lvCost = longerVeilCost(lvLevel);
         var lvSecs = paidVeilSecs(lvLevel);
         if (els.longerVeilEffect) {
-          els.longerVeilEffect.textContent = "Veil " + lvSecs + "s";
+          setText(els.longerVeilEffect, "Veil " + lvSecs + "s");
         }
         if (lvLevel >= LONGER_VEIL_MAX) {
-          if (els.longerVeilCost) els.longerVeilCost.textContent = "\u2014";
+          setText(els.longerVeilCost, "\u2014");
           if (els.longerVeilBuy) {
             els.longerVeilBuy.disabled = true;
-            els.longerVeilBuy.textContent = "The mouth stays nearest.";
+            setText(els.longerVeilBuy, "The mouth stays nearest.");
           }
         } else {
-          if (els.longerVeilCost) els.longerVeilCost.textContent = F.formatNumber(lvCost) + " Remembrance";
+          setText(els.longerVeilCost, F.formatNumber(lvCost) + " Remembrance");
           if (els.longerVeilBuy) {
             els.longerVeilBuy.disabled = !isFinite(lvCost) || (Number(state.remembrance) || 0) < lvCost;
-            els.longerVeilBuy.textContent = "Lengthen the Veil";
+            setText(els.longerVeilBuy, "Lengthen the Veil");
           }
         }
 
@@ -9329,19 +9501,19 @@
         var lhCost = longerHymnCost(lhLevel);
         var lhBonus = hymnBonusSecs(lhLevel);
         if (els.longerHymnEffect) {
-          els.longerHymnEffect.textContent = "Hymn +" + lhBonus + "s";
+          setText(els.longerHymnEffect, "Hymn +" + lhBonus + "s");
         }
         if (lhLevel >= LONGER_HYMN_MAX) {
-          if (els.longerHymnCost) els.longerHymnCost.textContent = "\u2014";
+          setText(els.longerHymnCost, "\u2014");
           if (els.longerHymnBuy) {
             els.longerHymnBuy.disabled = true;
-            els.longerHymnBuy.textContent = "The song lingers longest.";
+            setText(els.longerHymnBuy, "The song lingers longest.");
           }
         } else {
-          if (els.longerHymnCost) els.longerHymnCost.textContent = F.formatNumber(lhCost) + " Remembrance";
+          setText(els.longerHymnCost, F.formatNumber(lhCost) + " Remembrance");
           if (els.longerHymnBuy) {
             els.longerHymnBuy.disabled = !isFinite(lhCost) || (Number(state.remembrance) || 0) < lhCost;
-            els.longerHymnBuy.textContent = "Lengthen the Hymn";
+            setText(els.longerHymnBuy, "Lengthen the Hymn");
           }
         }
 
@@ -9349,19 +9521,19 @@
         var lkCost = longerKnellCost(lkLevel);
         var lkSecs = paidKnellSecs(lkLevel);
         if (els.longerKnellEffect) {
-          els.longerKnellEffect.textContent = "Knell " + lkSecs + "s";
+          setText(els.longerKnellEffect, "Knell " + lkSecs + "s");
         }
         if (lkLevel >= LONGER_KNELL_MAX) {
-          if (els.longerKnellCost) els.longerKnellCost.textContent = "\u2014";
+          setText(els.longerKnellCost, "\u2014");
           if (els.longerKnellBuy) {
             els.longerKnellBuy.disabled = true;
-            els.longerKnellBuy.textContent = "The second answer lingers longest.";
+            setText(els.longerKnellBuy, "The second answer lingers longest.");
           }
         } else {
-          if (els.longerKnellCost) els.longerKnellCost.textContent = F.formatNumber(lkCost) + " Remembrance";
+          setText(els.longerKnellCost, F.formatNumber(lkCost) + " Remembrance");
           if (els.longerKnellBuy) {
             els.longerKnellBuy.disabled = !isFinite(lkCost) || (Number(state.remembrance) || 0) < lkCost;
-            els.longerKnellBuy.textContent = "Lengthen the Knell";
+            setText(els.longerKnellBuy, "Lengthen the Knell");
           }
         }
       }
@@ -9370,7 +9542,7 @@
     renderNames();
 
     if (els.nextGoal) {
-      els.nextGoal.textContent = nextGoal(state);
+      setText(els.nextGoal, nextGoal(state));
     }
     renderChronicle();
     renderStats();
@@ -9399,12 +9571,24 @@
     }
   }
 
+  function hotSoulsUpdate() {
+    if (!els.soulsCount) return;
+    var F = SoulgatherFormat;
+    setText(els.soulsCount, F.formatNumber(state.souls));
+    setText(els.soulsRate, F.formatRate(soulsPerSec()));
+  }
+
   function tick(now) {
     if (!lastFrame) lastFrame = now;
     var dt = (now - lastFrame) / 1000;
     lastFrame = now;
     applyDt(dt, true);
-    render();
+    hotSoulsUpdate();
+    if (_dirty && now - _lastRenderTime >= RENDER_MS) {
+      _dirty = false;
+      _lastRenderTime = now;
+      render();
+    }
     window.requestAnimationFrame(tick);
   }
 
@@ -10335,6 +10519,18 @@
     ossuaryMult: ossuaryMult,
     producerCost: producerCost,
     bulkCost: bulkCost,
+    bulkCostLoop: bulkCostLoop,
+    maxAffordable: maxAffordable,
+    maxAffordableLoop: maxAffordableLoop,
+    wellMaxAffordable: wellMaxAffordable,
+    wellMaxAffordableLoop: wellMaxAffordableLoop,
+    wellBulkCost: wellBulkCost,
+    wellBulkCostLoop: wellBulkCostLoop,
+    setText: setText,
+    setTextWriteCount: function () { return setTextWriteCount; },
+    RENDER_HZ: RENDER_HZ,
+    RENDER_MS: RENDER_MS,
+    BULK_CAP: BULK_CAP,
     edictCost: edictCost,
     memoryCost: memoryCost,
     echoCost: echoCost,

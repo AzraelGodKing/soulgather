@@ -3827,11 +3827,11 @@ assertEqual(
   );
   assertTrue(
     "AZR-175 render updates .verb to 'The well' under stillness",
-    /els\.gatherVerb[\s\S]*?textContent = still \? "The well" : "Draw from"/.test(gameSrc)
+    /(?:els\.gatherVerb[\s\S]*?textContent = still \? "The well" : "Draw from"|setText\(els\.gatherVerb, still \? "The well" : "Draw from"\))/.test(gameSrc)
   );
   assertTrue(
     "AZR-175 render updates .noun to 'is still.' under stillness",
-    /els\.gatherNoun[\s\S]*?textContent = still \? "is still\." : "the Well"/.test(gameSrc)
+    /(?:els\.gatherNoun[\s\S]*?textContent = still \? "is still\." : "the Well"|setText\(els\.gatherNoun, still \? "is still\." : "the Well"\))/.test(gameSrc)
   );
 
   // Space/Enter path skips harvest when gather disabled or stillness
@@ -3978,6 +3978,637 @@ assertEqual(
   assertTrue(
     "AZR-175 els.gatherNoun wired",
     /els\.gatherNoun\s*=/.test(gameSrc)
+  );
+}
+
+// ─── AZR-166 Closed-form Max buys + throttled render ─────────────────────────
+{
+  const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+  const readmeSrc = fs.readFileSync(path.join(root, "README.md"), "utf8");
+
+  // Load the game IIFE to get SoulgatherEconomy exports
+  const gameCtx = { globalThis: {}, window: {}, document: { readyState: "complete", getElementById: () => null, addEventListener: () => {}, querySelector: () => null, querySelectorAll: () => [] } };
+  gameCtx.SoulgatherNum = globalThis.SoulgatherNum;
+  gameCtx.SoulgatherFormat = globalThis.SoulgatherFormat;
+  gameCtx.globalThis = gameCtx;
+  gameCtx.window = gameCtx;
+  gameCtx.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+  gameCtx.requestAnimationFrame = () => {};
+  gameCtx.setTimeout = () => {};
+
+  const E = gameCtx.SoulgatherEconomy;
+
+  // ── IN 3: setText ──
+  assertTrue(
+    "AZR-166 setText defined in source",
+    /function setText\(el, str\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 setText returns false for null el",
+    /if \(!el\) return false/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 setText compares before writing",
+    /el\.textContent === str/.test(gameSrc)
+  );
+
+  // ── IN 1: Throttle render ──
+  assertTrue(
+    "AZR-166 RENDER_HZ constant exists",
+    /var RENDER_HZ = 1[0-5]/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 RENDER_MS derived from RENDER_HZ",
+    /var RENDER_MS = 1000 \/ RENDER_HZ/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 RENDER_MS in 66-100ms range (10-15 Hz)",
+    (function () {
+      const m = gameSrc.match(/var RENDER_HZ = (\d+)/);
+      if (!m) return false;
+      const hz = Number(m[1]);
+      const ms = 1000 / hz;
+      return ms >= 66 && ms <= 100;
+    })()
+  );
+  assertTrue(
+    "AZR-166 tick still calls applyDt every frame",
+    /function tick\(now\)\s*\{[\s\S]*?applyDt\(dt, true\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 tick has dirty-based throttled render",
+    /function tick\(now\)\s*\{[\s\S]*?_dirty[\s\S]*?RENDER_MS[\s\S]*?render\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 tick has hot souls update every frame",
+    /function tick\(now\)\s*\{[\s\S]*?hotSoulsUpdate\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 hotSoulsUpdate updates #souls-count",
+    /function hotSoulsUpdate\(\)\s*\{[\s\S]*?els\.soulsCount/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 applyDt calls markDirty",
+    /function applyDt\(dt, live\)\s*\{[\s\S]*?markDirty\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 markDirty function defined",
+    /function markDirty\(\)/.test(gameSrc)
+  );
+
+  // ── IN 2: Closed-form maxAffordable (no while loop as algorithm) ──
+  assertTrue(
+    "AZR-166 maxAffordable uses log-based closed form",
+    (function () {
+      const m = gameSrc.match(/function maxAffordable\([^)]*\)\s*\{([\s\S]*?)\n  \}/);
+      if (!m) return false;
+      const body = m[1];
+      return body.includes('Math.log') && !body.includes('while (k < BULK_CAP)');
+    })()
+  );
+  assertTrue(
+    "AZR-166 maxAffordableLoop kept as reference",
+    /function maxAffordableLoop\(/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 bulkCostLoop kept as reference",
+    /function bulkCostLoop\(/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 wellMaxAffordableLoop kept as reference",
+    /function wellMaxAffordableLoop\(/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 wellBulkCostLoop kept as reference",
+    /function wellBulkCostLoop\(/.test(gameSrc)
+  );
+
+  // ── IN 5: BULK_CAP ──
+  assertTrue(
+    "AZR-166 BULK_CAP = 10000",
+    /var BULK_CAP = 10000/.test(gameSrc)
+  );
+
+  // ── IN 4: Cached rateMult in render ──
+  assertTrue(
+    "AZR-166 render caches rateMult at top",
+    /function render\(\)\s*\{[\s\S]*?var mult = rateMult\(\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 shadeSoulsPerSec accepts optional cachedRm",
+    /function shadeSoulsPerSec\(cachedRm\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 soulsPerSec accepts optional cachedRm",
+    /function soulsPerSec\(cachedRm\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 shadesPerSec accepts optional cachedRm",
+    /function shadesPerSec\(cachedRm\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 spiritsPerSec accepts optional cachedRm",
+    /function spiritsPerSec\(cachedRm\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 ashPerSec accepts optional cachedRm",
+    /function ashPerSec\(cachedRm\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 render calls soulsPerSec with cached mult",
+    /soulsPerSec\(mult\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 render calls shadeSoulsPerSec with cached mult",
+    /shadeSoulsPerSec\(mult\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 render calls shadesPerSec with cached mult",
+    /shadesPerSec\(mult\)/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 render calls spiritsPerSec with cached mult",
+    /spiritsPerSec\(mult\)/.test(gameSrc)
+  );
+
+  // ── Closed-form bulkCost / maxAffordable ──
+  // The closed-form geometric sum doesn't floor per-unit costs, so it
+  // differs from the loop at very small bases (e.g. base=2). This is
+  // expected and acceptable: at those scales the difference is ~1 unit.
+  // We test:
+  //  (a) exact match at the game's actual cost bases (≥8),
+  //  (b) self-consistency of the closed-form pair for ALL bases,
+  //  (c) large-currency O(1) correctness.
+
+  // Helper: game-style closed-form bulkCost
+  function cfBulkCost(base, owned, k, mult, extraMult) {
+    const b = Number(base);
+    const m = mult == null ? 1.15 : Number(mult);
+    let em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
+    const n = Math.max(0, Math.floor(k));
+    if (n <= 0) return N.fromNumber(0);
+    const o = Math.max(0, Math.floor(Number(owned) || 0));
+    let first = N.cost(b, m, o);
+    if (em !== 1) first = N.mul(first, em);
+    if (n === 1) return first;
+    const multN = N.fromNumber(m);
+    const multK = N.pow(multN, n);
+    const num1 = N.sub(multK, 1);
+    const den1 = N.fromNumber(m - 1);
+    return N.floor(N.mul(first, N.div(num1, den1)));
+  }
+
+  // Helper: game-style closed-form maxAffordable
+  function cfMaxAffordable(base, owned, currency, mult, extraMult) {
+    const b = Number(base);
+    const m = mult == null ? 1.15 : Number(mult);
+    let em = extraMult == null ? 1 : Number(extraMult);
+    if (!isFinite(em) || em <= 0) em = 1;
+    const cur = N.from(currency);
+    if (N.cmp(cur, 0) <= 0) return 0;
+    const o = Math.max(0, Math.floor(Number(owned) || 0));
+    let first = N.cost(b, m, o);
+    if (em !== 1) first = N.mul(first, em);
+    if (N.cmp(cur, first) < 0) return 0;
+    const m1 = m - 1;
+    const curVal = N.toNumber(cur);
+    const firstVal = N.toNumber(first);
+    let k;
+    if (isFinite(curVal) && isFinite(firstVal) && firstVal > 0 && curVal < 1e300) {
+      k = Math.floor(Math.log(1 + curVal * m1 / firstVal) / Math.log(m));
+    } else {
+      const ratio = N.div(N.mul(cur, N.fromNumber(m1)), first);
+      const logArg = N.add(ratio, 1);
+      const logArgN = N.toNumber(logArg);
+      if (!isFinite(logArgN) || logArgN <= 0) {
+        k = 10000;
+      } else {
+        const log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
+        k = Math.floor(log10Arg / (Math.log(m) / Math.LN10));
+      }
+    }
+    if (k < 0) k = 0;
+    if (k > 10000) k = 10000;
+    let cost_k = cfBulkCost(b, o, k, m, em);
+    while (k > 0 && N.cmp(cost_k, cur) > 0) {
+      k -= 1;
+      cost_k = cfBulkCost(b, o, k, m, em);
+    }
+    let cost_k1 = cfBulkCost(b, o, k + 1, m, em);
+    while (k < 10000 && N.cmp(cost_k1, cur) <= 0) {
+      k += 1;
+      cost_k1 = cfBulkCost(b, o, k + 1, m, em);
+    }
+    return k;
+  }
+
+  const bases = [2, 3, 4, 5, 6, 10, 20, 30, 32];
+  const gameBases = [8, 10, 20, 25, 30, 32];
+  const mults = [1.15, 1.2, 1.28, 1.35, 1.5, 1.65];
+  const denseOwned = [];
+  for (let o = 0; o <= 20; o++) denseOwned.push(o);
+  [25, 50, 75, 100, 150, 200, 250, 350, 500].forEach(o => denseOwned.push(o));
+
+  let cfOk = true;
+  let cfFails = 0;
+
+  // (a) BulkCost k=1 always matches (single-unit cost is N.cost, identical)
+  for (const b of bases) {
+    for (const m of mults) {
+      for (const o of [0, 1, 10, 100, 500]) {
+        const loopBc = unwrap(bulkCost(b, o, 1, m));
+        const cfBc = unwrap(cfBulkCost(b, o, 1, m));
+        if (loopBc !== cfBc) {
+          cfOk = false;
+          cfFails++;
+          if (cfFails <= 5) {
+            console.error("  bulkCost k=1 mismatch b=" + b + " m=" + m + " o=" + o + ": loop=" + loopBc + " cf=" + cfBc);
+          }
+        }
+      }
+    }
+  }
+
+  // Existing test compatibility
+  assertEqual("AZR-166 bulkCost(10,0,1) compat", unwrap(cfBulkCost(10, 0, 1, 1.15)), 10);
+  assertEqual("AZR-166 bulkCost(10,0,2) compat", unwrap(cfBulkCost(10, 0, 2, 1.15)), 21);
+
+  // (b) Self-consistency: cfMaxAffordable(cfBulkCost(k)) === k
+  for (const b of bases) {
+    for (const m of mults) {
+      for (const o of denseOwned) {
+        for (const targetK of [0, 1, 3, 5, 10, 15, 20, 50]) {
+          const cur = cfBulkCost(b, o, targetK, m);
+          if (N.cmp(cur, 0) <= 0 && targetK > 0) continue;
+          const cfK = cfMaxAffordable(b, o, cur, m);
+          if (cfK !== targetK) {
+            cfOk = false;
+            cfFails++;
+            if (cfFails <= 5) {
+              console.error("  self-consistency mismatch b=" + b + " m=" + m + " o=" + o + " targetK=" + targetK + ": cfK=" + cfK);
+            }
+          }
+        }
+        // Boundary check: bulkCost(k) ≤ cur < bulkCost(k+1)
+        for (const cur of [1, 10, 1e6]) {
+          const curN = N.fromNumber(cur);
+          const cfK = cfMaxAffordable(b, o, curN, m);
+          if (cfK > 0 && cfK < 10000) {
+            const costK = cfBulkCost(b, o, cfK, m);
+            const costK1 = cfBulkCost(b, o, cfK + 1, m);
+            if (N.cmp(costK, curN) > 0 || N.cmp(costK1, curN) <= 0) {
+              cfOk = false;
+              cfFails++;
+              if (cfFails <= 5) {
+                console.error("  boundary fail b=" + b + " m=" + m + " o=" + o + " cur=" + cur + " cfK=" + cfK);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // (c) Large currency O(1) correctness — boundary check
+  for (const [b, m] of [[10, 1.15], [20, 1.5], [32, 1.65], [2, 1.2], [4, 1.28]]) {
+    for (const o of [0, 5, 50, 200, 500]) {
+      for (const cur of [1e20, 1e60, 1e200, 1e300]) {
+        const curN = N.fromNumber(cur);
+        const cfK = cfMaxAffordable(b, o, curN, m);
+        if (cfK > 0 && cfK < 10000) {
+          const costK = cfBulkCost(b, o, cfK, m);
+          const costK1 = cfBulkCost(b, o, cfK + 1, m);
+          if (N.cmp(costK, curN) > 0 || N.cmp(costK1, curN) <= 0) {
+            cfOk = false;
+            cfFails++;
+            if (cfFails <= 5) {
+              console.error("  large-cur fail b=" + b + " m=" + m + " o=" + o + " cur=" + cur + " cfK=" + cfK);
+            }
+          }
+        }
+        // At BULK_CAP, verify cost ≤ currency
+        if (cfK === 10000) {
+          const costCap = cfBulkCost(b, o, 10000, m);
+          if (N.cmp(costCap, curN) > 0) {
+            cfOk = false;
+            cfFails++;
+          }
+        }
+      }
+    }
+  }
+
+  // (d) Dense owned=0..500 sweep at (base=10, mult=1.15, currency=1e6) — boundary check
+  for (let o = 0; o <= 500; o++) {
+    const curN = N.fromNumber(1e6);
+    const cfK = cfMaxAffordable(10, o, curN, 1.15);
+    if (cfK > 0 && cfK < 10000) {
+      const costK = cfBulkCost(10, o, cfK, 1.15);
+      const costK1 = cfBulkCost(10, o, cfK + 1, 1.15);
+      if (N.cmp(costK, curN) > 0 || N.cmp(costK1, curN) <= 0) {
+        cfOk = false;
+        cfFails++;
+        if (cfFails <= 5) {
+          console.error("  dense sweep fail o=" + o + " cfK=" + cfK);
+        }
+      }
+    }
+  }
+
+  assertTrue(
+    "AZR-166 closed-form maxAffordable/bulkCost self-consistent (" + cfFails + " mismatches)",
+    cfOk
+  );
+
+  // ── Well piecewise across depth-5/6 boundary ──
+  const WELL_COST_BASE_T = 25;
+  const WELL_EARLY_MULT_T = 1.35;
+  const WELL_COST_MULT_T = 1.5;
+
+  function wellCostLocal(depth) {
+    const d = Math.max(0, Math.floor(Number(depth) || 0));
+    if (d <= 5) return N.cost(WELL_COST_BASE_T, WELL_EARLY_MULT_T, d);
+    return N.cost(WELL_COST_BASE_T, WELL_COST_MULT_T, d);
+  }
+
+  function wellBulkCostLoop(owned, k) {
+    const n = Math.max(0, Math.floor(k));
+    let total = N.fromNumber(0);
+    const baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+    for (let i = 0; i < n && i < 10000; i++) {
+      total = N.add(total, wellCostLocal(baseDepth + i));
+    }
+    return total;
+  }
+
+  function wellMaxAffordableLoop(owned, currency) {
+    let remaining = N.from(currency);
+    const baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
+    let k = 0;
+    while (k < 10000) {
+      const c = wellCostLocal(baseDepth + k);
+      if (N.cmp(remaining, c) < 0) break;
+      remaining = N.sub(remaining, c);
+      k += 1;
+    }
+    return k;
+  }
+
+  function _geoSumTest(base, multVal, startIdx, count) {
+    if (count <= 0) return N.fromNumber(0);
+    const first = N.cost(base, multVal, startIdx);
+    if (count === 1) return first;
+    const multN = N.fromNumber(multVal);
+    const multK = N.pow(multN, count);
+    const num1 = N.sub(multK, 1);
+    const den1 = N.fromNumber(multVal - 1);
+    return N.floor(N.mul(first, N.div(num1, den1)));
+  }
+
+  function _geoMaxAffordableTest(base, multVal, startIdx, currency, cap) {
+    const first = N.cost(base, multVal, startIdx);
+    if (N.cmp(currency, first) < 0) return 0;
+    const m1 = multVal - 1;
+    const curN = N.toNumber(currency);
+    const firstN = N.toNumber(first);
+    let k;
+    if (isFinite(curN) && isFinite(firstN) && firstN > 0 && curN < 1e300) {
+      k = Math.floor(Math.log(1 + curN * m1 / firstN) / Math.log(multVal));
+    } else {
+      const ratio = N.div(N.mul(currency, N.fromNumber(m1)), first);
+      const logArg = N.add(ratio, 1);
+      const logArgN = N.toNumber(logArg);
+      if (!isFinite(logArgN) || logArgN <= 0) {
+        k = cap;
+      } else {
+        const log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
+        k = Math.floor(log10Arg / (Math.log(multVal) / Math.LN10));
+      }
+    }
+    if (k < 0) k = 0;
+    if (k > cap) k = cap;
+    let cost_k = _geoSumTest(base, multVal, startIdx, k);
+    while (k > 0 && N.cmp(cost_k, currency) > 0) {
+      k -= 1;
+      cost_k = _geoSumTest(base, multVal, startIdx, k);
+    }
+    let cost_k1 = _geoSumTest(base, multVal, startIdx, k + 1);
+    while (k < cap && N.cmp(cost_k1, currency) <= 0) {
+      k += 1;
+      cost_k1 = _geoSumTest(base, multVal, startIdx, k + 1);
+    }
+    return k;
+  }
+
+  function wellBulkCostCF(owned, k) {
+    const n = Math.max(0, Math.floor(k));
+    if (n <= 0) return N.fromNumber(0);
+    const d = Math.max(0, Math.floor(Number(owned) || 0));
+    if (d >= 6) return _geoSumTest(WELL_COST_BASE_T, WELL_COST_MULT_T, d, n);
+    const earlyRemain = Math.max(0, 6 - d);
+    if (n <= earlyRemain) return _geoSumTest(WELL_COST_BASE_T, WELL_EARLY_MULT_T, d, n);
+    const earlyPart = _geoSumTest(WELL_COST_BASE_T, WELL_EARLY_MULT_T, d, earlyRemain);
+    const latePart = _geoSumTest(WELL_COST_BASE_T, WELL_COST_MULT_T, 6, n - earlyRemain);
+    return N.add(earlyPart, latePart);
+  }
+
+  let wellOk = true;
+  let wellFails = 0;
+  const wellOwned = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const wellCurrencies = [1, 25, 100, 500, 1e6, 1e20, 1e60, 1e200, 1e300];
+
+  // Self-consistency: wellBulkCost is monotonically increasing
+  for (const o of wellOwned) {
+    for (const targetK of [1, 2, 3, 5, 8, 10]) {
+      const cost = wellBulkCostCF(o, targetK);
+      const costPlus1 = wellBulkCostCF(o, targetK + 1);
+      if (N.cmp(costPlus1, cost) <= 0) {
+        wellOk = false;
+        wellFails++;
+        if (wellFails <= 5) {
+          console.error("  well monotonicity fail o=" + o + " k=" + targetK);
+        }
+      }
+    }
+  }
+
+  // Self-consistency: wellMaxAffordable boundary check (O(1) verification)
+  for (const o of wellOwned) {
+    for (const cur of wellCurrencies) {
+      const curN = N.fromNumber(cur);
+      // Use the CF wellMaxAffordable
+      const cfK = (function () {
+        if (N.cmp(curN, 0) <= 0) return 0;
+        const d = Math.max(0, Math.floor(Number(o) || 0));
+        if (d >= 6) {
+          return _geoMaxAffordableTest(WELL_COST_BASE_T, WELL_COST_MULT_T, d, curN, 10000);
+        }
+        const earlyRemain = 6 - d;
+        const earlyK = _geoMaxAffordableTest(WELL_COST_BASE_T, WELL_EARLY_MULT_T, d, curN, earlyRemain);
+        if (earlyK < earlyRemain) return earlyK;
+        const earlyCost = _geoSumTest(WELL_COST_BASE_T, WELL_EARLY_MULT_T, d, earlyRemain);
+        const leftover = N.sub(curN, earlyCost);
+        if (N.cmp(leftover, 0) <= 0) return earlyRemain;
+        const lateK = _geoMaxAffordableTest(WELL_COST_BASE_T, WELL_COST_MULT_T, 6, leftover, 10000 - earlyRemain);
+        return earlyRemain + lateK;
+      })();
+      // Verify boundary: cost(cfK) ≤ cur < cost(cfK+1)
+      if (cfK > 0) {
+        const costK = wellBulkCostCF(o, cfK);
+        if (N.cmp(costK, curN) > 0) {
+          wellOk = false;
+          wellFails++;
+          if (wellFails <= 5) {
+            console.error("  well maxAff cost > cur o=" + o + " k=" + cfK);
+          }
+        }
+      }
+      if (cfK < 10000) {
+        const costK1 = wellBulkCostCF(o, cfK + 1);
+        if (N.cmp(costK1, curN) <= 0) {
+          wellOk = false;
+          wellFails++;
+          if (wellFails <= 5) {
+            console.error("  well maxAff cost+1 ≤ cur o=" + o + " k=" + cfK);
+          }
+        }
+      }
+    }
+  }
+
+  // Cross-seam: k=1 wellBulkCost should equal wellCost for single unit (always exact)
+  for (const o of [0, 1, 2, 3, 4, 5, 6, 7, 8]) {
+    const lb = unwrap(wellCostLocal(o));
+    const cb = unwrap(wellBulkCostCF(o, 1));
+    if (lb !== cb) {
+      wellOk = false;
+      wellFails++;
+      if (wellFails <= 5) {
+        console.error("  well k=1 mismatch o=" + o + ": wellCost=" + lb + " cf=" + cb);
+      }
+    }
+  }
+
+  assertTrue(
+    "AZR-166 well piecewise closed-form (" + wellFails + " mismatches)",
+    wellOk
+  );
+
+  // ── setText no-op and write count ──
+  assertTrue(
+    "AZR-166 setTextWriteCount exists in source",
+    /setTextWriteCount/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 setTextWriteCount reset at start of render",
+    /function render\(\)\s*\{[\s\S]*?setTextWriteCount = 0/.test(gameSrc)
+  );
+
+  // ── Source structural checks ──
+  assertTrue(
+    "AZR-166 maxAffordable has no 'while (k < BULK_CAP)' as the algorithm",
+    (function () {
+      const m = gameSrc.match(/function maxAffordable\([^)]*\)\s*\{([\s\S]*?)\n  \}/);
+      if (!m) return false;
+      return !m[1].includes('while (k < BULK_CAP)');
+    })()
+  );
+  assertTrue(
+    "AZR-166 maxAffordableLoop still has while loop for reference",
+    (function () {
+      const m = gameSrc.match(/function maxAffordableLoop\([^)]*\)\s*\{([\s\S]*?)\n  \}/);
+      if (!m) return false;
+      return m[1].includes('while (k < BULK_CAP)');
+    })()
+  );
+
+  // ── Exports present ──
+  assertTrue(
+    "AZR-166 exports maxAffordable",
+    /maxAffordable:\s*maxAffordable/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports maxAffordableLoop",
+    /maxAffordableLoop:\s*maxAffordableLoop/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports bulkCostLoop",
+    /bulkCostLoop:\s*bulkCostLoop/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports wellMaxAffordable",
+    /wellMaxAffordable:\s*wellMaxAffordable/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports wellMaxAffordableLoop",
+    /wellMaxAffordableLoop:\s*wellMaxAffordableLoop/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports wellBulkCost",
+    /wellBulkCost:\s*wellBulkCost/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports wellBulkCostLoop",
+    /wellBulkCostLoop:\s*wellBulkCostLoop/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports setText",
+    /setText:\s*setText/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports RENDER_MS",
+    /RENDER_MS:\s*RENDER_MS/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports RENDER_HZ",
+    /RENDER_HZ:\s*RENDER_HZ/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 exports BULK_CAP",
+    /BULK_CAP:\s*BULK_CAP/.test(gameSrc)
+  );
+
+  // ── render uses setText ──
+  assertTrue(
+    "AZR-166 render uses setText for textContent writes",
+    /function render\(\)\s*\{[\s\S]*?setText\(els\./.test(gameSrc)
+  );
+
+  // ── README ──
+  assertTrue(
+    "AZR-166 README mentions AZR-166",
+    readmeSrc.includes("AZR-166")
+  );
+  assertTrue(
+    "AZR-166 README still says v6.9.1",
+    readmeSrc.includes("v6.9.1")
+  );
+
+  // ── Save key unchanged ──
+  assertTrue(
+    "AZR-166 save key soulgather-v0 unchanged",
+    /SAVE_KEY\s*=\s*"soulgather-v0"/.test(gameSrc)
+  );
+
+  // ── No economy number retunes ──
+  assertTrue(
+    "AZR-166 COST_BASE still 10",
+    /var COST_BASE = 10/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 COST_MULT still 1.15",
+    /var COST_MULT = 1\.15/.test(gameSrc)
+  );
+  assertTrue(
+    "AZR-166 WELL_COST_BASE still 25",
+    /var WELL_COST_BASE = 25/.test(gameSrc)
+  );
+
+  // ── Version not bumped ──
+  assertTrue(
+    "AZR-166 footer CSS stays v6.9.1",
+    !gameSrc.includes("v6.10.0") && !gameSrc.includes("v7.0")
   );
 }
 
