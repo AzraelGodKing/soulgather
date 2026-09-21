@@ -198,7 +198,7 @@ console.log("\n─── Test 1: serialize → deserialize identity ───");
     buyMode: "10",
     buyModeHintDismissed: true,
     chronicle: [{ id: "tribute", at: 99999 }],
-    bonusFirstTribute: true,
+    giftFirstTribute: true,
     giftCrown: true,
     giftFirstVeil: true,
     vow: "stillness",
@@ -236,7 +236,7 @@ console.log("\n─── Test 1: serialize → deserialize identity ───");
   assertEqual("rt echoLevel", st.echoLevel, 1);
   assertEqual("rt buyMode", st.buyMode, "10");
   assertTrue("rt buyModeHintDismissed", st.buyModeHintDismissed);
-  assertTrue("rt bonusFirstTribute", st.bonusFirstTribute);
+  assertTrue("rt giftFirstTribute", st.giftFirstTribute);
   assertTrue("rt giftCrown", st.giftCrown);
   assertTrue("rt giftFirstVeil", st.giftFirstVeil);
   assertEqual("rt vow", st.vow, "stillness");
@@ -277,7 +277,7 @@ console.log("\n─── Test 2: Tribute account survival ───");
     allTimeSouls: N.fromNumber(500000),
     peakShades: N.fromNumber(800),
     peakLanterns: N.fromNumber(9),
-    bonusFirstTribute: true,
+    giftFirstTribute: true,
     giftCrown: true,
     giftFirstVeil: true,
     choirEdictLevel: 2,
@@ -333,7 +333,7 @@ console.log("\n─── Test 2: Tribute account survival ───");
   assertTrue("tribute: peakShades >= pre", N.cmp(st.peakShades, 800) >= 0);
   assertTrue("tribute: peakLanterns >= pre", N.cmp(st.peakLanterns, 9) >= 0);
   assertTrue("tribute: allTimeSouls survives", N.cmp(st.allTimeSouls, 500000) >= 0);
-  assertTrue("tribute: bonusFirstTribute", st.bonusFirstTribute);
+  assertTrue("tribute: giftFirstTribute", st.giftFirstTribute);
   assertTrue("tribute: giftCrown survives", st.giftCrown);
   assertTrue("tribute: giftFirstVeil survives", st.giftFirstVeil);
 
@@ -354,7 +354,7 @@ console.log("\n─── Test 3: Tribute run-field reset ───");
     favor: 5,
     favorEarned: 5,
     edictLevel: 1,
-    bonusFirstTribute: true,
+    giftFirstTribute: true,
     chronicle: [{ id: "tribute", at: 50000 }],
     hymnEdictLevel: 1,
     siphonLevel: 3,
@@ -427,7 +427,7 @@ console.log("\n─── Test 4: FIELDS keys match live state ───");
     lifetimeSouls: N.fromNumber(99999),
     favor: 5,
     favorEarned: 5,
-    bonusFirstTribute: true,
+    giftFirstTribute: true,
     chronicle: [{ id: "tribute", at: 100 }]
   });
   sandbox.confirm = function () { return true; };
@@ -466,7 +466,7 @@ console.log("\n─── Test 5: v6.9 fixture compatibility ───");
   assertEqual("fixture buyMode", st.buyMode, "10");
   assertTrue("fixture buyModeHintDismissed", st.buyModeHintDismissed);
   assertEqual("fixture vow", st.vow, "stillness");
-  assertTrue("fixture bonusFirstTribute", st.bonusFirstTribute);
+  assertTrue("fixture giftFirstTribute", st.giftFirstTribute);
   assertTrue("fixture giftCrown", st.giftCrown);
   assertTrue("fixture giftFirstVeil", st.giftFirstVeil);
   assertTrue("fixture giftFirstPyre", st.giftFirstPyre);

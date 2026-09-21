@@ -2354,17 +2354,17 @@
     peakBeacons:   { kind: "num", scope: "account" },
     peakSpires:    { kind: "num", scope: "account" },
     peakObelisks:  { kind: "num", scope: "account" },
-    // ── Bonus flags (flag, account) ──
-    bonusLifetimeSouls:  { kind: "flag", scope: "account" },
-    bonusPeakShades:     { kind: "flag", scope: "account" },
-    bonusFirstVessel:    { kind: "flag", scope: "account" },
-    bonusFirstTribute:   { kind: "flag", scope: "account" },
-    bonusThousandSouls:  { kind: "flag", scope: "account" },
-    bonusFirstLantern:   { kind: "flag", scope: "account" },
-    bonusFirstCenser:    { kind: "flag", scope: "account" },
-    bonusFirstFetter:    { kind: "flag", scope: "account" },
-    bonusTenThousandSouls: { kind: "flag", scope: "account" },
-    bonusFirstThrone:    { kind: "flag", scope: "account" },
+    // ── Gift flags — renamed from bonus* (flag, account) ──
+    giftLifetimeSouls:   { kind: "flag", scope: "account" },
+    giftPeakShades:      { kind: "flag", scope: "account" },
+    giftFirstVessel:     { kind: "flag", scope: "account" },
+    giftFirstTribute:    { kind: "flag", scope: "account" },
+    giftThousandSouls:   { kind: "flag", scope: "account" },
+    giftFirstLantern:    { kind: "flag", scope: "account" },
+    giftFirstCenser:     { kind: "flag", scope: "account" },
+    giftFirstFetter:     { kind: "flag", scope: "account" },
+    giftTenThousandSouls:{ kind: "flag", scope: "account" },
+    giftFirstThrone:     { kind: "flag", scope: "account" },
     // ── Gift flags (flag, account) ──
     giftCrown:              { kind: "flag", scope: "account" },
     giftFirstName:          { kind: "flag", scope: "account" },
@@ -2479,6 +2479,114 @@
   };
 
   var FIELDS_KEYS = Object.keys(FIELDS);
+
+  // ── bonus* → gift* migration map (AZR-179) ──
+  var BONUS_TO_GIFT = {
+    bonusLifetimeSouls:  "giftLifetimeSouls",
+    bonusPeakShades:     "giftPeakShades",
+    bonusFirstVessel:    "giftFirstVessel",
+    bonusFirstTribute:   "giftFirstTribute",
+    bonusThousandSouls:  "giftThousandSouls",
+    bonusFirstLantern:   "giftFirstLantern",
+    bonusFirstCenser:    "giftFirstCenser",
+    bonusFirstFetter:    "giftFirstFetter",
+    bonusTenThousandSouls:"giftTenThousandSouls",
+    bonusFirstThrone:    "giftFirstThrone"
+  };
+
+  // ── GIFTS table (AZR-179) ──────────────────────────────────────────────────
+  // { flag, stat, at, give, id, toast }
+  // Optional: alt (OR stat), cnt (true = Number cast), chr (fallback chronicle
+  // ids for "first building" grants), extra (side-effect fn name).
+  var GIFTS = [
+    { flag: "giftLifetimeSouls",  stat: "lifetimeSouls", alt: "allTimeSouls", at: 100,   give: { souls: 50 },  id: "giftSouls",       toast: "The well returns fifty souls." },
+    { flag: "giftPeakShades",     stat: "peakShades",    at: 10,   give: { shades: 1 },  id: "giftShades",      toast: "A shade is given, unbidden.", extra: "lifetimeShades" },
+    { flag: "giftFirstVessel",    stat: "vessels",       at: 1,    give: { ash: 3 },     id: "giftVessel",      toast: "Ash from the first vessel." },
+    { flag: "giftThousandSouls",  stat: "lifetimeSouls", alt: "allTimeSouls", at: 1000,  give: { souls: 200 }, id: "giftThousand",    toast: "The well returns two hundred souls." },
+    { flag: "giftFirstLantern",   stat: "lanterns",      at: 1,    give: { souls: 10 },  id: "giftLantern",     toast: "Ten souls for the first lantern." },
+    { flag: "giftPeakLanterns",   stat: "peakLanterns",  at: 10,   give: { souls: 20 },  id: "giftPeakLanterns",toast: "Twenty souls for ten lanterns." },
+    { flag: "giftFirstCenser",    stat: "censers",       at: 1,    give: { ash: 5 },     id: "giftCenser",      toast: "Ash from the first censer." },
+    { flag: "giftPeakCensers",    stat: "peakCensers",   at: 5,    give: { ash: 8 },     id: "giftPeakCensers", toast: "Eight ash for five censers." },
+    { flag: "giftFirstPyre",      stat: "peakPyres",     at: 1,    give: { ash: 5 },     id: "giftFirstPyre",   toast: "Five ash for the first pyre.",     chr: ["pyre","giftFirstPyre"] },
+    { flag: "giftPeakPyres",      stat: "peakPyres",     at: 5,    give: { ash: 10 },    id: "giftPeakPyres",   toast: "Ten ash for five pyres." },
+    { flag: "giftFirstUrn",       stat: "peakUrns",      at: 1,    give: { ash: 6 },     id: "giftFirstUrn",    toast: "Six ash for the first urn.",       chr: ["urn","giftFirstUrn"] },
+    { flag: "giftPeakUrns",       stat: "peakUrns",      at: 5,    give: { ash: 8 },     id: "giftPeakUrns",    toast: "Eight ash for five urns." },
+    { flag: "giftFirstHearth",    stat: "peakHearths",   at: 1,    give: { ash: 8 },     id: "giftFirstHearth", toast: "Eight ash for the first hearth.",   chr: ["hearth","giftFirstHearth"] },
+    { flag: "giftFirstBeacon",    stat: "peakBeacons",   at: 1,    give: { ash: 8 },     id: "giftFirstBeacon", toast: "Eight ash for the first beacon.",   chr: ["beacon","giftFirstBeacon"] },
+    { flag: "giftFirstSpire",     stat: "peakSpires",    at: 1,    give: { ash: 8 },     id: "giftFirstSpire",  toast: "Eight ash for the first spire.",   chr: ["spire","giftFirstSpire"] },
+    { flag: "giftFirstObelisk",   stat: "peakObelisks",  at: 1,    give: { ash: 8 },     id: "giftFirstObelisk",toast: "Eight ash for the first obelisk.", chr: ["obelisk","giftFirstObelisk"] },
+    { flag: "giftPeakSpires",     stat: "peakSpires",    at: 5,    give: { ash: 7 },     id: "giftPeakSpires",  toast: "Seven ash for five spires." },
+    { flag: "giftPeakObelisks",   stat: "peakObelisks",  at: 5,    give: { ash: 7 },     id: "giftPeakObelisks",toast: "Seven ash for five obelisks." },
+    { flag: "giftPeakBeacons",    stat: "peakBeacons",   at: 5,    give: { ash: 7 },     id: "giftPeakBeacons", toast: "Seven ash for five beacons." },
+    { flag: "giftPeakHearths",    stat: "peakHearths",   at: 5,    give: { ash: 10 },    id: "giftPeakHearths", toast: "Ten ash for five hearths." },
+    { flag: "giftFirstCinders",   stat: "cinderLevel",   at: 1, cnt: true, give: { ash: 8 },  id: "giftFirstCinders",  toast: "Eight ash for the first cinders." },
+    { flag: "giftFirstUrnRite",   stat: "urnRiteLevel",  at: 1, cnt: true, give: { ash: 6 },  id: "giftFirstUrnRite",  toast: "Six ash for the first cut urn." },
+    { flag: "giftFirstHearthRite",stat: "hearthRiteLevel",at: 1,cnt: true, give: { ash: 8 },  id: "giftFirstHearthRite",toast: "Eight ash for the first cut hearth." },
+    { flag: "giftFirstBeaconRite",stat: "beaconRiteLevel",at: 1,cnt: true, give: { ash: 10 }, id: "giftFirstBeaconRite",toast: "Ten ash for the first cut beacon." },
+    { flag: "giftFirstSpireRite", stat: "spireRiteLevel", at: 1,cnt: true, give: { ash: 10 }, id: "giftFirstSpireRite", toast: "Ten ash for the first cut spire." },
+    { flag: "giftFirstChalice",   stat: "chalices",      at: 1, cnt: true, give: { souls: 15 },id: "giftFirstChalice", toast: "Fifteen souls for the first chalice." },
+    { flag: "giftThreeChalices",  stat: "chalices",      at: 3, cnt: true, give: { ash: 10 },  id: "giftThreeChalices",toast: "Ten ash for three chalices." },
+    { flag: "giftFullCup",        stat: "chalices",      at: CHALICE_MAX, cnt: true, give: { souls: 25 }, id: "giftFullCup", toast: "Twenty-five souls for a full cup." },
+    { flag: "giftFirstOssuary",   stat: "ossuaryLevel",  at: 1, cnt: true, give: { souls: 10 },id: "giftFirstOssuary", toast: "Ten souls for the first bone." },
+    { flag: "giftFirstLongerProcession", stat: "longerProcessionLevel", at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerProcession", toast: "Five souls for the longer walk." },
+    { flag: "giftFirstDeeperToll",stat: "deeperTollLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstDeeperToll",toast: "Five souls for the longer toll." },
+    { flag: "giftFirstLongerWake",stat: "longerWakeLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerWake",toast: "Five souls for the longer wake." },
+    { flag: "giftFirstLongerTithe",stat:"longerTitheLevel",at:1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerTithe",toast: "Five souls for the longer tithe." },
+    { flag: "giftFirstLongerVeil",stat: "longerVeilLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerVeil",toast: "Five souls for the longer veil." },
+    { flag: "giftFirstLongerHymn",stat: "longerHymnLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerHymn",toast: "Five souls for the longer hymn." },
+    { flag: "giftFirstLongerKnell",stat:"longerKnellLevel",at:1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerKnell",toast: "Five souls for the longer knell." },
+    { flag: "giftFullOssuary",    stat: "ossuaryLevel",  at: OSSUARY_MAX, cnt: true, give: { souls: 20 }, id: "giftFullOssuary", toast: "Twenty souls for eight bones." },
+    { flag: "giftHundredDraws",   stat: "clicksThisRun", at: 100, cnt: true, give: { souls: 15 }, id: "giftHundredDraws",  toast: "Fifteen souls for a hundred draws." },
+    { flag: "giftTwoHundredDraws",stat: "clicksThisRun", at: 200, cnt: true, give: { souls: 20 }, id: "giftTwoHundredDraws",toast: "Twenty souls for two hundred draws." },
+    { flag: "giftThreeHundredDraws",stat:"clicksThisRun", at: 300, cnt: true, give: { souls: 25 }, id: "giftThreeHundredDraws",toast: "Twenty-five souls for three hundred draws." },
+    { flag: "giftFirstEmberVow",  stat: "_vow_ember",    at: 1,    give: { ash: 8 },     id: "giftFirstEmberVow",toast: "Eight ash for the ember vow." },
+    { flag: "giftTwoVows",        stat: "_vowsKnown",    at: 2,    give: { souls: 10 },   id: "giftTwoVows",     toast: "Ten souls for two vows." },
+    { flag: "giftThreeVows",      stat: "_vowsKnown",    at: 3,    give: { souls: 15 },   id: "giftThreeVows",   toast: "Fifteen souls for three vows." },
+    { flag: "giftAllVows",        stat: "_vowsKnown",    at: 4,    give: { souls: 25 },   id: "giftAllVows",     toast: "Twenty-five souls for four vows." },
+    { flag: "giftFirstFetter",    stat: "fetters",       at: 1,    give: { shades: 2 },   id: "giftFetter",      toast: "Two shades for the first fetter.", extra: "lifetimeShades" },
+    { flag: "giftPeakFetters",    stat: "peakFetters",   at: 8,    give: { shades: 15 },  id: "giftPeakFetters", toast: "Fifteen shades for eight fetters.",extra: "lifetimeShades" },
+    { flag: "giftTenThousandSouls",stat: "lifetimeSouls",alt: "allTimeSouls", at: 10000, give: { souls: 500 }, id: "giftTenThousand", toast: "The well returns five hundred souls." },
+    { flag: "giftFirstThrone",    stat: "thrones",       at: 1, cnt: true, give: { vessels: 1 }, id: "giftThrone", toast: "A vessel is returned.", extra: "unlockVessels" },
+    { flag: "giftFiveTributes",   stat: "tributesLaid",  at: 5, cnt: true, give: { favor: 2 },  id: "giftFiveTributes", toast: "The GodKing returns two Favor." },
+    { flag: "giftEightTributes",  stat: "tributesLaid",  at: 8, cnt: true, give: { souls: 25 }, id: "giftEightTributes",toast: "Twenty-five souls for eight emptyings." },
+    { flag: "giftTwelveTributes", stat: "tributesLaid",  at: 12,cnt: true, give: { souls: 40 }, id: "giftTwelveTributes",toast: "Forty souls for twelve emptyings." },
+    { flag: "giftSixteenTributes",stat: "tributesLaid",  at: 16,cnt: true, give: { souls: 50 }, id: "giftSixteenTributes",toast: "Fifty souls for sixteen emptyings." },
+    { flag: "giftTwentyTributes", stat: "tributesLaid",  at: 20,cnt: true, give: { souls: 60 }, id: "giftTwentyTributes",toast: "Sixty souls for twenty emptyings." },
+    { flag: "giftTwentyFourTributes",stat:"tributesLaid",at: 24,cnt: true, give: { souls: 70 }, id: "giftTwentyFourTributes",toast: "Seventy souls for twenty-four emptyings." },
+    { flag: "giftTwentyEightTributes",stat:"tributesLaid",at:28,cnt: true, give: { souls: 80 }, id: "giftTwentyEightTributes",toast: "Eighty souls for twenty-eight emptyings." },
+    { flag: "giftThirtyTwoTributes",stat:"tributesLaid", at: 32,cnt: true, give: { souls: 90 }, id: "giftThirtyTwoTributes",toast: "Ninety souls for thirty-two emptyings." },
+    { flag: "giftThirtySixTributes",stat:"tributesLaid", at: 36,cnt: true, give: { souls: 100 },id: "giftThirtySixTributes",toast: "A hundred souls for thirty-six emptyings." },
+    { flag: "giftFortyTributes",  stat: "tributesLaid",  at: 40,cnt: true, give: { souls: 110 },id: "giftFortyTributes",toast: "A hundred and ten souls for forty emptyings." }
+  ];
+
+  var GIFTS_BY_STAT = {};
+  var GIFT_FLAGS = [];
+  (function () {
+    for (var i = 0; i < GIFTS.length; i++) {
+      var g = GIFTS[i];
+      GIFT_FLAGS.push(g.flag);
+      var key = g.stat;
+      if (!GIFTS_BY_STAT[key]) GIFTS_BY_STAT[key] = [];
+      GIFTS_BY_STAT[key].push(g);
+      if (g.alt) {
+        if (!GIFTS_BY_STAT[g.alt]) GIFTS_BY_STAT[g.alt] = [];
+        GIFTS_BY_STAT[g.alt].push(g);
+      }
+    }
+  })();
+
+  var PEAK_STATS = {
+    peakShades:   "shades",
+    peakLanterns: "lanterns",
+    peakFetters:  "fetters",
+    peakCensers:  "censers",
+    peakPyres:    "pyres",
+    peakUrns:     "urns",
+    peakHearths:  "hearths",
+    peakBeacons:  "beacons",
+    peakSpires:   "spires",
+    peakObelisks: "obelisks"
+  };
 
   function fieldDefault(f) {
     if (f.dflt !== undefined) return typeof f.dflt === "function" ? f.dflt() : f.dflt;
@@ -4272,577 +4380,99 @@
     state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
   }
 
+  var _giftUngrantedCount = -1;
+  var _giftCmpCount = 0;
+  var _bumpPeakShadesCount = 0;
+
+  function rebuildUngrantedCount() {
+    var n = 0;
+    for (var i = 0; i < GIFTS.length; i++) {
+      if (!state[GIFTS[i].flag]) n++;
+    }
+    _giftUngrantedCount = n;
+  }
+
+  function giftStatValue(stat) {
+    if (stat === "_vow_ember") return normalizeVow(state.vow) === "ember" ? 1 : 0;
+    if (stat === "_vowsKnown") return vowsKnownCount(state.vowsKnown);
+    return state[stat];
+  }
+
+  function giftMeetsThreshold(g) {
+    var v = giftStatValue(g.stat);
+    var met;
+    if (g.cnt) {
+      met = (Number(v) || 0) >= g.at;
+    } else {
+      _giftCmpCount++;
+      met = N.cmp(num(v), g.at) >= 0;
+    }
+    if (!met && g.alt) {
+      var v2 = state[g.alt];
+      _giftCmpCount++;
+      met = N.cmp(num(v2), g.at) >= 0;
+    }
+    if (met && g.chr) {
+      var hasPeak = N.cmp(num(giftStatValue(g.stat)), g.at) >= 0;
+      var hasChr = false;
+      for (var c = 0; c < g.chr.length; c++) {
+        if (hasChronicle(g.chr[c])) { hasChr = true; break; }
+      }
+      if (!hasPeak && hasChr) met = false;
+      if (hasPeak && !hasChr) met = true;
+    }
+    return met;
+  }
+
+  function grantGift(g) {
+    state[g.flag] = true;
+    var give = g.give;
+    if (give.souls)   state.souls   = N.add(state.souls,   give.souls);
+    if (give.ash)     state.ash     = N.add(state.ash,     give.ash);
+    if (give.shades) {
+      state.shades = N.add(state.shades, give.shades);
+    }
+    if (give.vessels) state.vessels = N.add(state.vessels, give.vessels);
+    if (give.favor)   state.favor  = (Number(state.favor) || 0) + give.favor;
+    if (g.extra === "lifetimeShades" && give.shades) {
+      state.lifetimeShades = N.add(state.lifetimeShades, give.shades);
+    }
+    if (g.extra === "unlockVessels" && !state.unlockedVessels) {
+      state.unlockedVessels = true;
+    }
+    markChronicle(g.id);
+    showToast(g.toast, "gifts");
+    _giftUngrantedCount--;
+  }
+
   function tryMilestoneGifts() {
+    if (_giftUngrantedCount < 0) rebuildUngrantedCount();
+    if (_giftUngrantedCount === 0 && !tryNamesBoundNeeded()) return;
+
     var granted = false;
+    _giftCmpCount = 0;
+    _bumpPeakShadesCount = 0;
     beginGiftToastBatch();
-    bumpPeakShades();
-    bumpPeakLanterns();
-    bumpPeakFetters();
-    bumpPeakCensers();
-    bumpPeakPyres();
-    bumpPeakUrns();
-    bumpPeakHearths();
-    bumpPeakBeacons();
-    bumpPeakSpires();
-    bumpPeakObelisks();
 
-    if (
-      !state.bonusLifetimeSouls &&
-      (N.cmp(state.lifetimeSouls, 100) >= 0 || N.cmp(state.allTimeSouls, 100) >= 0)
-    ) {
-      state.bonusLifetimeSouls = true;
-      state.souls = N.add(state.souls, 50);
-      markChronicle("giftSouls");
-      showToast("The well returns fifty souls.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakShades();
-    if (!state.bonusPeakShades && N.cmp(state.peakShades, 10) >= 0) {
-      state.bonusPeakShades = true;
-      state.shades = N.add(state.shades, 1);
-      state.lifetimeShades = N.add(state.lifetimeShades, 1);
-      bumpPeakShades();
-      markChronicle("giftShades");
-      showToast("A shade is given, unbidden.", "gifts");
-      granted = true;
-    }
-
-    if (!state.bonusFirstVessel && N.cmp(state.vessels, 1) >= 0) {
-      state.bonusFirstVessel = true;
-      state.ash = N.add(state.ash, 3);
-      markChronicle("giftVessel");
-      showToast("Ash from the first vessel.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.bonusThousandSouls &&
-      (N.cmp(state.lifetimeSouls, 1000) >= 0 || N.cmp(state.allTimeSouls, 1000) >= 0)
-    ) {
-      state.bonusThousandSouls = true;
-      state.souls = N.add(state.souls, 200);
-      markChronicle("giftThousand");
-      showToast("The well returns two hundred souls.", "gifts");
-      granted = true;
-    }
-
-    if (!state.bonusFirstLantern && N.cmp(state.lanterns, 1) >= 0) {
-      state.bonusFirstLantern = true;
-      state.souls = N.add(state.souls, 10);
-      markChronicle("giftLantern");
-      showToast("Ten souls for the first lantern.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakLanterns();
-    if (!state.giftPeakLanterns && N.cmp(state.peakLanterns, 10) >= 0) {
-      state.giftPeakLanterns = true;
-      state.souls = N.add(state.souls, 20);
-      markChronicle("giftPeakLanterns");
-      showToast("Twenty souls for ten lanterns.", "gifts");
-      granted = true;
-    }
-
-    if (!state.bonusFirstCenser && N.cmp(state.censers, 1) >= 0) {
-      state.bonusFirstCenser = true;
-      state.ash = N.add(state.ash, 5);
-      markChronicle("giftCenser");
-      showToast("Ash from the first censer.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakCensers();
-    if (!state.giftPeakCensers && N.cmp(state.peakCensers, 5) >= 0) {
-      state.giftPeakCensers = true;
-      state.ash = N.add(state.ash, 8);
-      markChronicle("giftPeakCensers");
-      showToast("Eight ash for five censers.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakPyres();
-    if (!state.giftFirstPyre) {
-      var hasPyreNow = N.cmp(state.pyres, 1) >= 0;
-      var hasPyrePeak = N.cmp(state.peakPyres, 1) >= 0;
-      var hasPyreChron = hasChronicle("pyre") || hasChronicle("giftFirstPyre");
-      if (hasPyreNow || (hasPyrePeak && !hasPyreChron)) {
-        state.giftFirstPyre = true;
-        state.ash = N.add(state.ash, 5);
-        markChronicle("giftFirstPyre");
-        showToast("Five ash for the first pyre.", "gifts");
-        granted = true;
+    var peaksDone = {};
+    for (var pk in PEAK_STATS) {
+      if (Object.prototype.hasOwnProperty.call(PEAK_STATS, pk)) {
+        state[pk] = N.max(num(state[pk]), num(state[PEAK_STATS[pk]]));
+        peaksDone[pk] = true;
       }
-    }
-
-    bumpPeakPyres();
-    if (!state.giftPeakPyres && N.cmp(state.peakPyres, 5) >= 0) {
-      state.giftPeakPyres = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftPeakPyres");
-      showToast("Ten ash for five pyres.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakUrns();
-    if (!state.giftFirstUrn) {
-      var hasUrnNow = N.cmp(state.urns, 1) >= 0;
-      var hasUrnPeak = N.cmp(state.peakUrns, 1) >= 0;
-      var hasUrnChron = hasChronicle("urn") || hasChronicle("giftFirstUrn");
-      if (hasUrnNow || (hasUrnPeak && !hasUrnChron)) {
-        state.giftFirstUrn = true;
-        state.ash = N.add(state.ash, 6);
-        markChronicle("giftFirstUrn");
-        showToast("Six ash for the first urn.", "gifts");
-        granted = true;
-      }
-    }
-
-    bumpPeakUrns();
-    if (!state.giftPeakUrns && N.cmp(state.peakUrns, 5) >= 0) {
-      state.giftPeakUrns = true;
-      state.ash = N.add(state.ash, 8);
-      markChronicle("giftPeakUrns");
-      showToast("Eight ash for five urns.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakHearths();
-    if (!state.giftFirstHearth) {
-      var hasHearthNow = N.cmp(state.hearths, 1) >= 0;
-      var hasHearthPeak = N.cmp(state.peakHearths, 1) >= 0;
-      var hasHearthChron = hasChronicle("hearth") || hasChronicle("giftFirstHearth");
-      if (hasHearthNow || (hasHearthPeak && !hasHearthChron)) {
-        state.giftFirstHearth = true;
-        state.ash = N.add(state.ash, 8);
-        markChronicle("giftFirstHearth");
-        showToast("Eight ash for the first hearth.", "gifts");
-        granted = true;
-      }
-    }
-
-    bumpPeakBeacons();
-    if (!state.giftFirstBeacon) {
-      var hasBeaconNow = N.cmp(state.beacons, 1) >= 0;
-      var hasBeaconPeak = N.cmp(state.peakBeacons, 1) >= 0;
-      var hasBeaconChron = hasChronicle("beacon") || hasChronicle("giftFirstBeacon");
-      if (hasBeaconNow || (hasBeaconPeak && !hasBeaconChron)) {
-        state.giftFirstBeacon = true;
-        state.ash = N.add(state.ash, 8);
-        markChronicle("giftFirstBeacon");
-        showToast("Eight ash for the first beacon.", "gifts");
-        granted = true;
-      }
-    }
-
-    bumpPeakSpires();
-    if (!state.giftFirstSpire) {
-      var hasSpireNow = N.cmp(state.spires, 1) >= 0;
-      var hasSpirePeak = N.cmp(state.peakSpires, 1) >= 0;
-      var hasSpireChron = hasChronicle("spire") || hasChronicle("giftFirstSpire");
-      if (hasSpireNow || (hasSpirePeak && !hasSpireChron)) {
-        state.giftFirstSpire = true;
-        state.ash = N.add(state.ash, 8);
-        markChronicle("giftFirstSpire");
-        showToast("Eight ash for the first spire.", "gifts");
-        granted = true;
-      }
-    }
-
-    bumpPeakObelisks();
-    if (!state.giftFirstObelisk) {
-      var hasObeliskNow = N.cmp(state.obelisks, 1) >= 0;
-      var hasObeliskPeak = N.cmp(state.peakObelisks, 1) >= 0;
-      var hasObeliskChron = hasChronicle("obelisk") || hasChronicle("giftFirstObelisk");
-      if (hasObeliskNow || (hasObeliskPeak && !hasObeliskChron)) {
-        state.giftFirstObelisk = true;
-        state.ash = N.add(state.ash, 8);
-        markChronicle("giftFirstObelisk");
-        showToast("Eight ash for the first obelisk.", "gifts");
-        granted = true;
-      }
-    }
-
-    bumpPeakSpires();
-    if (!state.giftPeakSpires && N.cmp(state.peakSpires, 5) >= 0) {
-      state.giftPeakSpires = true;
-      state.ash = N.add(state.ash, 7);
-      markChronicle("giftPeakSpires");
-      showToast("Seven ash for five spires.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakObelisks();
-    if (!state.giftPeakObelisks && N.cmp(state.peakObelisks, 5) >= 0) {
-      state.giftPeakObelisks = true;
-      state.ash = N.add(state.ash, 7);
-      markChronicle("giftPeakObelisks");
-      showToast("Seven ash for five obelisks.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakBeacons();
-    if (!state.giftPeakBeacons && N.cmp(state.peakBeacons, 5) >= 0) {
-      state.giftPeakBeacons = true;
-      state.ash = N.add(state.ash, 7);
-      markChronicle("giftPeakBeacons");
-      showToast("Seven ash for five beacons.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakHearths();
-    if (!state.giftPeakHearths && N.cmp(state.peakHearths, 5) >= 0) {
-      state.giftPeakHearths = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftPeakHearths");
-      showToast("Ten ash for five hearths.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstCinders && (Number(state.cinderLevel) || 0) >= 1) {
-      state.giftFirstCinders = true;
-      state.ash = N.add(state.ash, 8);
-      markChronicle("giftFirstCinders");
-      showToast("Eight ash for the first cinders.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstUrnRite && (Number(state.urnRiteLevel) || 0) >= 1) {
-      state.giftFirstUrnRite = true;
-      state.ash = N.add(state.ash, 6);
-      markChronicle("giftFirstUrnRite");
-      showToast("Six ash for the first cut urn.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstHearthRite && (Number(state.hearthRiteLevel) || 0) >= 1) {
-      state.giftFirstHearthRite = true;
-      state.ash = N.add(state.ash, 8);
-      markChronicle("giftFirstHearthRite");
-      showToast("Eight ash for the first cut hearth.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstBeaconRite && (Number(state.beaconRiteLevel) || 0) >= 1) {
-      state.giftFirstBeaconRite = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftFirstBeaconRite");
-      showToast("Ten ash for the first cut beacon.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstSpireRite && (Number(state.spireRiteLevel) || 0) >= 1) {
-      state.giftFirstSpireRite = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftFirstSpireRite");
-      showToast("Ten ash for the first cut spire.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstChalice && (Number(state.chalices) || 0) >= 1) {
-      state.giftFirstChalice = true;
-      state.souls = N.add(state.souls, 15);
-      markChronicle("giftFirstChalice");
-      showToast("Fifteen souls for the first chalice.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftThreeChalices && (Number(state.chalices) || 0) >= 3) {
-      state.giftThreeChalices = true;
-      state.ash = N.add(state.ash, 10);
-      markChronicle("giftThreeChalices");
-      showToast("Ten ash for three chalices.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFullCup && (Number(state.chalices) || 0) >= CHALICE_MAX) {
-      state.giftFullCup = true;
-      state.souls = N.add(state.souls, 25);
-      markChronicle("giftFullCup");
-      showToast("Twenty-five souls for a full cup.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstOssuary && (Number(state.ossuaryLevel) || 0) >= 1) {
-      state.giftFirstOssuary = true;
-      state.souls = N.add(state.souls, 10);
-      markChronicle("giftFirstOssuary");
-      showToast("Ten souls for the first bone.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerProcession && (Number(state.longerProcessionLevel) || 0) >= 1) {
-      state.giftFirstLongerProcession = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerProcession");
-      showToast("Five souls for the longer walk.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstDeeperToll && (Number(state.deeperTollLevel) || 0) >= 1) {
-      state.giftFirstDeeperToll = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstDeeperToll");
-      showToast("Five souls for the longer toll.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerWake && (Number(state.longerWakeLevel) || 0) >= 1) {
-      state.giftFirstLongerWake = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerWake");
-      showToast("Five souls for the longer wake.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerTithe && (Number(state.longerTitheLevel) || 0) >= 1) {
-      state.giftFirstLongerTithe = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerTithe");
-      showToast("Five souls for the longer tithe.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerVeil && (Number(state.longerVeilLevel) || 0) >= 1) {
-      state.giftFirstLongerVeil = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerVeil");
-      showToast("Five souls for the longer veil.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerHymn && (Number(state.longerHymnLevel) || 0) >= 1) {
-      state.giftFirstLongerHymn = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerHymn");
-      showToast("Five souls for the longer hymn.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstLongerKnell && (Number(state.longerKnellLevel) || 0) >= 1) {
-      state.giftFirstLongerKnell = true;
-      state.souls = N.add(state.souls, 5);
-      markChronicle("giftFirstLongerKnell");
-      showToast("Five souls for the longer knell.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFullOssuary && (Number(state.ossuaryLevel) || 0) >= OSSUARY_MAX) {
-      state.giftFullOssuary = true;
-      state.souls = N.add(state.souls, 20);
-      markChronicle("giftFullOssuary");
-      showToast("Twenty souls for eight bones.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftHundredDraws && (Number(state.clicksThisRun) || 0) >= 100) {
-      state.giftHundredDraws = true;
-      state.souls = N.add(state.souls, 15);
-      markChronicle("giftHundredDraws");
-      showToast("Fifteen souls for a hundred draws.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftTwoHundredDraws && (Number(state.clicksThisRun) || 0) >= 200) {
-      state.giftTwoHundredDraws = true;
-      state.souls = N.add(state.souls, 20);
-      markChronicle("giftTwoHundredDraws");
-      showToast("Twenty souls for two hundred draws.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftThreeHundredDraws && (Number(state.clicksThisRun) || 0) >= 300) {
-      state.giftThreeHundredDraws = true;
-      state.souls = N.add(state.souls, 25);
-      markChronicle("giftThreeHundredDraws");
-      showToast("Twenty-five souls for three hundred draws.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftFirstEmberVow && normalizeVow(state.vow) === "ember") {
-      state.giftFirstEmberVow = true;
-      state.ash = N.add(state.ash, 8);
-      markChronicle("giftFirstEmberVow");
-      showToast("Eight ash for the ember vow.", "gifts");
-      granted = true;
     }
 
     if (normalizeVow(state.vow)) rememberVow(state.vow);
 
-    if (!state.giftTwoVows && vowsKnownCount(state.vowsKnown) >= 2) {
-      state.giftTwoVows = true;
-      state.souls = N.add(state.souls, 10);
-      markChronicle("giftTwoVows");
-      showToast("Ten souls for two vows.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftThreeVows && vowsKnownCount(state.vowsKnown) >= 3) {
-      state.giftThreeVows = true;
-      state.souls = N.add(state.souls, 15);
-      markChronicle("giftThreeVows");
-      showToast("Fifteen souls for three vows.", "gifts");
-      granted = true;
-    }
-
-    if (!state.giftAllVows && vowsKnownCount(state.vowsKnown) >= 4) {
-      state.giftAllVows = true;
-      state.souls = N.add(state.souls, 25);
-      markChronicle("giftAllVows");
-      showToast("Twenty-five souls for four vows.", "gifts");
-      granted = true;
-    }
-
-    if (!state.bonusFirstFetter && N.cmp(state.fetters, 1) >= 0) {
-      state.bonusFirstFetter = true;
-      state.shades = N.add(state.shades, 2);
-      state.lifetimeShades = N.add(state.lifetimeShades, 2);
-      bumpPeakShades();
-      markChronicle("giftFetter");
-      showToast("Two shades for the first fetter.", "gifts");
-      granted = true;
-    }
-
-    bumpPeakFetters();
-    if (!state.giftPeakFetters && N.cmp(state.peakFetters, 8) >= 0) {
-      state.giftPeakFetters = true;
-      state.shades = N.add(state.shades, 15);
-      state.lifetimeShades = N.add(state.lifetimeShades, 15);
-      bumpPeakShades();
-      markChronicle("giftPeakFetters");
-      showToast("Fifteen shades for eight fetters.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.bonusTenThousandSouls &&
-      (N.cmp(state.lifetimeSouls, 10000) >= 0 || N.cmp(state.allTimeSouls, 10000) >= 0)
-    ) {
-      state.bonusTenThousandSouls = true;
-      state.souls = N.add(state.souls, 500);
-      markChronicle("giftTenThousand");
-      showToast("The well returns five hundred souls.", "gifts");
-      granted = true;
-    }
-
-    if (!state.bonusFirstThrone && (Number(state.thrones) || 0) >= 1) {
-      state.bonusFirstThrone = true;
-      state.vessels = N.add(state.vessels, 1);
-      if (!state.unlockedVessels) {
-        state.unlockedVessels = true;
+    for (var i = 0; i < GIFTS.length; i++) {
+      var g = GIFTS[i];
+      if (state[g.flag]) continue;
+      if (!giftMeetsThreshold(g)) continue;
+      grantGift(g);
+      if (g.extra === "lifetimeShades" || g.give.shades) {
+        _bumpPeakShadesCount++;
+        state.peakShades = N.max(num(state.peakShades), num(state.shades));
       }
-      markChronicle("giftThrone");
-      showToast("A vessel is returned.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftFiveTributes &&
-      (Number(state.tributesLaid) || 0) >= 5
-    ) {
-      state.giftFiveTributes = true;
-      state.favor = (Number(state.favor) || 0) + 2;
-      markChronicle("giftFiveTributes");
-      showToast("The GodKing returns two Favor.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftEightTributes &&
-      (Number(state.tributesLaid) || 0) >= 8
-    ) {
-      state.giftEightTributes = true;
-      state.souls = N.add(state.souls, 25);
-      markChronicle("giftEightTributes");
-      showToast("Twenty-five souls for eight emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftTwelveTributes &&
-      (Number(state.tributesLaid) || 0) >= 12
-    ) {
-      state.giftTwelveTributes = true;
-      state.souls = N.add(state.souls, 40);
-      markChronicle("giftTwelveTributes");
-      showToast("Forty souls for twelve emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftSixteenTributes &&
-      (Number(state.tributesLaid) || 0) >= 16
-    ) {
-      state.giftSixteenTributes = true;
-      state.souls = N.add(state.souls, 50);
-      markChronicle("giftSixteenTributes");
-      showToast("Fifty souls for sixteen emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftTwentyTributes &&
-      (Number(state.tributesLaid) || 0) >= 20
-    ) {
-      state.giftTwentyTributes = true;
-      state.souls = N.add(state.souls, 60);
-      markChronicle("giftTwentyTributes");
-      showToast("Sixty souls for twenty emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftTwentyFourTributes &&
-      (Number(state.tributesLaid) || 0) >= 24
-    ) {
-      state.giftTwentyFourTributes = true;
-      state.souls = N.add(state.souls, 70);
-      markChronicle("giftTwentyFourTributes");
-      showToast("Seventy souls for twenty-four emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftTwentyEightTributes &&
-      (Number(state.tributesLaid) || 0) >= 28
-    ) {
-      state.giftTwentyEightTributes = true;
-      state.souls = N.add(state.souls, 80);
-      markChronicle("giftTwentyEightTributes");
-      showToast("Eighty souls for twenty-eight emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftThirtyTwoTributes &&
-      (Number(state.tributesLaid) || 0) >= 32
-    ) {
-      state.giftThirtyTwoTributes = true;
-      state.souls = N.add(state.souls, 90);
-      markChronicle("giftThirtyTwoTributes");
-      showToast("Ninety souls for thirty-two emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftThirtySixTributes &&
-      (Number(state.tributesLaid) || 0) >= 36
-    ) {
-      state.giftThirtySixTributes = true;
-      state.souls = N.add(state.souls, 100);
-      markChronicle("giftThirtySixTributes");
-      showToast("A hundred souls for thirty-six emptyings.", "gifts");
-      granted = true;
-    }
-
-    if (
-      !state.giftFortyTributes &&
-      (Number(state.tributesLaid) || 0) >= 40
-    ) {
-      state.giftFortyTributes = true;
-      state.souls = N.add(state.souls, 110);
-      markChronicle("giftFortyTributes");
-      showToast("A hundred and ten souls for forty emptyings.", "gifts");
       granted = true;
     }
 
@@ -4852,8 +4482,15 @@
     if (granted) markSaveDirty();
   }
 
+  function tryNamesBoundNeeded() {
+    var current = Math.max(0, Math.floor(Number(state.namesBound) || 0));
+    if (current < 12) return true;
+    if (!state.namesComplete) return true;
+    if (!state.giftNamesComplete) return true;
+    return false;
+  }
+
   function tryNamesBound() {
-    bumpPeakShades();
     var target = namesFromPeak(state.peakShades);
     var current = Math.max(0, Math.floor(Number(state.namesBound) || 0));
     if (current > 12) current = 12;
@@ -5401,7 +5038,8 @@
     if (state.choirLevel >= 1) state.unlockedChoir = true;
     if (state.namesBound >= 12) state.namesComplete = true;
     if ((loadCount(data.titheLeft) || 0) > 0) state.tithePaid = true;
-    if (data.bonusFirstTribute == null) state.bonusFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
+    if (data.giftFirstTribute == null && data.bonusFirstTribute == null) state.giftFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
+    if (data.giftFirstTribute == null && data.bonusFirstTribute != null) state.giftFirstTribute = !!data.bonusFirstTribute;
     if (data.giftCrown == null) state.giftCrown = state.crownWeight >= 1;
     if (data.giftFirstName == null) state.giftFirstName = Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 1;
     if (data.giftFiveTributes == null) state.giftFiveTributes = (loadCount(data.tributesLaid) || 0) >= 5;
@@ -5459,6 +5097,16 @@
     if (data.giftFirstLongerKnell == null) state.giftFirstLongerKnell = hasChronicle("giftFirstLongerKnell") || hasChronicle("longerKnell") || (loadCount(data.longerKnellLevel) || 0) >= 1;
     if (data.giftFirstToll == null) state.giftFirstToll = hasChronicle("toll") || hasChronicle("giftFirstToll") || (loadCount(data.tollLeft) || 0) > 0;
     if (data.giftFirstKnell == null) state.giftFirstKnell = hasChronicle("knell") || hasChronicle("giftFirstKnell") || (loadCount(data.knellLeft) || 0) > 0;
+    // bonus* → gift* migration (AZR-179)
+    for (var oldKey in BONUS_TO_GIFT) {
+      if (Object.prototype.hasOwnProperty.call(BONUS_TO_GIFT, oldKey)) {
+        var newKey = BONUS_TO_GIFT[oldKey];
+        if (data[oldKey] && !state[newKey]) {
+          state[newKey] = true;
+        }
+      }
+    }
+    _giftUngrantedCount = -1;
   }
 
   function adoptSave(data) {
@@ -6130,8 +5778,8 @@
 
   function applyTributeAccountMutations(gain) {
     var firstTributeBonus = 0;
-    if (!state.bonusFirstTribute) {
-      state.bonusFirstTribute = true;
+    if (!state.giftFirstTribute) {
+      state.giftFirstTribute = true;
       firstTributeBonus = 1;
       markChronicle("giftTribute");
     }
@@ -7772,7 +7420,7 @@
     }
 
     var tributeOffer = gain;
-    if (gain >= 1 && !state.bonusFirstTribute) tributeOffer += 1;
+    if (gain >= 1 && !state.giftFirstTribute) tributeOffer += 1;
     if (gain >= 1) tributeOffer += vowExtraFavor(state.vow, state.vowHungerPaid);
     var tributeReady = gain >= 1;
     if (els.tributePanel) {
@@ -9709,6 +9357,17 @@
     layTribute: layTribute,
     FIELDS: FIELDS,
     FIELDS_KEYS: FIELDS_KEYS,
+    GIFTS: GIFTS,
+    GIFTS_BY_STAT: GIFTS_BY_STAT,
+    GIFT_FLAGS: GIFT_FLAGS,
+    BONUS_TO_GIFT: BONUS_TO_GIFT,
+    PEAK_STATS: PEAK_STATS,
+    tryMilestoneGifts: tryMilestoneGifts,
+    checkUnlock: checkUnlock,
+    rebuildUngrantedCount: rebuildUngrantedCount,
+    getGiftCmpCount: function () { return _giftCmpCount; },
+    getGiftUngrantedCount: function () { return _giftUngrantedCount; },
+    getBumpPeakShadesCount: function () { return _bumpPeakShadesCount; },
     resetToScope: resetToScope,
     SAVE_FIELDS: SAVE_FIELDS,
     SAVE_KEY: SAVE_KEY,

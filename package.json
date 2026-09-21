@@ -3,7 +3,7 @@
   "private": true,
   "version": "6.9.1",
   "scripts": {
-    "test": "node test-economy.mjs && node sim-firstrun.mjs",
+    "test": "node test-economy.mjs && node sim-firstrun.mjs && node test-gifts.mjs",
     "check": "node --check js/game.js && node --check js/num.js && node --check js/format.js"
   }
 }
