@@ -2561,16 +2561,20 @@
 
   var GIFTS_BY_STAT = {};
   var GIFT_FLAGS = [];
+  var GIFT_STAT_KEYS = [];
   (function () {
+    var seenStats = {};
     for (var i = 0; i < GIFTS.length; i++) {
       var g = GIFTS[i];
       GIFT_FLAGS.push(g.flag);
       var key = g.stat;
       if (!GIFTS_BY_STAT[key]) GIFTS_BY_STAT[key] = [];
       GIFTS_BY_STAT[key].push(g);
+      if (!seenStats[key]) { seenStats[key] = true; GIFT_STAT_KEYS.push(key); }
       if (g.alt) {
         if (!GIFTS_BY_STAT[g.alt]) GIFTS_BY_STAT[g.alt] = [];
         GIFTS_BY_STAT[g.alt].push(g);
+        if (!seenStats[g.alt]) { seenStats[g.alt] = true; GIFT_STAT_KEYS.push(g.alt); }
       }
     }
   })();
@@ -4382,7 +4386,9 @@
 
   var _giftUngrantedCount = -1;
   var _giftCmpCount = 0;
+  var _giftMeetsCount = 0;
   var _bumpPeakShadesCount = 0;
+  var _giftLastSeen = null;
 
   function rebuildUngrantedCount() {
     var n = 0;
@@ -4392,13 +4398,33 @@
     _giftUngrantedCount = n;
   }
 
+  function snapshotGiftStats() {
+    var snap = {};
+    for (var i = 0; i < GIFT_STAT_KEYS.length; i++) {
+      var k = GIFT_STAT_KEYS[i];
+      snap[k] = giftStatValue(k);
+    }
+    return snap;
+  }
+
   function giftStatValue(stat) {
     if (stat === "_vow_ember") return normalizeVow(state.vow) === "ember" ? 1 : 0;
     if (stat === "_vowsKnown") return vowsKnownCount(state.vowsKnown);
     return state[stat];
   }
 
+  function giftStatChanged(stat, lastSeen) {
+    var cur = giftStatValue(stat);
+    var prev = lastSeen[stat];
+    if (cur === prev) return false;
+    if (cur && typeof cur === "object" && prev && typeof prev === "object") {
+      return N.cmp(num(cur), num(prev)) !== 0;
+    }
+    return true;
+  }
+
   function giftMeetsThreshold(g) {
+    _giftMeetsCount++;
     var v = giftStatValue(g.stat);
     var met;
     if (g.cnt) {
@@ -4451,30 +4477,65 @@
 
     var granted = false;
     _giftCmpCount = 0;
+    _giftMeetsCount = 0;
     _bumpPeakShadesCount = 0;
     beginGiftToastBatch();
 
-    var peaksDone = {};
     for (var pk in PEAK_STATS) {
       if (Object.prototype.hasOwnProperty.call(PEAK_STATS, pk)) {
         state[pk] = N.max(num(state[pk]), num(state[PEAK_STATS[pk]]));
-        peaksDone[pk] = true;
       }
     }
 
     if (normalizeVow(state.vow)) rememberVow(state.vow);
 
-    for (var i = 0; i < GIFTS.length; i++) {
-      var g = GIFTS[i];
-      if (state[g.flag]) continue;
-      if (!giftMeetsThreshold(g)) continue;
-      grantGift(g);
-      if (g.extra === "lifetimeShades" || g.give.shades) {
-        _bumpPeakShadesCount++;
-        state.peakShades = N.max(num(state.peakShades), num(state.shades));
+    var lastSeen = _giftLastSeen;
+    var dirty = null;
+    var fullScan = !lastSeen;
+
+    if (!fullScan) {
+      dirty = {};
+      for (var si = 0; si < GIFT_STAT_KEYS.length; si++) {
+        var sk = GIFT_STAT_KEYS[si];
+        if (giftStatChanged(sk, lastSeen)) dirty[sk] = true;
       }
-      granted = true;
     }
+
+    if (fullScan) {
+      for (var i = 0; i < GIFTS.length; i++) {
+        var g = GIFTS[i];
+        if (state[g.flag]) continue;
+        if (!giftMeetsThreshold(g)) continue;
+        grantGift(g);
+        if (g.extra === "lifetimeShades" || g.give.shades) {
+          _bumpPeakShadesCount++;
+          state.peakShades = N.max(num(state.peakShades), num(state.shades));
+        }
+        granted = true;
+      }
+    } else {
+      var visited = {};
+      for (var dk in dirty) {
+        if (!Object.prototype.hasOwnProperty.call(dirty, dk)) continue;
+        var bucket = GIFTS_BY_STAT[dk];
+        if (!bucket) continue;
+        for (var bi = 0; bi < bucket.length; bi++) {
+          var gb = bucket[bi];
+          if (visited[gb.flag]) continue;
+          visited[gb.flag] = true;
+          if (state[gb.flag]) continue;
+          if (!giftMeetsThreshold(gb)) continue;
+          grantGift(gb);
+          if (gb.extra === "lifetimeShades" || gb.give.shades) {
+            _bumpPeakShadesCount++;
+            state.peakShades = N.max(num(state.peakShades), num(state.shades));
+          }
+          granted = true;
+        }
+      }
+    }
+
+    _giftLastSeen = snapshotGiftStats();
 
     if (tryNamesBound()) granted = true;
 
@@ -5107,6 +5168,7 @@
       }
     }
     _giftUngrantedCount = -1;
+    _giftLastSeen = null;
   }
 
   function adoptSave(data) {
@@ -9365,9 +9427,12 @@
     tryMilestoneGifts: tryMilestoneGifts,
     checkUnlock: checkUnlock,
     rebuildUngrantedCount: rebuildUngrantedCount,
+    GIFT_STAT_KEYS: GIFT_STAT_KEYS,
     getGiftCmpCount: function () { return _giftCmpCount; },
+    getGiftMeetsCount: function () { return _giftMeetsCount; },
     getGiftUngrantedCount: function () { return _giftUngrantedCount; },
     getBumpPeakShadesCount: function () { return _bumpPeakShadesCount; },
+    resetGiftLastSeen: function () { _giftLastSeen = null; },
     resetToScope: resetToScope,
     SAVE_FIELDS: SAVE_FIELDS,
     SAVE_KEY: SAVE_KEY,

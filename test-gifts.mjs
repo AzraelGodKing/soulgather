@@ -606,6 +606,143 @@ console.log("\n─── Test 15: v6.9 fixture bonus* migration ───");
   assertTrue("fixture: giftFirstThrone migrated", st.giftFirstThrone === true);
 }
 
+// ─── Test 16: dirty-stat index only checks gifts for changed stats ──────────────
+console.log("\n─── Test 16: dirty-stat index ───");
+{
+  resetState({
+    souls: N.fromNumber(10),
+    lifetimeSouls: N.fromNumber(10),
+    allTimeSouls: N.fromNumber(10),
+    shades: N.fromNumber(5),
+    peakShades: N.fromNumber(5)
+  });
+  G.rebuildUngrantedCount();
+  G.resetGiftLastSeen();
+
+  G.tryMilestoneGifts();
+  const meetsAfterFirst = G.getGiftMeetsCount();
+  assertTrue("first pass (full scan) checks many gifts", meetsAfterFirst > 10);
+
+  const st = G.getState();
+  st.shades = N.fromNumber(6);
+  G.tryMilestoneGifts();
+  const meetsAfterShade = G.getGiftMeetsCount();
+
+  const shadesBucket = G.GIFTS_BY_STAT["shades"] || [];
+  const peakShadesBucket = G.GIFTS_BY_STAT["peakShades"] || [];
+  const maxFromShades = shadesBucket.length + peakShadesBucket.length;
+  assertTrue(
+    "shades-only tick checks <= shades+peakShades bucket (" + meetsAfterShade + " <= " + maxFromShades + ")",
+    meetsAfterShade <= maxFromShades
+  );
+  assertTrue(
+    "shades-only tick checks fewer than full scan (" + meetsAfterShade + " < " + meetsAfterFirst + ")",
+    meetsAfterShade < meetsAfterFirst
+  );
+
+  const totalGifts = G.GIFTS.length;
+  assertTrue(
+    "shades-only tick skips other-stat gifts (" + meetsAfterShade + " < " + totalGifts + ")",
+    meetsAfterShade < totalGifts
+  );
+}
+
+// ─── Test 17: no dirty stats → no giftMeetsThreshold calls ─────────────────────
+console.log("\n─── Test 17: unchanged stats → zero threshold checks ───");
+{
+  resetState({
+    souls: N.fromNumber(50),
+    lifetimeSouls: N.fromNumber(50),
+    allTimeSouls: N.fromNumber(50),
+    shades: N.fromNumber(5),
+    peakShades: N.fromNumber(5)
+  });
+  G.rebuildUngrantedCount();
+  G.resetGiftLastSeen();
+
+  G.tryMilestoneGifts();
+
+  G.tryMilestoneGifts();
+  assertEqual("no dirty stats → zero giftMeetsThreshold calls", G.getGiftMeetsCount(), 0);
+}
+
+// ─── Test 18: tributesLaid dirty only checks tribute-keyed gifts ────────────────
+console.log("\n─── Test 18: tributesLaid dirty → only tribute gifts checked ───");
+{
+  resetState({
+    souls: N.fromNumber(99999),
+    lifetimeSouls: N.fromNumber(99999),
+    allTimeSouls: N.fromNumber(99999),
+    shades: N.fromNumber(1000),
+    peakShades: N.fromNumber(1000),
+    lanterns: N.fromNumber(100),
+    peakLanterns: N.fromNumber(100),
+    fetters: N.fromNumber(100),
+    peakFetters: N.fromNumber(100),
+    censers: N.fromNumber(100),
+    peakCensers: N.fromNumber(100),
+    pyres: N.fromNumber(100),
+    peakPyres: N.fromNumber(100),
+    urns: N.fromNumber(100),
+    peakUrns: N.fromNumber(100),
+    hearths: N.fromNumber(100),
+    peakHearths: N.fromNumber(100),
+    beacons: N.fromNumber(100),
+    peakBeacons: N.fromNumber(100),
+    spires: N.fromNumber(100),
+    peakSpires: N.fromNumber(100),
+    obelisks: N.fromNumber(100),
+    peakObelisks: N.fromNumber(100),
+    vessels: N.fromNumber(100),
+    thrones: 10,
+    chalices: 12,
+    cinderLevel: 5,
+    urnRiteLevel: 3,
+    hearthRiteLevel: 3,
+    beaconRiteLevel: 3,
+    spireRiteLevel: 3,
+    ossuaryLevel: 8,
+    longerProcessionLevel: 2,
+    deeperTollLevel: 2,
+    longerWakeLevel: 2,
+    longerTitheLevel: 2,
+    longerVeilLevel: 2,
+    longerHymnLevel: 2,
+    longerKnellLevel: 2,
+    clicksThisRun: 500,
+    vow: "ember",
+    vowsKnown: { stillness: true, poverty: true, hunger: true, ember: true },
+    tributesLaid: 3,
+    favor: 20,
+    favorEarned: 20,
+    namesBound: 12,
+    namesComplete: true,
+    giftFirstName: true,
+    giftNamesComplete: true
+  });
+
+  const st = G.getState();
+  for (const g of G.GIFTS) st[g.flag] = true;
+  for (const g of G.GIFTS) {
+    if (g.stat === "tributesLaid") st[g.flag] = false;
+  }
+  G.rebuildUngrantedCount();
+  G.resetGiftLastSeen();
+
+  G.tryMilestoneGifts();
+
+  st.tributesLaid = 50;
+  G.tryMilestoneGifts();
+
+  const tributeBucket = G.GIFTS_BY_STAT["tributesLaid"] || [];
+  const meetsCount = G.getGiftMeetsCount();
+  assertTrue(
+    "tributesLaid dirty: checks ≤ tributesLaid bucket (" + meetsCount + " ≤ " + tributeBucket.length + ")",
+    meetsCount <= tributeBucket.length
+  );
+  assertTrue("tributesLaid dirty: checks > 0", meetsCount > 0);
+}
+
 // ─── Done ───────────────────────────────────────────────────────────────────────
 if (failed > 0) {
   console.error("\n" + failed + " assertion(s) failed");
