@@ -2469,20 +2469,17 @@ body::before {
   left: 8px;
 }
 
-/* ----- Reduced-motion in-game toggle ----- */
+/* ----- Reduced-motion in-game toggle (inside footer chrome) ----- */
 .reduced-motion-toggle {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  color: var(--ash);
   cursor: pointer;
-  text-transform: uppercase;
 }
 
 .reduced-motion-toggle input {
   accent-color: var(--gold);
+  margin: 0;
 }
 
 /* ----- prefers-reduced-motion: OS level ----- */

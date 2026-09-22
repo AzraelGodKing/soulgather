@@ -4562,7 +4562,6 @@
     }
     markChronicle(g.id);
     showToast(g.toast, "gifts");
-    announce(g.toast);
     _giftUngrantedCount--;
   }
 
@@ -6430,6 +6429,7 @@
     if (!msgs.length) return;
     if (msgs.length === 1) {
       showToast(msgs[0]);
+      announce(msgs[0]);
       return;
     }
     var soulsGain = Math.max(0, Math.floor(N.toNumber(N.sub(state.souls, batch.souls)) || 0));
@@ -6441,16 +6441,16 @@
       Math.floor(Number(state.namesBound) || 0) - (Number(batch.names) || 0)
     );
     var favorGain = Math.max(0, (Number(state.favor) || 0) - (Number(batch.favor) || 0));
-    showToast(
-      formatGiftBatchSummary(msgs.length, {
+    var summary = formatGiftBatchSummary(msgs.length, {
         souls: soulsGain,
         ash: ashGain,
         shades: shadesGain,
         vessels: vesselsGain,
         names: namesGain,
         favor: favorGain
-      })
-    );
+      });
+    showToast(summary);
+    announce(msgs.length + " gifts received.");
   }
 
   function showToast(message, groupKey) {

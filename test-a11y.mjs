@@ -184,6 +184,10 @@ ok(!html.includes('role="note"'), 'no role="note" in index.html');
 console.log("\n─── Test 6: skip link ───");
 ok(html.includes('class="skip-link"'), "skip link element exists");
 ok(html.includes('href="#chronicle"'), "skip link targets chronicle");
+const bodyStart = html.indexOf("<body>");
+const skipIdx = html.indexOf('class="skip-link"', bodyStart);
+const wrapIdx = html.indexOf('class="wrap"', bodyStart);
+ok(skipIdx > bodyStart && skipIdx < wrapIdx, "skip link is first visible element in DOM (before .wrap)");
 
 // ─── Test 7: head metadata ──────────────────────────────────────────────────
 console.log("\n─── Test 7: head metadata ───");
@@ -197,6 +201,8 @@ ok(html.includes('rel="icon"'), "favicon present");
 // ─── Test 8: in-game reduced-motion toggle in HTML ──────────────────────────
 console.log("\n─── Test 8: reduced-motion toggle ───");
 ok(html.includes('id="reduced-motion-toggle"'), "reduced-motion toggle exists in HTML");
+const toggleLabel = html.match(/<label[^>]*id="reduced-motion-label"[^>]*>/);
+ok(toggleLabel && toggleLabel[0].includes("reset-btn"), "toggle label uses existing reset-btn chrome");
 
 // ─── Test 9: prefers-reduced-motion CSS ─────────────────────────────────────
 console.log("\n─── Test 9: reduced-motion CSS ───");
@@ -240,6 +246,16 @@ ok(hiddenMatch, ".card.is-hidden { display: none } intact");
 console.log("\n─── Test 12: version string ───");
 ok(html.includes("v6.9.1"), "footer version string v6.9.1");
 ok(E.GAME_VERSION === "6.9.1", "GAME_VERSION is 6.9.1");
+
+// ─── Test 13: gift announcements batched, not per-gift ──────────────────────
+console.log("\n─── Test 13: gift announce batching ───");
+const grantGiftSrc = gameJsSrc.match(/function grantGift\(g\)\s*\{[^}]*\}/);
+ok(grantGiftSrc, "grantGift function found in source");
+if (grantGiftSrc) {
+  ok(!grantGiftSrc[0].includes("announce("), "grantGift does NOT call announce() directly (batched via flushGiftToasts)");
+}
+ok(gameJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
+ok(/announce\(\s*msgs\.length\s*\+/.test(gameJsSrc), "multi-gift batch announces count summary");
 
 // ─── Summary ────────────────────────────────────────────────────────────────
 console.log("\n" + (failed ? "FAILED " + failed + " / " + (passed + failed) : "all " + passed + " a11y assertions passed"));
