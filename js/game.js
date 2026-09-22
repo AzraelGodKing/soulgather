@@ -6544,7 +6544,6 @@
     var gain = favorGain(state.lifetimeSouls);
 
     setText(els.soulsCount, F.formatNumber(state.souls));
-    if (els.soulsCount) els.soulsCount.setAttribute("aria-label", "Souls: " + F.formatNumber(state.souls));
     setText(els.soulsRate, F.formatRate(soulsPerSec(mult)));
 
     if (els.hollowStatus) {

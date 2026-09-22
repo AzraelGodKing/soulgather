@@ -169,9 +169,9 @@ ok(!E.reduceMotionActive(), "reduceMotionActive() is false when setting off");
 E.setReduceMotion(true);
 ok(E.reduceMotionActive(), "reduceMotionActive() is true when setting on");
 
-const gameJs = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-ok(gameJs.includes("function spawnRipple"), "spawnRipple function exists");
-ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(gameJs),
+const gameJsSrc = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+ok(gameJsSrc.includes("function spawnRipple"), "spawnRipple function exists");
+ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(gameJsSrc),
    "spawnRipple guards on reduceMotionActive()");
 
 E.setReduceMotion(false);
@@ -204,14 +204,32 @@ const css = fs.readFileSync(path.join(root, "css", "style.css"), "utf8");
 ok(css.includes("prefers-reduced-motion: reduce"), "prefers-reduced-motion media query in CSS");
 ok(css.includes(".reduce-motion"), "in-game .reduce-motion class rules in CSS");
 
+// ─── Test 9b: announcer uses real visually-hidden, not display:none ─────────
+console.log("\n─── Test 9b: announcer is visually-hidden (not display:none) ───");
+const srOnlyBlock = css.match(/\.sr-only\s*\{([^}]*)\}/);
+ok(srOnlyBlock, ".sr-only CSS rule exists");
+if (srOnlyBlock) {
+  ok(!srOnlyBlock[1].includes("display: none") && !srOnlyBlock[1].includes("display:none"),
+     ".sr-only does not use display:none");
+  ok(!srOnlyBlock[1].includes("visibility: hidden") && !srOnlyBlock[1].includes("visibility:hidden"),
+     ".sr-only does not use visibility:hidden");
+  ok(srOnlyBlock[1].includes("position: absolute") || srOnlyBlock[1].includes("position:absolute"),
+     ".sr-only uses position:absolute");
+  ok(srOnlyBlock[1].includes("clip"), ".sr-only uses clip");
+}
+
 // ─── Test 10: souls-count is focusable ──────────────────────────────────────
 console.log("\n─── Test 10: souls-count focusable ───");
 const soulsCountMatch = html.match(/<div[^>]*id="souls-count"[^>]*>/);
 ok(soulsCountMatch, "souls-count element found");
 if (soulsCountMatch) {
   ok(soulsCountMatch[0].includes('tabindex="0"'), "souls-count has tabindex=0");
-  ok(soulsCountMatch[0].includes("aria-label"), "souls-count has aria-label");
+  ok(soulsCountMatch[0].includes('aria-label="Soul counter"'), "souls-count has static aria-label");
 }
+
+// ─── Test 10b: no per-frame aria-label rewrite ──────────────────────────────
+console.log("\n─── Test 10b: no per-frame aria-label rewrite ───");
+ok(!gameJsSrc.includes('setAttribute("aria-label", "Souls:'), "no per-frame aria-label rewrite on souls-count");
 
 // ─── Test 11: .is-hidden still display:none ─────────────────────────────────
 console.log("\n─── Test 11: is-hidden intact ───");
