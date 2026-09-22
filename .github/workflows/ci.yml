@@ -31,5 +31,8 @@ jobs:
       - name: GIFTS table tests
         run: node test-gifts.mjs
 
+      - name: Accessibility tests
+        run: node test-a11y.mjs
+
       - name: ESLint (no-redeclare, no-dupe-keys)
         run: npx --yes eslint@8 js/ --no-eslintrc --env browser,es6 --parser-options ecmaVersion:2020 --rule '{"no-dupe-keys":"error","no-redeclare":"error"}'

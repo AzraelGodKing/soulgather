@@ -2434,3 +2434,190 @@ body::before {
     align-items: stretch;
   }
 }
+
+/* ----- Visually-hidden (screen-reader only) ----- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Skip link ----- */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 100;
+  padding: 8px 16px;
+  background: var(--void);
+  color: var(--gold-bright);
+  border: 1px solid var(--gold);
+  font-family: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 8px;
+  left: 8px;
+}
+
+/* ----- Reduced-motion in-game toggle (inside footer chrome) ----- */
+.reduced-motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.reduced-motion-toggle input {
+  accent-color: var(--gold);
+  margin: 0;
+}
+
+/* ----- prefers-reduced-motion: OS level ----- */
+@media (prefers-reduced-motion: reduce) {
+  .card#well-card,
+  .card#spirit-card,
+  .card#vessel-card,
+  .card#throne-card,
+  .card#lantern-card,
+  .card#censer-card,
+  .card#pyre-card,
+  .card#urn-card,
+  .card#hearth-card,
+  .card#beacon-card,
+  .card#spire-card,
+  .card#obelisk-card,
+  .card#fetter-card,
+  .card#chalice-card {
+    transition: none;
+  }
+
+  .card#well-card.is-revealed,
+  .card#spirit-card.is-revealed,
+  .card#vessel-card.is-revealed,
+  .card#throne-card.is-revealed,
+  .card#lantern-card.is-revealed,
+  .card#censer-card.is-revealed,
+  .card#pyre-card.is-revealed,
+  .card#urn-card.is-revealed,
+  .card#hearth-card.is-revealed,
+  .card#beacon-card.is-revealed,
+  .card#spire-card.is-revealed,
+  .card#obelisk-card.is-revealed,
+  .card#fetter-card.is-revealed,
+  .card#chalice-card.is-revealed {
+    transition: none;
+  }
+
+  .gather-btn {
+    transition: none;
+  }
+
+  .gather-btn.is-pulse .sigil {
+    animation: none;
+  }
+
+  .soul-drop {
+    animation: none;
+    opacity: 0;
+  }
+
+  .toast {
+    transition: none;
+  }
+
+  .toast.is-visible {
+    animation: none;
+  }
+
+  .card-buy {
+    transition: none;
+  }
+
+  .tribute-lay {
+    transition: none;
+  }
+
+  .aspect-row,
+  .vow-row {
+    transition: none;
+  }
+}
+
+/* ----- In-game reduced-motion override (same rules, class-driven) ----- */
+.reduce-motion .card#well-card,
+.reduce-motion .card#spirit-card,
+.reduce-motion .card#vessel-card,
+.reduce-motion .card#throne-card,
+.reduce-motion .card#lantern-card,
+.reduce-motion .card#censer-card,
+.reduce-motion .card#pyre-card,
+.reduce-motion .card#urn-card,
+.reduce-motion .card#hearth-card,
+.reduce-motion .card#beacon-card,
+.reduce-motion .card#spire-card,
+.reduce-motion .card#obelisk-card,
+.reduce-motion .card#fetter-card,
+.reduce-motion .card#chalice-card {
+  transition: none;
+}
+
+.reduce-motion .card#well-card.is-revealed,
+.reduce-motion .card#spirit-card.is-revealed,
+.reduce-motion .card#vessel-card.is-revealed,
+.reduce-motion .card#throne-card.is-revealed,
+.reduce-motion .card#lantern-card.is-revealed,
+.reduce-motion .card#censer-card.is-revealed,
+.reduce-motion .card#pyre-card.is-revealed,
+.reduce-motion .card#urn-card.is-revealed,
+.reduce-motion .card#hearth-card.is-revealed,
+.reduce-motion .card#beacon-card.is-revealed,
+.reduce-motion .card#spire-card.is-revealed,
+.reduce-motion .card#obelisk-card.is-revealed,
+.reduce-motion .card#fetter-card.is-revealed,
+.reduce-motion .card#chalice-card.is-revealed {
+  transition: none;
+}
+
+.reduce-motion .gather-btn {
+  transition: none;
+}
+
+.reduce-motion .gather-btn.is-pulse .sigil {
+  animation: none;
+}
+
+.reduce-motion .soul-drop {
+  animation: none;
+  opacity: 0;
+}
+
+.reduce-motion .toast {
+  transition: none;
+}
+
+.reduce-motion .toast.is-visible {
+  animation: none;
+}
+
+.reduce-motion .card-buy {
+  transition: none;
+}
+
+.reduce-motion .tribute-lay {
+  transition: none;
+}
+
+.reduce-motion .aspect-row,
+.reduce-motion .vow-row {
+  transition: none;
+}

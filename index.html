@@ -3,10 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Soulgather — an incremental idle game. Draw souls from the well, bind shades, lay tribute to the GodKing.">
+  <meta name="theme-color" content="#07050a">
+  <meta property="og:title" content="Soulgather — For the GodKing">
+  <meta property="og:description" content="An incremental idle game. Draw souls from the well, bind shades, lay tribute to the GodKing.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://azraelgodking.github.io/soulgather/">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Soulgather — For the GodKing">
+  <meta name="twitter:description" content="An incremental idle game. Draw souls from the well, bind shades, lay tribute to the GodKing.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕯</text></svg>">
   <title>Soulgather — For the GodKing</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <a class="skip-link" href="#chronicle">Skip to Chronicle &amp; Stats</a>
+    <div id="a11y-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="wrap">
     <header class="masthead">
       <h1>Soulgather</h1>
@@ -14,8 +26,8 @@
       <div class="rule" aria-hidden="true"></div>
     </header>
 
-    <section class="souls-display" aria-live="polite">
-      <div class="souls-count" id="souls-count">0</div>
+    <section class="souls-display">
+      <div class="souls-count" id="souls-count" tabindex="0" aria-label="Soul counter">0</div>
       <div class="souls-label">Souls</div>
       <div class="souls-rate" id="souls-rate">0 / sec</div>
       <div class="souls-hollow is-hidden" id="hollow-status">Hollow</div>
@@ -68,7 +80,7 @@
         <button type="button" class="buy-mode-btn" data-mode="10" aria-pressed="false">10</button>
         <button type="button" class="buy-mode-btn" data-mode="max" aria-pressed="false">Max</button>
       </div>
-      <p class="buy-mode-hint is-hidden" id="buy-mode-hint" role="note">
+      <p class="buy-mode-hint is-hidden" id="buy-mode-hint" role="status">
         <span>1 / 2 / 3 switch amount</span>
         <button type="button" class="buy-mode-hint-dismiss" id="buy-mode-hint-dismiss" aria-label="Dismiss">×</button>
       </p>
@@ -1304,6 +1316,10 @@
     <footer class="foot">
       <span>Soulgather v6.9.1 · prototype</span>
       <div class="foot-actions">
+        <label class="reset-btn reduced-motion-toggle" id="reduced-motion-label">
+          <input type="checkbox" id="reduced-motion-toggle" aria-label="Reduce motion">
+          Reduce motion
+        </label>
         <button type="button" class="tribute-lay is-hidden" id="tribute-foot-btn">Lay Tribute</button>
         <details class="memory-xfer" id="memory-panel">
           <summary>Memory</summary>
