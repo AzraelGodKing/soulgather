@@ -224,6 +224,76 @@
     return Math.max(0, Math.floor(Number(owned) || 0)) + i;
   }
 
+  /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
+  var ANNOUNCE_THROTTLE_MS = 2500;
+  var _announceLastMs = 0;
+  var _announceQueue = [];
+  var _announceTimer = null;
+
+  function announce(msg) {
+    if (!msg) return;
+    var now = Date.now();
+    var wait = ANNOUNCE_THROTTLE_MS - (now - _announceLastMs);
+    if (wait <= 0) {
+      _pushAnnounce(msg);
+    } else {
+      _announceQueue.push(msg);
+      if (!_announceTimer) {
+        _announceTimer = window.setTimeout(_drainAnnounce, wait);
+      }
+    }
+  }
+
+  function _pushAnnounce(msg) {
+    _announceLastMs = Date.now();
+    var el = typeof document !== "undefined" && document.getElementById("a11y-announcer");
+    if (!el) return;
+    el.textContent = "";
+    void el.offsetWidth;
+    el.textContent = msg;
+  }
+
+  function _drainAnnounce() {
+    _announceTimer = null;
+    if (!_announceQueue.length) return;
+    var next = _announceQueue.shift();
+    _pushAnnounce(next);
+    if (_announceQueue.length) {
+      _announceTimer = window.setTimeout(_drainAnnounce, ANNOUNCE_THROTTLE_MS);
+    }
+  }
+
+  /* ─── Reduced-motion (in-game setting, independent of OS) ──────────── */
+  var REDUCE_MOTION_KEY = "soulgather-reduce-motion";
+  var _reduceMotion = false;
+
+  function reduceMotionActive() {
+    if (_reduceMotion) return true;
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+    return false;
+  }
+
+  function setReduceMotion(on) {
+    _reduceMotion = !!on;
+    if (typeof localStorage !== "undefined") {
+      try { localStorage.setItem(REDUCE_MOTION_KEY, _reduceMotion ? "1" : ""); } catch (e) { /* ignore */ }
+    }
+    if (typeof document !== "undefined") {
+      document.body.classList.toggle("reduce-motion", _reduceMotion);
+    }
+  }
+
+  function loadReduceMotion() {
+    if (typeof localStorage !== "undefined") {
+      try { _reduceMotion = localStorage.getItem(REDUCE_MOTION_KEY) === "1"; } catch (e) { /* ignore */ }
+    }
+    if (typeof document !== "undefined") {
+      document.body.classList.toggle("reduce-motion", _reduceMotion);
+    }
+  }
+
   function producerCost(owned) {
     return N.cost(COST_BASE, COST_MULT, owned);
   }
@@ -1343,6 +1413,7 @@
       if (first && !state.hollowWarned) {
         state.hollowWarned = true;
         showToast("The well grows hollow.");
+        announce("Hollow stack gained.");
       }
     }
   }
@@ -2634,6 +2705,7 @@
   var toastHold = false;
   var toastEscapeArmed = false;
   var giftToastBatch = null;
+  var _favorReadyAnnounced = false;
   var pendingAwayToast = null;
   var loadFailed = false;
   var loadFailedRaw = null;
@@ -2909,6 +2981,14 @@
     markDirty();
 
     var remaining = dt;
+    var titheWas = Number(state.titheLeft) || 0;
+    var nightWas = Number(state.nightLeft) || 0;
+    var hymnWas = Number(state.hymnLeft) || 0;
+    var veilWas = Number(state.veilLeft) || 0;
+    var tollWas = Number(state.tollLeft) || 0;
+    var wakeWas = Number(state.wakeLeft) || 0;
+    var procWas = Number(state.processionLeft) || 0;
+    var knellWas = Number(state.knellLeft) || 0;
     while (remaining > 0) {
       var tithe = Number(state.titheLeft) || 0;
       if (tithe < 0) tithe = 0;
@@ -2972,6 +3052,15 @@
     }
 
     if (live) {
+      if (titheWas > 0 && (Number(state.titheLeft) || 0) <= 0) announce("Tithe expired.");
+      if (nightWas > 0 && (Number(state.nightLeft) || 0) <= 0) announce("Night's Tithe expired.");
+      if (hymnWas > 0 && (Number(state.hymnLeft) || 0) <= 0) announce("Hymn expired.");
+      if (wakeWas > 0 && (Number(state.wakeLeft) || 0) <= 0) announce("Wake expired.");
+      if (veilWas > 0 && (Number(state.veilLeft) || 0) <= 0) announce("Veil expired.");
+      if (tollWas > 0 && (Number(state.tollLeft) || 0) <= 0) announce("Toll expired.");
+      if (procWas > 0 && (Number(state.processionLeft) || 0) <= 0) announce("Procession expired.");
+      if (knellWas > 0 && (Number(state.knellLeft) || 0) <= 0) announce("Knell expired.");
+
       // AZR-164: production already used full clamped dt above; Hollow/Autobind use liveSpan only.
       var liveSpan = Math.min(dt, LIVE_FRAME_MAX);
       tickHollowHunger(liveSpan); // also no-ops if document.hidden
@@ -4024,6 +4113,7 @@
     }
     checkUnlock();
     showToast("The GodKing takes his cut.");
+    announce("Tithe active.");
     markSaveDirty();
     markDirty();
   }
@@ -4040,6 +4130,7 @@
     noteHollowManualSpend("ash", cost, hollowBefore);
     state.nightLeft = nightSecs(state.deeperNightLevel);
     showToast("The GodKing hungers at midnight.");
+    announce("Night's Tithe active.");
     markSaveDirty();
     markDirty();
   }
@@ -4062,6 +4153,7 @@
       showToast("Eight ash for the first wake.");
     }
     showToast("The fire does not sleep.");
+    announce("Wake active.");
     markSaveDirty();
     markDirty();
   }
@@ -4318,6 +4410,7 @@
       showToast("Ten souls for the first toll.");
     }
     showToast("The well answers twice.");
+    announce("Toll active.");
     markSaveDirty();
     markDirty();
   }
@@ -4340,6 +4433,7 @@
       showToast("Ten ash for the first veil.");
     }
     showToast("The well's mouth is near.");
+    announce("Veil active.");
     markSaveDirty();
     markDirty();
   }
@@ -4468,6 +4562,7 @@
     }
     markChronicle(g.id);
     showToast(g.toast, "gifts");
+    announce(g.toast);
     _giftUngrantedCount--;
   }
 
@@ -4830,10 +4925,10 @@
       showToast("Five souls for the first procession.");
     }
     showToast("They walk the emptied hall.");
+    announce("Procession active.");
     markSaveDirty();
     markDirty();
   }
-
   function soundKnell() {
     if (!remembranceUnlocked()) return;
     if (knellActive()) return;
@@ -4851,6 +4946,7 @@
       showToast("Five souls for the first knell.");
     }
     showToast("The well answers twice.");
+    announce("Knell active.");
     markSaveDirty();
     markDirty();
   }
@@ -5931,6 +6027,7 @@
     markChronicle("hymn");
     hideToast(true);
     hideUnlockCards();
+    _favorReadyAnnounced = false;
     checkUnlock();
     revealUnlockedCards(false);
     save();
@@ -5939,6 +6036,7 @@
       showToast("The GodKing's first remembrance is generous.");
     }
     showToast("A hymn follows the emptying.");
+    announce("Hymn active.");
   }
 
 
@@ -5989,6 +6087,7 @@
   }
 
   function spawnRipple(power) {
+    if (reduceMotionActive()) return;
     var well = els.gatherBtn;
     if (!well) return;
     var drop = document.createElement("span");
@@ -6023,6 +6122,7 @@
     if (withToast && !state.toastShown) {
       state.toastShown = true;
       showToast("The well answers. A will can be bound.");
+      announce("Unlocked: Bound Spirits.");
       markSaveDirty();
     }
   }
@@ -6032,6 +6132,7 @@
     if (withToast && !state.vesselToastShown) {
       state.vesselToastShown = true;
       showToast("A vessel waits. A will can be housed.");
+      announce("Unlocked: Vessels.");
       markSaveDirty();
     }
   }
@@ -6041,6 +6142,7 @@
     if (withToast && !state.throneToastShown) {
       state.throneToastShown = true;
       showToast("A throne may be raised.");
+      announce("Unlocked: Thrones.");
       markSaveDirty();
     }
   }
@@ -6054,6 +6156,7 @@
     if (withToast && !state.censerToastShown) {
       state.censerToastShown = true;
       showToast("They burn what the well discards.");
+      announce("Unlocked: Censers.");
       markSaveDirty();
     }
   }
@@ -6441,6 +6544,7 @@
     var gain = favorGain(state.lifetimeSouls);
 
     setText(els.soulsCount, F.formatNumber(state.souls));
+    if (els.soulsCount) els.soulsCount.setAttribute("aria-label", "Souls: " + F.formatNumber(state.souls));
     setText(els.soulsRate, F.formatRate(soulsPerSec(mult)));
 
     if (els.hollowStatus) {
@@ -7485,6 +7589,10 @@
     if (gain >= 1 && !state.giftFirstTribute) tributeOffer += 1;
     if (gain >= 1) tributeOffer += vowExtraFavor(state.vow, state.vowHungerPaid);
     var tributeReady = gain >= 1;
+    if (tributeReady && !_favorReadyAnnounced) {
+      _favorReadyAnnounced = true;
+      announce("Favor ready. Tribute available.");
+    }
     if (els.tributePanel) {
       els.tributePanel.classList.toggle("is-hidden", !tributeReady);
     }
@@ -8958,6 +9066,15 @@
     if (els.memoryExport) els.memoryExport.addEventListener("click", exportMemory);
     if (els.memoryImport) els.memoryImport.addEventListener("click", importMemory);
 
+    loadReduceMotion();
+    els.reduceMotionToggle = document.getElementById("reduced-motion-toggle");
+    if (els.reduceMotionToggle) {
+      els.reduceMotionToggle.checked = _reduceMotion;
+      els.reduceMotionToggle.addEventListener("change", function () {
+        setReduceMotion(els.reduceMotionToggle.checked);
+      });
+    }
+
     els.loadFailNotice = document.getElementById("load-fail-notice");
     els.loadFailRaw = document.getElementById("load-fail-raw");
     els.loadFailExport = document.getElementById("load-fail-export");
@@ -9450,6 +9567,15 @@
     getLoadFailed: function () { return loadFailed; },
     setLoadFailed: function (v) { loadFailed = !!v; },
     getLoadFailedRaw: function () { return loadFailedRaw; },
-    setLoadFailedRaw: function (v) { loadFailedRaw = v == null ? null : String(v); }
+    setLoadFailedRaw: function (v) { loadFailedRaw = v == null ? null : String(v); },
+    announce: announce,
+    ANNOUNCE_THROTTLE_MS: ANNOUNCE_THROTTLE_MS,
+    reduceMotionActive: reduceMotionActive,
+    setReduceMotion: setReduceMotion,
+    _getReduceMotion: function () { return _reduceMotion; },
+    _getAnnounceQueue: function () { return _announceQueue; },
+    _getAnnounceLastMs: function () { return _announceLastMs; },
+    _resetAnnouncer: function () { _announceLastMs = 0; _announceQueue = []; if (_announceTimer) { clearTimeout(_announceTimer); _announceTimer = null; } },
+    spawnRipple: spawnRipple
   };
 })();
