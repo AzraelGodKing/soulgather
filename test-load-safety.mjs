@@ -270,6 +270,7 @@ function loadScript(rel) {
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
 loadScript("js/game.js");
 
 const Eco = sandbox.SoulgatherEconomy;
