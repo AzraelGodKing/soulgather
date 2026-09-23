@@ -30,6 +30,7 @@ function assertEqual(label, a, b) {
 }
 
 const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+const configSrc = fs.readFileSync(path.join(root, "js/config.js"), "utf8");
 
 // --- Source contracts ---
 assertTrue(
@@ -46,19 +47,19 @@ assertTrue(
 );
 assertTrue(
   "AZR-165 SAVE_BAK1_KEY exists",
-  /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(gameSrc)
+  /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(gameSrc) || /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(configSrc)
 );
 assertTrue(
   "AZR-165 SAVE_BAK2_KEY exists",
-  /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(gameSrc)
+  /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(gameSrc) || /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(configSrc)
 );
 assertTrue(
   "AZR-165 BAK1_MS = 60s",
-  /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(gameSrc)
+  /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(gameSrc) || /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(configSrc)
 );
 assertTrue(
   "AZR-165 BAK2_MS = 1h",
-  /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(gameSrc)
+  /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(gameSrc) || /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(configSrc)
 );
 assertTrue(
   "AZR-165 beginLoadFailure helper exists",
@@ -271,6 +272,7 @@ function loadScript(rel) {
 loadScript("js/num.js");
 loadScript("js/format.js");
 loadScript("js/config.js");
+loadScript("js/economy.js");
 loadScript("js/game.js");
 
 const Eco = sandbox.SoulgatherEconomy;
