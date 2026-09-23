@@ -2,185 +2,173 @@
   "use strict";
 
   var N = globalThis.SoulgatherNum;
+  var C = globalThis.SoulgatherConfig;
 
-  var GAME_VERSION = "6.9.1";
-  var SAVE_KEY = "soulgather-v0";
-  var SAVE_BAK1_KEY = "soulgather-v0.bak1";
-  var SAVE_BAK2_KEY = "soulgather-v0.bak2";
-  var BAK1_MS = 60 * 1000;
-  var BAK2_MS = 60 * 60 * 1000;
-  var COST_BASE = 10;
-  var COST_MULT = 1.15;
-  var WELL_COST_BASE = 25;
-  var WELL_COST_MULT = 1.5;
-  var WELL_EARLY_MULT = 1.35;
-  var LANTERN_COST_BASE = 30;
-  var LANTERN_COST_MULT = 1.2;
-  var MARK_COST_BASE = 8;
-  var MARK_COST_MULT = 2;
-  var SHADE_SOULS_PER_SEC = 1;
-  var SPIRIT_SHADES_PER_SEC = 0.1;
-  var VESSEL_SPIRITS_PER_SEC = 0.1;
-  var CENSER_ASH_PER_SEC = 0.2;
-  var PYRE_ASH_PER_SEC = 0.15;
-  var PYRE_COST_BASE = 2;
-  var PYRE_COST_MULT = 1.2;
-  var UNLOCK_PYRES = 3;
-  var URN_ASH_PER_SEC = 0.1;
-  var URN_COST_BASE = 3;
-  var URN_COST_MULT = 1.28;
-  var UNLOCK_URNS = 6;
-  var HEARTH_ASH_PER_SEC = 0.08;
-  var HEARTH_COST_BASE = 4;
-  var HEARTH_COST_MULT = 1.28;
-  var UNLOCK_HEARTHS = 6;
-  var BEACON_ASH_PER_SEC = 0.06;
-  var BEACON_COST_BASE = 4;
-  var BEACON_COST_MULT = 1.28;
-  var UNLOCK_BEACONS = 6;
-  var SPIRE_ASH_PER_SEC = 0.045;
-  var SPIRE_COST_BASE = 5;
-  var SPIRE_COST_MULT = 1.28;
-  var UNLOCK_SPIRES = 6;
-  var OBELISK_ASH_PER_SEC = 0.03;
-  var OBELISK_COST_BASE = 6;
-  var OBELISK_COST_MULT = 1.28;
-  var UNLOCK_OBELISKS = 6;
-  var UNLOCK_CHALICES = 5;
-  var CHALICE_MAX = 12;
-  var CHALICE_COST_BASE = 32;
-  var CHALICE_COST_MULT = 1.65;
-  var ASH_FROM_SHADE_FRAC = 0.01;
-  var UNLOCK_SHADES = 10;
-  var UNLOCK_LIFETIME = 100;
-  var UNLOCK_SPIRITS_FOR_VESSELS = 5;
-  var UNLOCK_LIFETIME_SHADES = 50;
-  var UNLOCK_VESSELS_FOR_THRONES = 1;
-  var UNLOCK_LIFETIME_SPIRITS = 50;
-  var UNLOCK_WELL_DRAWS_SHADES = 3;
-  var UNLOCK_LANTERNS = 3;
-  var UNLOCK_MARKS_LIFETIME = 500;
-  var UNLOCK_CENSERS_VESSELS = 1;
-  var UNLOCK_CENSERS_LIFETIME_SPIRITS = 25;
-  var WELL_DRAWS_COST = 50;
-  var BULK_CAP = 10000;
-  var RENDER_HZ = 12;
-  var RENDER_MS = 1000 / RENDER_HZ;
-  var AUTOSAVE_MS = 5000;
-  var MAX_DT = 8 * 60 * 60;
-  var AUTOBIND_INTERVAL = 1;
-  var LIVE_FRAME_MAX = 1.0;
+  var GAME_VERSION = C.GAME_VERSION;
+  var SAVE_KEY = C.SAVE_KEY;
+  var SAVE_BAK1_KEY = C.SAVE_BAK1_KEY;
+  var SAVE_BAK2_KEY = C.SAVE_BAK2_KEY;
+  var BAK1_MS = C.BAK1_MS;
+  var BAK2_MS = C.BAK2_MS;
+  var COST_BASE = C.COST_BASE;
+  var COST_MULT = C.COST_MULT;
+  var WELL_COST_BASE = C.WELL_COST_BASE;
+  var WELL_COST_MULT = C.WELL_COST_MULT;
+  var WELL_EARLY_MULT = C.WELL_EARLY_MULT;
+  var LANTERN_COST_BASE = C.LANTERN_COST_BASE;
+  var LANTERN_COST_MULT = C.LANTERN_COST_MULT;
+  var MARK_COST_BASE = C.MARK_COST_BASE;
+  var MARK_COST_MULT = C.MARK_COST_MULT;
+  var SHADE_SOULS_PER_SEC = C.SHADE_SOULS_PER_SEC;
+  var SPIRIT_SHADES_PER_SEC = C.SPIRIT_SHADES_PER_SEC;
+  var VESSEL_SPIRITS_PER_SEC = C.VESSEL_SPIRITS_PER_SEC;
+  var CENSER_ASH_PER_SEC = C.CENSER_ASH_PER_SEC;
+  var PYRE_ASH_PER_SEC = C.PYRE_ASH_PER_SEC;
+  var PYRE_COST_BASE = C.PYRE_COST_BASE;
+  var PYRE_COST_MULT = C.PYRE_COST_MULT;
+  var UNLOCK_PYRES = C.UNLOCK_PYRES;
+  var URN_ASH_PER_SEC = C.URN_ASH_PER_SEC;
+  var URN_COST_BASE = C.URN_COST_BASE;
+  var URN_COST_MULT = C.URN_COST_MULT;
+  var UNLOCK_URNS = C.UNLOCK_URNS;
+  var HEARTH_ASH_PER_SEC = C.HEARTH_ASH_PER_SEC;
+  var HEARTH_COST_BASE = C.HEARTH_COST_BASE;
+  var HEARTH_COST_MULT = C.HEARTH_COST_MULT;
+  var UNLOCK_HEARTHS = C.UNLOCK_HEARTHS;
+  var BEACON_ASH_PER_SEC = C.BEACON_ASH_PER_SEC;
+  var BEACON_COST_BASE = C.BEACON_COST_BASE;
+  var BEACON_COST_MULT = C.BEACON_COST_MULT;
+  var UNLOCK_BEACONS = C.UNLOCK_BEACONS;
+  var SPIRE_ASH_PER_SEC = C.SPIRE_ASH_PER_SEC;
+  var SPIRE_COST_BASE = C.SPIRE_COST_BASE;
+  var SPIRE_COST_MULT = C.SPIRE_COST_MULT;
+  var UNLOCK_SPIRES = C.UNLOCK_SPIRES;
+  var OBELISK_ASH_PER_SEC = C.OBELISK_ASH_PER_SEC;
+  var OBELISK_COST_BASE = C.OBELISK_COST_BASE;
+  var OBELISK_COST_MULT = C.OBELISK_COST_MULT;
+  var UNLOCK_OBELISKS = C.UNLOCK_OBELISKS;
+  var UNLOCK_CHALICES = C.UNLOCK_CHALICES;
+  var CHALICE_MAX = C.CHALICE_MAX;
+  var CHALICE_COST_BASE = C.CHALICE_COST_BASE;
+  var CHALICE_COST_MULT = C.CHALICE_COST_MULT;
+  var ASH_FROM_SHADE_FRAC = C.ASH_FROM_SHADE_FRAC;
+  var UNLOCK_SHADES = C.UNLOCK_SHADES;
+  var UNLOCK_LIFETIME = C.UNLOCK_LIFETIME;
+  var UNLOCK_SPIRITS_FOR_VESSELS = C.UNLOCK_SPIRITS_FOR_VESSELS;
+  var UNLOCK_LIFETIME_SHADES = C.UNLOCK_LIFETIME_SHADES;
+  var UNLOCK_VESSELS_FOR_THRONES = C.UNLOCK_VESSELS_FOR_THRONES;
+  var UNLOCK_LIFETIME_SPIRITS = C.UNLOCK_LIFETIME_SPIRITS;
+  var UNLOCK_WELL_DRAWS_SHADES = C.UNLOCK_WELL_DRAWS_SHADES;
+  var UNLOCK_LANTERNS = C.UNLOCK_LANTERNS;
+  var UNLOCK_MARKS_LIFETIME = C.UNLOCK_MARKS_LIFETIME;
+  var UNLOCK_CENSERS_VESSELS = C.UNLOCK_CENSERS_VESSELS;
+  var UNLOCK_CENSERS_LIFETIME_SPIRITS = C.UNLOCK_CENSERS_LIFETIME_SPIRITS;
+  var WELL_DRAWS_COST = C.WELL_DRAWS_COST;
+  var BULK_CAP = C.BULK_CAP;
+  var RENDER_HZ = C.RENDER_HZ;
+  var RENDER_MS = C.RENDER_MS;
+  var AUTOSAVE_MS = C.AUTOSAVE_MS;
+  var MAX_DT = C.MAX_DT;
+  var AUTOBIND_INTERVAL = C.AUTOBIND_INTERVAL;
+  var LIVE_FRAME_MAX = C.LIVE_FRAME_MAX;
   var autobindAcc = 0;
   var sanityAcc = 0;
-  var HOLLOW_GRACE = 90;
-  var HOLLOW_INTERVAL = 45;
-  var HOLLOW_MAX = 5;
-  var HOLLOW_PENALTY = 0.04;
-  var HOLLOW_SOUL_CLEAR_CAP = 500;
-  var HOLLOW_SOUL_CLEAR_FLOOR = 25;
-  var HOLLOW_ASH_CLEAR_FLOOR = 5;
-  var HOLLOW_SHADE_CLEAR_FLOOR = 3;
-  var HOLLOW_CLEAR_FRAC = 0.02;
-  var TOAST_MS = 5200;
-  var TOAST_FAST_MS = 1800;
-  var TOAST_QUEUE_MAX = 5;
-  var AWAY_MIN_DT = 2;
-  var AWAY_SUMMARY_DT = 60;
-  var TITHE_MIN = 25;
-  var TITHE_FRAC = 0.1;
-  var TITHE_SECS = 60;
-  var FETTER_COST_BASE = 20;
-  var FETTER_COST_MULT = 1.2;
-  var UNLOCK_FETTERS = 3;
-  var UNLOCK_AUTOBIND_SHADES = 15;
-  var UNLOCK_AUTOBIND_SPIRITS = 10;
-  var UNLOCK_AUTOBIND_VESSELS = 3;
-  var UNLOCK_AUTOBIND_LANTERNS = 8;
-  var UNLOCK_AUTOBIND_FETTERS = 6;
-  var UNLOCK_AUTOBIND_CENSERS = 4;
-  var UNLOCK_AUTOBIND_THRONES = 4;
-  var UNLOCK_AUTOBIND_PYRES = 4;
-  var UNLOCK_AUTOBIND_CHALICES = 3;
-  var UNLOCK_AUTOBIND_URNS = 3;
-  var UNLOCK_AUTOBIND_HEARTHS = 3;
-  var UNLOCK_AUTOBIND_BEACONS = 3;
-  var UNLOCK_AUTOBIND_SPIRES = 3;
-  var UNLOCK_AUTOBIND_OBELISKS = 3;
-  var CINDER_COST_BASE = 22;
-  var CINDER_COST_MULT = 2.6;
-  var URN_RITE_COST_BASE = 18;
-  var URN_RITE_COST_MULT = 2.6;
-  var HEARTH_RITE_COST_BASE = 20;
-  var HEARTH_RITE_COST_MULT = 2.6;
-  var BEACON_RITE_COST_BASE = 24;
-  var BEACON_RITE_COST_MULT = 2.6;
-  var SPIRE_RITE_COST_BASE = 26;
-  var SPIRE_RITE_COST_MULT = 2.6;
+  var HOLLOW_GRACE = C.HOLLOW_GRACE;
+  var HOLLOW_INTERVAL = C.HOLLOW_INTERVAL;
+  var HOLLOW_MAX = C.HOLLOW_MAX;
+  var HOLLOW_PENALTY = C.HOLLOW_PENALTY;
+  var HOLLOW_SOUL_CLEAR_CAP = C.HOLLOW_SOUL_CLEAR_CAP;
+  var HOLLOW_SOUL_CLEAR_FLOOR = C.HOLLOW_SOUL_CLEAR_FLOOR;
+  var HOLLOW_ASH_CLEAR_FLOOR = C.HOLLOW_ASH_CLEAR_FLOOR;
+  var HOLLOW_SHADE_CLEAR_FLOOR = C.HOLLOW_SHADE_CLEAR_FLOOR;
+  var HOLLOW_CLEAR_FRAC = C.HOLLOW_CLEAR_FRAC;
+  var TOAST_MS = C.TOAST_MS;
+  var TOAST_FAST_MS = C.TOAST_FAST_MS;
+  var TOAST_QUEUE_MAX = C.TOAST_QUEUE_MAX;
+  var AWAY_MIN_DT = C.AWAY_MIN_DT;
+  var AWAY_SUMMARY_DT = C.AWAY_SUMMARY_DT;
+  var TITHE_MIN = C.TITHE_MIN;
+  var TITHE_FRAC = C.TITHE_FRAC;
+  var TITHE_SECS = C.TITHE_SECS;
+  var FETTER_COST_BASE = C.FETTER_COST_BASE;
+  var FETTER_COST_MULT = C.FETTER_COST_MULT;
+  var UNLOCK_FETTERS = C.UNLOCK_FETTERS;
+  var UNLOCK_AUTOBIND_SHADES = C.UNLOCK_AUTOBIND_SHADES;
+  var UNLOCK_AUTOBIND_SPIRITS = C.UNLOCK_AUTOBIND_SPIRITS;
+  var UNLOCK_AUTOBIND_VESSELS = C.UNLOCK_AUTOBIND_VESSELS;
+  var UNLOCK_AUTOBIND_LANTERNS = C.UNLOCK_AUTOBIND_LANTERNS;
+  var UNLOCK_AUTOBIND_FETTERS = C.UNLOCK_AUTOBIND_FETTERS;
+  var UNLOCK_AUTOBIND_CENSERS = C.UNLOCK_AUTOBIND_CENSERS;
+  var UNLOCK_AUTOBIND_THRONES = C.UNLOCK_AUTOBIND_THRONES;
+  var UNLOCK_AUTOBIND_PYRES = C.UNLOCK_AUTOBIND_PYRES;
+  var UNLOCK_AUTOBIND_CHALICES = C.UNLOCK_AUTOBIND_CHALICES;
+  var UNLOCK_AUTOBIND_URNS = C.UNLOCK_AUTOBIND_URNS;
+  var UNLOCK_AUTOBIND_HEARTHS = C.UNLOCK_AUTOBIND_HEARTHS;
+  var UNLOCK_AUTOBIND_BEACONS = C.UNLOCK_AUTOBIND_BEACONS;
+  var UNLOCK_AUTOBIND_SPIRES = C.UNLOCK_AUTOBIND_SPIRES;
+  var UNLOCK_AUTOBIND_OBELISKS = C.UNLOCK_AUTOBIND_OBELISKS;
+  var CINDER_COST_BASE = C.CINDER_COST_BASE;
+  var CINDER_COST_MULT = C.CINDER_COST_MULT;
+  var URN_RITE_COST_BASE = C.URN_RITE_COST_BASE;
+  var URN_RITE_COST_MULT = C.URN_RITE_COST_MULT;
+  var HEARTH_RITE_COST_BASE = C.HEARTH_RITE_COST_BASE;
+  var HEARTH_RITE_COST_MULT = C.HEARTH_RITE_COST_MULT;
+  var BEACON_RITE_COST_BASE = C.BEACON_RITE_COST_BASE;
+  var BEACON_RITE_COST_MULT = C.BEACON_RITE_COST_MULT;
+  var SPIRE_RITE_COST_BASE = C.SPIRE_RITE_COST_BASE;
+  var SPIRE_RITE_COST_MULT = C.SPIRE_RITE_COST_MULT;
   /* Aliases to BASE for export/compat (live costs use *Cost(level)). */
-  var CINDER_COST = CINDER_COST_BASE;
-  var URN_RITE_COST = URN_RITE_COST_BASE;
-  var HEARTH_RITE_COST = HEARTH_RITE_COST_BASE;
-  var BEACON_RITE_COST = BEACON_RITE_COST_BASE;
-  var SPIRE_RITE_COST = SPIRE_RITE_COST_BASE;
-  var RITE_MULT_BASE = 1.55;
-  var SIPHON_COST_BASE = 65;
-  var LEVY_COST_BASE = 22;
-  var BINDING_TOLL_COST_BASE = 40;
-  var BINDING_TOLL_COST_MULT = 1.45;
-  var BINDING_TOLL_MAX = 4;
-  var BINDING_TOLL_RATE = 1.12;
-  var BINDING_TOLL_COST_BONUS = 0.15;
-  var UNLOCK_NIGHT_LANTERNS = 8;
-  var UNLOCK_VEIL_CLICKS = 50;
-  var UNLOCK_TOLL_CLICKS = 80;
-  var TOLL_COST = 40;
-  var TOLL_SECS = 25;
-  var VEIL_MIN = 20;
-  var VEIL_FRAC = 0.15;
-  var VEIL_SECS = 20;
-  var WAKE_COST = 30;
-  var WAKE_SECS = 40;
-  var UNLOCK_WAKE_ASH = 40;
-  var NIGHT_TITHE_MIN = 10;
-  var NIGHT_TITHE_FRAC = 0.25;
-  var NIGHT_TITHE_SECS = 30;
-  var REMEMBRANCE_FAVOR_COST = 3;
-  var FAVOR_SOULS_BASE = 25000;
-  var ASHEN_TIDE_MAX = 5;
-  var OSSUARY_COST = 1;
-  var OSSUARY_MAX = 8;
-  var PROCESSION_COST = 1;
-  var PROCESSION_SECS = 45;
-  var KNELL_COST = 1;
-  var KNELL_SECS = 20;
-  var LONGER_PROCESSION_MAX = 5;
-  var DEEPER_TOLL_MAX = 5;
-  var LONGER_WAKE_MAX = 5;
-  var LONGER_TITHE_MAX = 5;
-  var LONGER_VEIL_MAX = 5;
-  var LONGER_HYMN_MAX = 5;
-  var LONGER_KNELL_MAX = 5;
-  var CHOIR_MAX = 10;
-  var CHOIR_LANTERN_COST = 5;
-  var UNLOCK_CHOIR_LANTERNS = 5;
-  var UNLOCK_CHOIR_ASH = 20;
-  var HYMN_SECS = 45;
-  var HYMN_MULT = 1.25;
-  var NAME_THRESHOLDS = [25, 50, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25e3, 50000];
-  var BOUND_NAMES = [
-    "The First Siphon",
-    "The Quiet Chain",
-    "The Hollow Tithe",
-    "The Bound Echo",
-    "The Ashen Mouth",
-    "The Night Levy",
-    "The Well's Hunger",
-    "The Seat Unseen",
-    "The Kindled Fetter",
-    "The Crown's Shadow",
-    "The Last Vessel",
-    "The Name He Keeps"
-  ];
+  var CINDER_COST = C.CINDER_COST;
+  var URN_RITE_COST = C.URN_RITE_COST;
+  var HEARTH_RITE_COST = C.HEARTH_RITE_COST;
+  var BEACON_RITE_COST = C.BEACON_RITE_COST;
+  var SPIRE_RITE_COST = C.SPIRE_RITE_COST;
+  var RITE_MULT_BASE = C.RITE_MULT_BASE;
+  var SIPHON_COST_BASE = C.SIPHON_COST_BASE;
+  var LEVY_COST_BASE = C.LEVY_COST_BASE;
+  var BINDING_TOLL_COST_BASE = C.BINDING_TOLL_COST_BASE;
+  var BINDING_TOLL_COST_MULT = C.BINDING_TOLL_COST_MULT;
+  var BINDING_TOLL_MAX = C.BINDING_TOLL_MAX;
+  var BINDING_TOLL_RATE = C.BINDING_TOLL_RATE;
+  var BINDING_TOLL_COST_BONUS = C.BINDING_TOLL_COST_BONUS;
+  var UNLOCK_NIGHT_LANTERNS = C.UNLOCK_NIGHT_LANTERNS;
+  var UNLOCK_VEIL_CLICKS = C.UNLOCK_VEIL_CLICKS;
+  var UNLOCK_TOLL_CLICKS = C.UNLOCK_TOLL_CLICKS;
+  var TOLL_COST = C.TOLL_COST;
+  var TOLL_SECS = C.TOLL_SECS;
+  var VEIL_MIN = C.VEIL_MIN;
+  var VEIL_FRAC = C.VEIL_FRAC;
+  var VEIL_SECS = C.VEIL_SECS;
+  var WAKE_COST = C.WAKE_COST;
+  var WAKE_SECS = C.WAKE_SECS;
+  var UNLOCK_WAKE_ASH = C.UNLOCK_WAKE_ASH;
+  var NIGHT_TITHE_MIN = C.NIGHT_TITHE_MIN;
+  var NIGHT_TITHE_FRAC = C.NIGHT_TITHE_FRAC;
+  var NIGHT_TITHE_SECS = C.NIGHT_TITHE_SECS;
+  var REMEMBRANCE_FAVOR_COST = C.REMEMBRANCE_FAVOR_COST;
+  var FAVOR_SOULS_BASE = C.FAVOR_SOULS_BASE;
+  var ASHEN_TIDE_MAX = C.ASHEN_TIDE_MAX;
+  var OSSUARY_COST = C.OSSUARY_COST;
+  var OSSUARY_MAX = C.OSSUARY_MAX;
+  var PROCESSION_COST = C.PROCESSION_COST;
+  var PROCESSION_SECS = C.PROCESSION_SECS;
+  var KNELL_COST = C.KNELL_COST;
+  var KNELL_SECS = C.KNELL_SECS;
+  var LONGER_PROCESSION_MAX = C.LONGER_PROCESSION_MAX;
+  var DEEPER_TOLL_MAX = C.DEEPER_TOLL_MAX;
+  var LONGER_WAKE_MAX = C.LONGER_WAKE_MAX;
+  var LONGER_TITHE_MAX = C.LONGER_TITHE_MAX;
+  var LONGER_VEIL_MAX = C.LONGER_VEIL_MAX;
+  var LONGER_HYMN_MAX = C.LONGER_HYMN_MAX;
+  var LONGER_KNELL_MAX = C.LONGER_KNELL_MAX;
+  var CHOIR_MAX = C.CHOIR_MAX;
+  var CHOIR_LANTERN_COST = C.CHOIR_LANTERN_COST;
+  var UNLOCK_CHOIR_LANTERNS = C.UNLOCK_CHOIR_LANTERNS;
+  var UNLOCK_CHOIR_ASH = C.UNLOCK_CHOIR_ASH;
+  var HYMN_SECS = C.HYMN_SECS;
+  var HYMN_MULT = C.HYMN_MULT;
+  var NAME_THRESHOLDS = C.NAME_THRESHOLDS;
+  var BOUND_NAMES = C.BOUND_NAMES;
 
   function num(v) {
     return N.from(v);
@@ -225,7 +213,7 @@
   }
 
   /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
-  var ANNOUNCE_THROTTLE_MS = 2500;
+  var ANNOUNCE_THROTTLE_MS = C.ANNOUNCE_THROTTLE_MS;
   var _announceLastMs = 0;
   var _announceQueue = [];
   var _announceTimer = null;
@@ -264,7 +252,7 @@
   }
 
   /* ─── Reduced-motion (in-game setting, independent of OS) ──────────── */
-  var REDUCE_MOTION_KEY = "soulgather-reduce-motion";
+  var REDUCE_MOTION_KEY = C.REDUCE_MOTION_KEY;
   var _reduceMotion = false;
 
   function reduceMotionActive() {
@@ -628,49 +616,19 @@
     return soulsForFavor(favorGain(lifetimeSouls) + 1);
   }
 
-  function favorOrdinal(n) {
-    var k = Math.max(0, Math.floor(Number(n) || 0));
-    var mod100 = k % 100;
-    if (mod100 >= 11 && mod100 <= 13) return k + "th";
-    switch (k % 10) {
-      case 1:
-        return k + "st";
-      case 2:
-        return k + "nd";
-      case 3:
-        return k + "rd";
-      default:
-        return k + "th";
-    }
-  }
+  var favorOrdinal = C.favorOrdinal;
 
-  function prestigeMult(favorEarned) {
-    return 1 + 0.5 * (Number(favorEarned) || 0);
-  }
+  var prestigeMult = C.prestigeMult;
 
-  function harvestMult(on) {
-    return on ? 1.5 : 1;
-  }
+  var harvestMult = C.harvestMult;
 
-  function bindingMult(on) {
-    return on ? 1.5 : 1;
-  }
+  var bindingMult = C.bindingMult;
 
-  function throneWeight(dominion) {
-    return dominion ? 0.15 : 0.1;
-  }
+  var throneWeight = C.throneWeight;
 
-  function chaliceMult(n) {
-    var k = Math.max(0, Math.floor(Number(n) || 0));
-    if (k > CHALICE_MAX) k = CHALICE_MAX;
-    return 1 + 0.08 * k;
-  }
+  var chaliceMult = C.chaliceMult;
 
-  function ossuaryMult(n) {
-    var k = Math.max(0, Math.floor(Number(n) || 0));
-    if (k > OSSUARY_MAX) k = OSSUARY_MAX;
-    return 1 + 0.05 * k;
-  }
+  var ossuaryMult = C.ossuaryMult;
 
   function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices, ossuary) {
     var w = weight == null ? 0.1 : Number(weight);
@@ -702,9 +660,7 @@
     return N.max(N.fromNumber(TITHE_MIN), tenth);
   }
 
-  function titheMult(on) {
-    return on ? 2 : 1;
-  }
+  var titheMult = C.titheMult;
 
   function nightTitheCost(ash) {
     var n = N.max(num(ash), 0);
@@ -712,9 +668,7 @@
     return N.max(N.fromNumber(NIGHT_TITHE_MIN), quarter);
   }
 
-  function nightMult(on) {
-    return on ? 3 : 1;
-  }
+  var nightMult = C.nightMult;
 
   function veilCost(ash) {
     var n = N.max(num(ash), 0);
@@ -722,29 +676,17 @@
     return N.max(N.fromNumber(VEIL_MIN), cut);
   }
 
-  function veilMult(on) {
-    return on ? 2 : 1;
-  }
+  var veilMult = C.veilMult;
 
-  function tollMult(on) {
-    return on ? 2 : 1;
-  }
+  var tollMult = C.tollMult;
 
-  function hymnMult(on) {
-    return on ? HYMN_MULT : 1;
-  }
+  var hymnMult = C.hymnMult;
 
-  function wakeMult(on) {
-    return on ? 2 : 1;
-  }
+  var wakeMult = C.wakeMult;
 
-  function processionMult(on) {
-    return on ? 1.2 : 1;
-  }
+  var processionMult = C.processionMult;
 
-  function knellMult(on) {
-    return on ? 2 : 1;
-  }
+  var knellMult = C.knellMult;
 
   function hymnSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
@@ -1207,9 +1149,7 @@
     return nightTitheSecs(level);
   }
 
-  function namesCompleteMult(on) {
-    return on ? 1.05 : 1;
-  }
+  var namesCompleteMult = C.namesCompleteMult;
 
   function ashFromShadeFrac(level, choirLevel) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
@@ -1344,17 +1284,9 @@
     return emberMult(level);
   }
 
-  function hollowMult(stacks) {
-    var n = Math.max(0, Math.floor(Number(stacks) || 0));
-    if (n > HOLLOW_MAX) n = HOLLOW_MAX;
-    return 1 - HOLLOW_PENALTY * n;
-  }
+  var hollowMult = C.hollowMult;
 
-  function stacksWantedFromIdle(idle) {
-    var t = Number(idle) || 0;
-    if (!(t >= HOLLOW_GRACE)) return 0;
-    return Math.min(HOLLOW_MAX, 1 + Math.floor((t - HOLLOW_GRACE) / HOLLOW_INTERVAL));
-  }
+  var stacksWantedFromIdle = C.stacksWantedFromIdle;
 
   function hollowHungerActive(view) {
     var s = view || state;
@@ -1418,73 +1350,25 @@
     }
   }
 
-  var ASPECT_IDS = { harvest: "harvest", binding: "binding", dominion: "dominion" };
-  var ASPECT_NAMES = {
-    harvest: "Harvest",
-    binding: "Binding",
-    dominion: "Dominion"
-  };
+  var ASPECT_IDS = C.ASPECT_IDS;
+  var ASPECT_NAMES = C.ASPECT_NAMES;
 
-  function normalizeAspect(raw) {
-    if (raw === "harvest" || raw === "aspectHarvest") return "harvest";
-    if (raw === "binding" || raw === "aspectBinding") return "binding";
-    if (raw === "dominion" || raw === "aspectDominion") return "dominion";
-    return "";
-  }
+  var normalizeAspect = C.normalizeAspect;
 
-  var VOW_IDS = { stillness: "stillness", poverty: "poverty", hunger: "hunger", ember: "ember" };
-  var VOW_NAMES = {
-    stillness: "Stillness",
-    poverty: "Poverty",
-    hunger: "Hunger",
-    ember: "Ember"
-  };
+  var VOW_IDS = C.VOW_IDS;
+  var VOW_NAMES = C.VOW_NAMES;
 
-  var VOW_HUD_STRINGS = {
-    stillness: "Vow: Stillness \u2014 no draws",
-    poverty: "Vow: Poverty \u2014 no autobind Thrones",
-    hunger: "Vow: Hunger \u2014 tithe \u00d72",
-    ember: "Vow: Ember \u2014 no Night\u2019s Tithe, no Wake"
-  };
+  var VOW_HUD_STRINGS = C.VOW_HUD_STRINGS;
 
-  function normalizeVow(raw) {
-    if (raw === "stillness") return "stillness";
-    if (raw === "poverty") return "poverty";
-    if (raw === "hunger") return "hunger";
-    if (raw === "ember") return "ember";
-    return "";
-  }
+  var normalizeVow = C.normalizeVow;
 
-  function vowExtraFavor(vow, hungerPaid) {
-    var v = normalizeVow(vow);
-    if (v === "stillness" || v === "poverty" || v === "ember") return 1;
-    if (v === "hunger") return hungerPaid ? 1 : 0;
-    return 0;
-  }
+  var vowExtraFavor = C.vowExtraFavor;
 
-  function emptyVowsKnown() {
-    return { stillness: false, poverty: false, hunger: false, ember: false };
-  }
+  var emptyVowsKnown = C.emptyVowsKnown;
 
-  function vowsKnownCount(known) {
-    if (!known || typeof known !== "object") return 0;
-    var n = 0;
-    if (known.stillness || known.knownStillness) n += 1;
-    if (known.poverty || known.knownPoverty) n += 1;
-    if (known.hunger || known.knownHunger) n += 1;
-    if (known.ember || known.knownEmber) n += 1;
-    return n;
-  }
+  var vowsKnownCount = C.vowsKnownCount;
 
-  function normalizeVowsKnown(raw) {
-    var out = emptyVowsKnown();
-    if (!raw || typeof raw !== "object") return out;
-    if (raw.stillness || raw.knownStillness) out.stillness = true;
-    if (raw.poverty || raw.knownPoverty) out.poverty = true;
-    if (raw.hunger || raw.knownHunger) out.hunger = true;
-    if (raw.ember || raw.knownEmber) out.ember = true;
-    return out;
-  }
+  var normalizeVowsKnown = C.normalizeVowsKnown;
 
   function rememberVow(id) {
     var v = normalizeVow(id);
@@ -1506,322 +1390,11 @@
     return known;
   }
 
-  function normalizeBuyMode(mode) {
-    if (mode === "10" || mode === "max" || mode === "1") return mode;
-    return "1";
-  }
+  var normalizeBuyMode = C.normalizeBuyMode;
 
-  var CHRONICLE_ORDER = [
-    "soul",
-    "shade",
-    "spirits",
-    "well",
-    "vessels",
-    "throne",
-    "rite",
-    "cinders",
-    "urnRite",
-    "hearthRite",
-    "beaconRite",
-    "spireRite",
-    "bindingToll",
-    "wellDraw",
-    "tribute",
-    "aspect",
-    "echo",
-    "seat",
-    "lantern",
-    "ash",
-    "mark",
-    "censer",
-    "pyre",
-    "urn",
-    "hearth",
-    "beacon",
-    "spire",
-    "obelisk",
-    "fetter",
-    "giftSouls",
-    "giftShades",
-    "giftVessel",
-    "giftTribute",
-    "giftThousand",
-    "giftLantern",
-    "giftCenser",
-    "giftFetter",
-    "giftTenThousand",
-    "giftThrone",
-    "giftCrown",
-    "giftFirstName",
-    "giftFiveTributes",
-    "giftNamesComplete",
-    "giftFirstVeil",
-    "giftFirstWake",
-    "giftPeakLanterns",
-    "giftPeakFetters",
-    "giftPeakCensers",
-    "giftFirstPyre",
-    "giftFirstUrn",
-    "giftFirstHearth",
-    "giftFirstBeacon",
-    "giftFirstSpire",
-    "giftFirstObelisk",
-    "giftEightTributes",
-    "giftPeakPyres",
-    "giftPeakUrns",
-    "giftPeakHearths",
-    "giftPeakBeacons",
-    "giftPeakSpires",
-    "giftPeakObelisks",
-    "giftFirstCinders",
-    "giftFirstUrnRite",
-    "giftFirstHearthRite",
-    "giftFirstBeaconRite",
-    "giftFirstSpireRite",
-    "giftFirstChalice",
-    "giftThreeChalices",
-    "giftTwelveTributes",
-    "giftSixteenTributes",
-    "giftTwentyTributes",
-    "giftTwentyFourTributes",
-    "giftTwentyEightTributes",
-    "giftThirtyTwoTributes",
-    "giftThirtySixTributes",
-    "giftFortyTributes",
-    "giftFullCup",
-    "giftFirstOssuary",
-    "giftFullOssuary",
-    "giftHundredDraws",
-    "giftTwoHundredDraws",
-    "giftThreeHundredDraws",
-    "giftFirstEmberVow",
-    "giftTwoVows",
-    "giftThreeVows",
-    "giftAllVows",
-    "giftFirstProcession",
-    "giftFirstLongerProcession",
-    "giftFirstDeeperToll",
-    "giftFirstLongerWake",
-    "giftFirstLongerTithe",
-    "giftFirstLongerVeil",
-    "giftFirstLongerHymn",
-    "giftFirstLongerKnell",
-    "giftFirstToll",
-    "giftFirstKnell",
-    "choir",
-    "veil",
-    "toll",
-    "wake",
-    "procession",
-    "knell",
-    "longerProcession",
-    "deeperToll",
-    "longerWake",
-    "longerTithe",
-    "longerVeil",
-    "longerHymn",
-    "longerKnell",
-    "choirEdict",
-    "hymnEdict",
-    "smokeEdict",
-    "embersEdict",
-    "urnEdict",
-    "hearthEdict",
-    "beaconEdict",
-    "spireEdict",
-    "obeliskEdict",
-    "cinderEdict",
-    "cutEdict",
-    "tendingEdict",
-    "gleamEdict",
-    "riseEdict",
-    "cupEdict",
-    "draughtEdict",
-    "wakeEdict",
-    "processionEdict",
-    "tollEdict",
-    "veilEdict",
-    "knellEdict",
-    "nightEdict",
-    "chalice",
-    "ossuary",
-    "hymn",
-    "vow",
-    "vowStillness",
-    "vowPoverty",
-    "vowHunger",
-    "vowEmber",
-    "quietCourt",
-    "name1",
-    "name2",
-    "name3",
-    "name4",
-    "name5",
-    "name6",
-    "name7",
-    "name8",
-    "name9",
-    "name10",
-    "name11",
-    "name12",
-    "namesComplete"
-  ];
+  var CHRONICLE_ORDER = C.CHRONICLE_ORDER;
 
-  var CHRONICLE_LINES = {
-    soul: "The first soul was drawn.",
-    shade: "The first Shade was bound.",
-    spirits: "Bound Spirits answered the well.",
-    well: "The well was carved deeper.",
-    vessels: "A vessel opened to house a will.",
-    throne: "A throne was raised.",
-    rite: "The first rite was cut.",
-    cinders: "The cinders were cut.",
-    urnRite: "The urn was cut.",
-    hearthRite: "The hearth was cut.",
-    beaconRite: "The beacon was cut.",
-    spireRite: "The spire was cut.",
-    bindingToll: "The binding toll was paid.",
-    wellDraw: "The well began to draw.",
-    tribute: "Tribute was laid. The GodKing remembers.",
-    aspect: "An aspect was sworn.",
-    echo: "An echo was spoken.",
-    seat: "A seat was raised.",
-    lantern: "A lantern was kindled.",
-    ash: "Ash gathered at the well's lip.",
-    mark: "A mark was pressed.",
-    censer: "A censer was raised.",
-    pyre: "A pyre was raised.",
-    urn: "An urn was raised.",
-    hearth: "A hearth was kindled.",
-    beacon: "A beacon was raised.",
-    spire: "A spire was raised.",
-    obelisk: "An obelisk was raised.",
-    fetter: "A fetter was bound.",
-    giftSouls: "A hundred souls. The well returned a gift.",
-    giftShades: "Ten shades. One more was given.",
-    giftVessel: "The first vessel. Ash remains.",
-    giftTribute: "First tribute. The GodKing was generous.",
-    giftThousand: "A thousand souls. The well returned a greater gift.",
-    giftLantern: "The first lantern. The well returned ten souls.",
-    giftCenser: "The first censer. Ash remains in the smoke.",
-    giftFetter: "The first fetter. Two shades were given.",
-    giftTenThousand: "Ten thousand souls. The well returned a greater gift.",
-    giftThrone: "The first throne. A vessel was returned.",
-    giftCrown: "The crown was generous.",
-    giftFirstName: "The first name. The well returned fifteen souls.",
-    giftFiveTributes: "Five tributes. The GodKing returned two Favor.",
-    giftNamesComplete: "The names complete. The GodKing returned Favor.",
-    giftFirstVeil: "The first veil. The well returned ten ash.",
-    giftFirstWake: "The first wake. The well returned eight ash.",
-    giftPeakLanterns: "Ten lanterns. The well returned twenty souls.",
-    giftPeakFetters: "Eight fetters. The well returned fifteen shades.",
-    giftPeakCensers: "Five censers. The well returned eight ash.",
-    giftFirstPyre: "The first pyre. The well returned five ash.",
-    giftFirstUrn: "The first urn. The well returned six ash.",
-    giftFirstHearth: "The first hearth. The well returned eight ash.",
-    giftFirstBeacon: "The first beacon. The well returned eight ash.",
-    giftFirstSpire: "The first spire. The well returned eight ash.",
-    giftFirstObelisk: "The first obelisk. The well returned eight ash.",
-    giftEightTributes: "Eight emptyings. The well returned twenty-five souls.",
-    giftPeakPyres: "Five pyres. The well returned ten ash.",
-    giftPeakUrns: "Five urns. The well returned eight ash.",
-    giftPeakHearths: "Five hearths. The well returned ten ash.",
-    giftPeakBeacons: "Five beacons. The well returned seven ash.",
-    giftPeakSpires: "Five spires. The well returned seven ash.",
-    giftPeakObelisks: "Five obelisks. The well returned seven ash.",
-    giftFirstCinders: "The first cinders. The well returned eight ash.",
-    giftFirstUrnRite: "The first cut urn. The well returned six ash.",
-    giftFirstHearthRite: "The first cut hearth. The well returned eight ash.",
-    giftFirstBeaconRite: "The first cut beacon. The well returned ten ash.",
-    giftFirstSpireRite: "The first cut spire. The well returned ten ash.",
-    giftFirstChalice: "The first chalice. The well returned fifteen souls.",
-    giftTwelveTributes: "Twelve emptyings. The well returned forty souls.",
-    giftSixteenTributes: "Sixteen emptyings. The well returned fifty souls.",
-    giftTwentyTributes: "Twenty emptyings. The well returned sixty souls.",
-    giftTwentyFourTributes: "Twenty-four emptyings. The well returned seventy souls.",
-    giftTwentyEightTributes: "Twenty-eight emptyings. The well returned eighty souls.",
-    giftThirtyTwoTributes: "Thirty-two emptyings. The well returned ninety souls.",
-    giftThirtySixTributes: "Thirty-six emptyings. The well returned a hundred souls.",
-    giftFortyTributes: "Forty emptyings. The well returned a hundred and ten souls.",
-    giftFullCup: "The cup was full. The well returned twenty-five souls.",
-    giftThreeChalices: "Three chalices. The well returned ten ash.",
-    giftFirstOssuary: "The first bone. The well returned ten souls.",
-    giftFullOssuary: "Eight bones. The well returned twenty souls.",
-    giftHundredDraws: "A hundred draws. The well returned fifteen souls.",
-    giftTwoHundredDraws: "Two hundred draws. The well returned twenty souls.",
-    giftThreeHundredDraws: "Three hundred draws. The well returned twenty-five souls.",
-    giftFirstEmberVow: "The ember vow. The well returned eight ash.",
-    giftTwoVows: "Two vows remembered. The well returned ten souls.",
-    giftThreeVows: "Three vows remembered. The well returned fifteen souls.",
-    giftAllVows: "Four vows remembered. The well returned twenty-five souls.",
-    giftFirstProcession: "The first procession. The well returned five souls.",
-    giftFirstLongerProcession: "The first longer walk. The well returned five souls.",
-    giftFirstDeeperToll: "The first longer toll. The well returned five souls.",
-    giftFirstLongerWake: "The first longer wake. The well returned five souls.",
-    giftFirstLongerTithe: "The first longer tithe. The well returned five souls.",
-    giftFirstLongerVeil: "The first longer veil. The well returned five souls.",
-    giftFirstLongerHymn: "The first longer hymn. The well returned five souls.",
-    giftFirstLongerKnell: "The first longer knell. The well returned five souls.",
-    giftFirstToll: "The first toll. The well returned ten souls.",
-    giftFirstKnell: "The first knell. The well returned five souls.",
-    choir: "The choir of ash was raised.",
-    veil: "The veil thinned.",
-    toll: "The toll was sounded.",
-    wake: "The wake was kept.",
-    procession: "The procession began.",
-    knell: "The knell was sounded.",
-    longerProcession: "The walk was lengthened.",
-    deeperToll: "The toll was lengthened.",
-    longerWake: "The wake was lengthened.",
-    longerTithe: "The tithe was lengthened.",
-    longerVeil: "The veil was lengthened.",
-    longerHymn: "The hymn was lengthened.",
-    longerKnell: "The knell was lengthened.",
-    choirEdict: "The choir was spoken.",
-    hymnEdict: "The hymn was spoken.",
-    smokeEdict: "The smoke was spoken.",
-    embersEdict: "The embers were spoken.",
-    urnEdict: "The urn was spoken.",
-    hearthEdict: "The hearth was spoken.",
-    beaconEdict: "The beacon was spoken.",
-    spireEdict: "The spire was spoken.",
-    obeliskEdict: "The obelisk was spoken.",
-    cinderEdict: "The cinders were spoken.",
-    cutEdict: "The cut was spoken.",
-    tendingEdict: "The tending was spoken.",
-    gleamEdict: "The gleam was spoken.",
-    riseEdict: "The rise was spoken.",
-    cupEdict: "The cup was spoken.",
-    draughtEdict: "The draught was spoken.",
-    wakeEdict: "The wake was spoken.",
-    processionEdict: "The procession was spoken.",
-    tollEdict: "The toll was spoken.",
-    veilEdict: "The veil was spoken.",
-    knellEdict: "The knell was spoken.",
-    nightEdict: "The night was spoken.",
-    chalice: "A chalice was raised.",
-    ossuary: "A bone was laid.",
-    hymn: "A hymn followed the emptying.",
-    vow: "A vow was sworn.",
-    vowStillness: "A stillness vow was sworn.",
-    vowPoverty: "A poverty vow was sworn.",
-    vowHunger: "A hunger vow was sworn.",
-    vowEmber: "An ember vow was sworn.",
-    quietCourt: "The Quiet Court was seated.",
-    name1: "The First Siphon.",
-    name2: "The Quiet Chain.",
-    name3: "The Hollow Tithe.",
-    name4: "The Bound Echo.",
-    name5: "The Ashen Mouth.",
-    name6: "The Night Levy.",
-    name7: "The Well's Hunger.",
-    name8: "The Seat Unseen.",
-    name9: "The Kindled Fetter.",
-    name10: "The Crown's Shadow.",
-    name11: "The Last Vessel.",
-    name12: "The Name He Keeps.",
-    namesComplete: "The names of the bound were spoken."
-  };
+  var CHRONICLE_LINES = C.CHRONICLE_LINES;
 
   function formatGoalNum(n) {
     if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatNumber) {
@@ -2552,18 +2125,7 @@
   var FIELDS_KEYS = Object.keys(FIELDS);
 
   // ── bonus* → gift* migration map (AZR-179) ──
-  var BONUS_TO_GIFT = {
-    bonusLifetimeSouls:  "giftLifetimeSouls",
-    bonusPeakShades:     "giftPeakShades",
-    bonusFirstVessel:    "giftFirstVessel",
-    bonusFirstTribute:   "giftFirstTribute",
-    bonusThousandSouls:  "giftThousandSouls",
-    bonusFirstLantern:   "giftFirstLantern",
-    bonusFirstCenser:    "giftFirstCenser",
-    bonusFirstFetter:    "giftFirstFetter",
-    bonusTenThousandSouls:"giftTenThousandSouls",
-    bonusFirstThrone:    "giftFirstThrone"
-  };
+  var BONUS_TO_GIFT = C.BONUS_TO_GIFT;
 
   // ── GIFTS table (AZR-179) ──────────────────────────────────────────────────
   // { flag, stat, at, give, id, toast }
@@ -2650,18 +2212,7 @@
     }
   })();
 
-  var PEAK_STATS = {
-    peakShades:   "shades",
-    peakLanterns: "lanterns",
-    peakFetters:  "fetters",
-    peakCensers:  "censers",
-    peakPyres:    "pyres",
-    peakUrns:     "urns",
-    peakHearths:  "hearths",
-    peakBeacons:  "beacons",
-    peakSpires:   "spires",
-    peakObelisks: "obelisks"
-  };
+  var PEAK_STATS = C.PEAK_STATS;
 
   function fieldDefault(f) {
     if (f.dflt !== undefined) return typeof f.dflt === "function" ? f.dflt() : f.dflt;
@@ -6357,14 +5908,9 @@
     }
   }
 
-  function toastOverflowLabel(n) {
-    return "\u2026and " + n + " more.";
-  }
+  var toastOverflowLabel = C.toastOverflowLabel;
 
-  function toastOverflowCount(message) {
-    var m = /^\u2026and (\d+) more\.$/.exec(String(message || ""));
-    return m ? parseInt(m[1], 10) : 0;
-  }
+  var toastOverflowCount = C.toastOverflowCount;
 
   /** Pure: enqueue onto a queue copy, never exceeding max (overflow summary in last slot). */
   function capEnqueueToast(queue, message, max) {
