@@ -3,6 +3,7 @@
 
   var N = globalThis.SoulgatherNum;
   var C = globalThis.SoulgatherConfig;
+  var E = globalThis.SoulgatherEconomy;
 
   var GAME_VERSION = C.GAME_VERSION;
   var SAVE_KEY = C.SAVE_KEY;
@@ -170,18 +171,8 @@
   var NAME_THRESHOLDS = C.NAME_THRESHOLDS;
   var BOUND_NAMES = C.BOUND_NAMES;
 
-  function num(v) {
-    return N.from(v);
-  }
-
-  function nVal(v) {
-    if (v && typeof v === "object" && typeof v.m === "number") {
-      var n = N.toNumber(v);
-      if (!isFinite(n)) return n > 0 ? 1e300 : 0;
-      return n;
-    }
-    return Number(v) || 0;
-  }
+  var num = E.num;
+  var nVal = E.nVal;
 
   var setTextWriteCount = 0;
 
@@ -204,13 +195,7 @@
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
   function markRenderDirty() { markDirty(); }
 
-  function addOwned(owned, i) {
-    i = Number(i) || 0;
-    if (owned && typeof owned === "object" && typeof owned.m === "number") {
-      return N.add(N.floor(N.max(owned, 0)), i);
-    }
-    return Math.max(0, Math.floor(Number(owned) || 0)) + i;
-  }
+  var addOwned = E.addOwned;
 
   /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
   var ANNOUNCE_THROTTLE_MS = C.ANNOUNCE_THROTTLE_MS;
@@ -282,339 +267,64 @@
     }
   }
 
-  function producerCost(owned) {
-    return N.cost(COST_BASE, COST_MULT, owned);
-  }
+  var producerCost = E.producerCost;
 
   function shadeCost(owned) {
-    return N.mul(producerCost(owned), bindingTollCostMult(state.bindingTollLevel));
+    return E.shadeCost(owned, state.bindingTollLevel);
   }
 
   function spiritCost(owned) {
-    return N.mul(producerCost(owned), bindingTollCostMult(state.bindingTollLevel));
+    return E.spiritCost(owned, state.bindingTollLevel);
   }
 
-  function vesselCost(owned) {
-    return producerCost(owned);
-  }
+  var vesselCost = E.vesselCost;
 
-  function throneCost(owned) {
-    return producerCost(owned);
-  }
+  var throneCost = E.throneCost;
 
-  function lanternCost(owned) {
-    return N.cost(LANTERN_COST_BASE, LANTERN_COST_MULT, owned);
-  }
+  var lanternCost = E.lanternCost;
 
-  function fetterCost(owned) {
-    return N.cost(FETTER_COST_BASE, FETTER_COST_MULT, owned);
-  }
+  var fetterCost = E.fetterCost;
 
-  function censerCost(owned) {
-    return producerCost(owned);
-  }
+  var censerCost = E.censerCost;
 
-  function pyreCost(owned) {
-    return N.cost(PYRE_COST_BASE, PYRE_COST_MULT, owned);
-  }
+  var pyreCost = E.pyreCost;
 
-  function urnCost(owned) {
-    return N.cost(URN_COST_BASE, URN_COST_MULT, owned);
-  }
+  var urnCost = E.urnCost;
 
-  function hearthCost(owned) {
-    return N.cost(HEARTH_COST_BASE, HEARTH_COST_MULT, owned);
-  }
+  var hearthCost = E.hearthCost;
 
-  function beaconCost(owned) {
-    return N.cost(BEACON_COST_BASE, BEACON_COST_MULT, owned);
-  }
+  var beaconCost = E.beaconCost;
 
-  function spireCost(owned) {
-    return N.cost(SPIRE_COST_BASE, SPIRE_COST_MULT, owned);
-  }
+  var spireCost = E.spireCost;
 
-  function obeliskCost(owned) {
-    return N.cost(OBELISK_COST_BASE, OBELISK_COST_MULT, owned);
-  }
+  var obeliskCost = E.obeliskCost;
 
-  function chaliceCost(owned) {
-    return N.cost(CHALICE_COST_BASE, CHALICE_COST_MULT, owned);
-  }
+  var chaliceCost = E.chaliceCost;
 
-  function markCost(level) {
-    return N.cost(MARK_COST_BASE, MARK_COST_MULT, level);
-  }
+  var markCost = E.markCost;
 
-  function wellCost(depth) {
-    var d = Math.max(0, Math.floor(Number(depth) || 0));
-    if (d <= 5) {
-      return N.cost(WELL_COST_BASE, WELL_EARLY_MULT, d);
-    }
-    return N.cost(WELL_COST_BASE, WELL_COST_MULT, d);
-  }
+  var wellCost = E.wellCost;
 
-  function wellBulkCostLoop(owned, k) {
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    var total = N.fromNumber(0);
-    var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
-    var i;
-    for (i = 0; i < n; i++) {
-      total = N.add(total, wellCost(baseDepth + i));
-    }
-    return total;
-  }
-
-  function wellMaxAffordableLoop(owned, currency) {
-    var remaining = num(currency);
-    var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
-    var k = 0;
-    while (k < BULK_CAP) {
-      var c = wellCost(baseDepth + k);
-      if (N.cmp(remaining, c) < 0) break;
-      remaining = N.sub(remaining, c);
-      k += 1;
-    }
-    return k;
-  }
-
-  function _geoSum(base, multVal, startIdx, count) {
-    if (count <= 0) return N.fromNumber(0);
-    var first = N.cost(base, multVal, startIdx);
-    if (count === 1) return first;
-    var multN = N.fromNumber(multVal);
-    var multK = N.pow(multN, count);
-    var num1 = N.sub(multK, 1);
-    var den1 = N.fromNumber(multVal - 1);
-    return N.floor(N.mul(first, N.div(num1, den1)));
-  }
-
-  function wellBulkCost(owned, k) {
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    if (n <= 0) return N.fromNumber(0);
-    var d = Math.max(0, Math.floor(Number(owned) || 0));
-    if (d >= 6) {
-      return _geoSum(WELL_COST_BASE, WELL_COST_MULT, d, n);
-    }
-    var earlyRemain = Math.max(0, 6 - d);
-    if (n <= earlyRemain) {
-      return _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, n);
-    }
-    var earlyPart = _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, earlyRemain);
-    var latePart = _geoSum(WELL_COST_BASE, WELL_COST_MULT, 6, n - earlyRemain);
-    return N.add(earlyPart, latePart);
-  }
-
-  function _geoMaxAffordable(base, multVal, startIdx, currency, cap) {
-    var first = N.cost(base, multVal, startIdx);
-    if (N.cmp(currency, first) < 0) return 0;
-    var m1 = multVal - 1;
-    var curN = N.toNumber(currency);
-    var firstN = N.toNumber(first);
-    var k;
-    if (isFinite(curN) && isFinite(firstN) && firstN > 0 && curN < 1e300) {
-      k = Math.floor(Math.log(1 + curN * m1 / firstN) / Math.log(multVal));
-    } else {
-      var ratio = N.div(N.mul(currency, N.fromNumber(m1)), first);
-      var logArg = N.add(ratio, 1);
-      var logArgN = N.toNumber(logArg);
-      if (!isFinite(logArgN) || logArgN <= 0) {
-        k = cap;
-      } else {
-        var log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
-        k = Math.floor(log10Arg / (Math.log(multVal) / Math.LN10));
-      }
-    }
-    if (k < 0) k = 0;
-    if (k > cap) k = cap;
-    var cost_k = _geoSum(base, multVal, startIdx, k);
-    while (k > 0 && N.cmp(cost_k, currency) > 0) {
-      k -= 1;
-      cost_k = _geoSum(base, multVal, startIdx, k);
-    }
-    var cost_k1 = _geoSum(base, multVal, startIdx, k + 1);
-    while (k < cap && N.cmp(cost_k1, currency) <= 0) {
-      k += 1;
-      cost_k1 = _geoSum(base, multVal, startIdx, k + 1);
-    }
-    return k;
-  }
-
-  function wellMaxAffordable(owned, currency) {
-    var cur = num(currency);
-    if (N.cmp(cur, 0) <= 0) return 0;
-    var d = Math.max(0, Math.floor(Number(owned) || 0));
-    if (d >= 6) {
-      return _geoMaxAffordable(WELL_COST_BASE, WELL_COST_MULT, d, cur, BULK_CAP);
-    }
-    var earlyRemain = 6 - d;
-    var earlyK = _geoMaxAffordable(WELL_COST_BASE, WELL_EARLY_MULT, d, cur, earlyRemain);
-    if (earlyK < earlyRemain) return earlyK;
-    var earlyCost = _geoSum(WELL_COST_BASE, WELL_EARLY_MULT, d, earlyRemain);
-    var leftover = N.sub(cur, earlyCost);
-    if (N.cmp(leftover, 0) <= 0) return earlyRemain;
-    var lateK = _geoMaxAffordable(WELL_COST_BASE, WELL_COST_MULT, 6, leftover, BULK_CAP - earlyRemain);
-    return earlyRemain + lateK;
-  }
+  var wellBulkCostLoop = E.wellBulkCostLoop;
+  var wellMaxAffordableLoop = E.wellMaxAffordableLoop;
+  var _geoSum = E._geoSum;
+  var wellBulkCost = E.wellBulkCost;
+  var wellMaxAffordable = E.wellMaxAffordable;
 
   function wellPurchasePlan(owned, currency) {
-    var one = wellCost(owned);
-    var mode = state.buyMode;
-    if (mode === "10") {
-      var k10 = wellMaxAffordable(owned, currency);
-      if (k10 < 1) {
-        return { k: 0, cost: one, can: false };
-      }
-      if (k10 > 10) k10 = 10;
-      return { k: k10, cost: wellBulkCost(owned, k10), can: true };
-    }
-    if (mode === "max") {
-      var k = wellMaxAffordable(owned, currency);
-      if (k < 1) {
-        return { k: 0, cost: one, can: false };
-      }
-      return { k: k, cost: wellBulkCost(owned, k), can: true };
-    }
-    return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
+    return E.wellPurchasePlan(owned, currency, state.buyMode);
   }
 
-  function bulkCostLoop(base, owned, k, mult, extraMult) {
-    var b = Number(base);
-    if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    var total = N.fromNumber(0);
-    var i;
-    for (i = 0; i < n; i++) {
-      var unit = N.cost(b, mult, addOwned(owned, i));
-      if (em !== 1) unit = N.mul(unit, em);
-      total = N.add(total, unit);
-    }
-    return total;
-  }
+  var bulkCostLoop = E.bulkCostLoop;
+  var maxAffordableLoop = E.maxAffordableLoop;
+  var bulkCost = E.bulkCost;
+  var maxAffordable = E.maxAffordable;
 
-  function maxAffordableLoop(base, owned, currency, mult, extraMult) {
-    var b = Number(base);
-    if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var remaining = num(currency);
-    var k = 0;
-    while (k < BULK_CAP) {
-      var c = N.cost(b, mult, addOwned(owned, k));
-      if (em !== 1) c = N.mul(c, em);
-      if (N.cmp(remaining, c) < 0) break;
-      remaining = N.sub(remaining, c);
-      k += 1;
-    }
-    return k;
-  }
+  var favorGain = E.favorGain;
 
-  function bulkCost(base, owned, k, mult, extraMult) {
-    var b = Number(base);
-    if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    if (n <= 0) return N.fromNumber(0);
-    var o = (typeof owned === "object" && typeof owned.m === "number")
-      ? N.toNumber(N.floor(N.max(owned, 0)))
-      : Math.max(0, Math.floor(Number(owned) || 0));
-    var first = N.cost(b, mult, o);
-    if (em !== 1) first = N.mul(first, em);
-    if (n === 1) return first;
-    var multN = N.fromNumber(mult);
-    var multK = N.pow(multN, n);
-    var num1 = N.sub(multK, 1);
-    var den1 = N.fromNumber(mult - 1);
-    var total = N.floor(N.mul(first, N.div(num1, den1)));
-    return total;
-  }
+  var soulsForFavor = E.soulsForFavor;
 
-  function maxAffordable(base, owned, currency, mult, extraMult) {
-    var b = Number(base);
-    if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var cur = num(currency);
-    if (N.cmp(cur, 0) <= 0) return 0;
-    var o = (typeof owned === "object" && typeof owned.m === "number")
-      ? N.toNumber(N.floor(N.max(owned, 0)))
-      : Math.max(0, Math.floor(Number(owned) || 0));
-    var first = N.cost(b, mult, o);
-    if (em !== 1) first = N.mul(first, em);
-    if (N.cmp(cur, first) < 0) return 0;
-    var m1 = mult - 1;
-    var curN = N.toNumber(cur);
-    var firstN = N.toNumber(first);
-    var k;
-    if (isFinite(curN) && isFinite(firstN) && firstN > 0 && curN < 1e300) {
-      k = Math.floor(Math.log(1 + curN * m1 / firstN) / Math.log(mult));
-    } else {
-      var ratio = N.div(N.mul(cur, N.fromNumber(m1)), first);
-      var logArg = N.add(ratio, 1);
-      var logArgN = N.toNumber(logArg);
-      if (!isFinite(logArgN) || logArgN <= 0) {
-        k = BULK_CAP;
-      } else {
-        var log10Arg = Math.log(logArgN) / Math.LN10 + (logArg.e || 0);
-        k = Math.floor(log10Arg / (Math.log(mult) / Math.LN10));
-      }
-    }
-    if (k < 0) k = 0;
-    if (k > BULK_CAP) k = BULK_CAP;
-    var cost_k = bulkCost(b, owned, k, mult, em);
-    while (k > 0 && N.cmp(cost_k, cur) > 0) {
-      k -= 1;
-      cost_k = bulkCost(b, owned, k, mult, em);
-    }
-    var cost_k1 = bulkCost(b, owned, k + 1, mult, em);
-    while (k < BULK_CAP && N.cmp(cost_k1, cur) <= 0) {
-      k += 1;
-      cost_k1 = bulkCost(b, owned, k + 1, mult, em);
-    }
-    return k;
-  }
-
-  function favorGain(lifetimeSouls) {
-    var n = N.max(num(lifetimeSouls), 0);
-    if (N.cmp(n, 0) <= 0) return 0;
-    if (n.e < 15) {
-      var v = N.toNumber(n);
-      if (isFinite(v) && v >= 0) {
-        return Math.floor(Math.sqrt(v / FAVOR_SOULS_BASE) + 1e-9);
-      }
-    }
-    var q = N.div(n, FAVOR_SOULS_BASE);
-    var s = N.floor(N.add(N.pow(q, 0.5), N.fromNumber(1e-9)));
-    var asN = N.toNumber(s);
-    if (!isFinite(asN) || asN > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
-    if (asN < 0) return 0;
-    return Math.floor(asN);
-  }
-
-  /** Souls required for the nth Favor: FAVOR_SOULS_BASE * n^2. */
-  function soulsForFavor(n) {
-    var k = Math.max(0, Math.floor(Number(n) || 0));
-    if (!isFinite(k) || k <= 0) return N.fromNumber(0);
-    if (k <= 100000) {
-      return N.mul(N.fromNumber(FAVOR_SOULS_BASE), k * k);
-    }
-    return N.mul(N.fromNumber(FAVOR_SOULS_BASE), N.mul(N.fromNumber(k), N.fromNumber(k)));
-  }
-
-  function nextFavorThreshold(lifetimeSouls) {
-    return soulsForFavor(favorGain(lifetimeSouls) + 1);
-  }
+  var nextFavorThreshold = E.nextFavorThreshold;
 
   var favorOrdinal = C.favorOrdinal;
 
@@ -630,51 +340,21 @@
 
   var ossuaryMult = C.ossuaryMult;
 
-  function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices, ossuary) {
-    var w = weight == null ? 0.1 : Number(weight);
-    if (!isFinite(w)) w = 0.1;
-    return (
-      prestigeMult(favorEarned) *
-      (1 + w * (Number(thrones) || 0)) *
-      (1 + 0.25 * (Number(edictLevel) || 0)) *
-      (1 + 0.10 * (Number(crownWeight) || 0)) *
-      namesCompleteMult(namesComplete) *
-      chaliceMult(chalices) *
-      ossuaryMult(ossuary)
-    );
-  }
+  var prodMult = E.prodMult;
 
-  function crownCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 6 * Math.pow(2, n);
-  }
+  var crownCost = E.crownCost;
 
-  function longMemCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 5 * Math.pow(2, n);
-  }
+  var longMemCost = E.longMemCost;
 
-  function titheCost(souls) {
-    var n = N.max(num(souls), 0);
-    var tenth = N.floor(N.mul(n, TITHE_FRAC));
-    return N.max(N.fromNumber(TITHE_MIN), tenth);
-  }
+  var titheCost = E.titheCost;
 
   var titheMult = C.titheMult;
 
-  function nightTitheCost(ash) {
-    var n = N.max(num(ash), 0);
-    var quarter = N.floor(N.mul(n, NIGHT_TITHE_FRAC));
-    return N.max(N.fromNumber(NIGHT_TITHE_MIN), quarter);
-  }
+  var nightTitheCost = E.nightTitheCost;
 
   var nightMult = C.nightMult;
 
-  function veilCost(ash) {
-    var n = N.max(num(ash), 0);
-    var cut = N.floor(N.div(N.mul(n, 15), 100));
-    return N.max(N.fromNumber(VEIL_MIN), cut);
-  }
+  var veilCost = E.veilCost;
 
   var veilMult = C.veilMult;
 
@@ -688,535 +368,149 @@
 
   var knellMult = C.knellMult;
 
-  function hymnSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return HYMN_SECS + 15 * n;
-  }
-
-  function hymnBonusSecs(level) {
-    return 10 * Math.max(0, Math.floor(Number(level) || 0));
-  }
-
-  function hymnLeftAfterTribute(edictLevel, longerHymnLevel) {
-    if (longerHymnLevel == null) longerHymnLevel = 0;
-    return hymnSecs(edictLevel) + hymnBonusSecs(longerHymnLevel);
-  }
-
-  function hymnEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 4 * Math.pow(2, n);
-  }
-
-  function wakeSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return WAKE_SECS + 15 * n;
-  }
-
-  function wakeEdictStartsWake(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function wakeLeftAfterTribute(level) {
-    if (!wakeEdictStartsWake(level)) return 0;
-    return wakeSecs(level);
-  }
-
-  function wakeEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function processionSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return PROCESSION_SECS + 15 * n;
-  }
-
-  function processionEdictStartsProcession(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function processionLeftAfterTribute(level) {
-    if (!processionEdictStartsProcession(level)) return 0;
-    return processionSecs(level);
-  }
-
-  function processionEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 9 * Math.pow(2, n);
-  }
-
-  function tollSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return TOLL_SECS + 10 * n;
-  }
-
-  function tollEdictStartsToll(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function tollLeftAfterTribute(level) {
-    if (!tollEdictStartsToll(level)) return 0;
-    return tollSecs(level);
-  }
-
-  function tollEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 6 * Math.pow(2, n);
-  }
-
-  function veilSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return VEIL_SECS + 10 * n;
-  }
-
-  function veilEdictStartsVeil(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function veilLeftAfterTribute(level) {
-    if (!veilEdictStartsVeil(level)) return 0;
-    return veilSecs(level);
-  }
-
-  function veilEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 7 * Math.pow(2, n);
-  }
-
-  function knellSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return KNELL_SECS + 10 * n;
-  }
-
-  function knellEdictStartsKnell(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function knellLeftAfterTribute(level) {
-    if (!knellEdictStartsKnell(level)) return 0;
-    return knellSecs(level);
-  }
-
-  function knellEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function nightEdictSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return NIGHT_TITHE_SECS + 15 * n;
-  }
-
-  function nightEdictStartsNight(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function nightLeftAfterTribute(level) {
-    if (!nightEdictStartsNight(level)) return 0;
-    return nightEdictSecs(level);
-  }
-
-  function nightEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 5 * Math.pow(2, n);
-  }
-
-  function choirEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 5 * Math.pow(2, n);
-  }
-
-  function edictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 1 * Math.pow(2, n);
-  }
-
-  function memoryCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 2 * Math.pow(2, n);
-  }
-
-  function echoCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= 1) return Infinity;
-    return 3;
-  }
-
-  function seatCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 5 * Math.pow(2, n);
-  }
-
-  function kindleCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 4 * Math.pow(2, n);
-  }
-
-  function ashenCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 3 * Math.pow(2, n);
-  }
-
-  function depthCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 4 * Math.pow(2, n);
-  }
-
-  function quietCourtCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function quietCourtStartsLanternAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsFetterAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsObeliskAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function smokeEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 6 * Math.pow(2, n);
-  }
-
-  function smokeStartsCenserAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function embersEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 7 * Math.pow(2, n);
-  }
-
-  function embersStartsPyres(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function urnEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function urnEdictStartsUrns(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function hearthEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 9 * Math.pow(2, n);
-  }
-
-  function hearthEdictStartsHearths(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function beaconEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 10 * Math.pow(2, n);
-  }
-
-  function beaconEdictStartsBeacons(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function spireEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 11 * Math.pow(2, n);
-  }
-
-  function spireEdictStartsSpires(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function obeliskEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 12 * Math.pow(2, n);
-  }
-
-  function obeliskEdictStartsObelisks(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return n;
-  }
-
-  function cinderEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function cinderEdictStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function cutEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 11 * Math.pow(2, n);
-  }
-
-  function cutEdictStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function tendingEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 12 * Math.pow(2, n);
-  }
-
-  function tendingEdictStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function gleamEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 13 * Math.pow(2, n);
-  }
-
-  function gleamEdictStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function riseEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 14 * Math.pow(2, n);
-  }
-
-  function riseEdictStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function cupEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 9 * Math.pow(2, n);
-  }
-
-  function cupStartsChalices(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > CHALICE_MAX) n = CHALICE_MAX;
-    return n;
-  }
-
-  function draughtEdictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 10 * Math.pow(2, n);
-  }
-
-  function draughtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function remembranceCostFavor() {
-    return REMEMBRANCE_FAVOR_COST;
-  }
-
-  function remembranceFavorCost() {
-    return remembranceCostFavor();
-  }
-
-  function deeperNightCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 1 * Math.pow(2, n);
-  }
-
-  function longerProcessionCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_PROCESSION_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidProcessionSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_PROCESSION_MAX) n = LONGER_PROCESSION_MAX;
-    return PROCESSION_SECS + 10 * n;
-  }
-
-  function deeperTollCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= DEEPER_TOLL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidTollSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > DEEPER_TOLL_MAX) n = DEEPER_TOLL_MAX;
-    return TOLL_SECS + 10 * n;
-  }
-
-  function longerWakeCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_WAKE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidWakeSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_WAKE_MAX) n = LONGER_WAKE_MAX;
-    return WAKE_SECS + 10 * n;
-  }
-
-  function longerTitheCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_TITHE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidTitheSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_TITHE_MAX) n = LONGER_TITHE_MAX;
-    return TITHE_SECS + 10 * n;
-  }
-
-  function longerVeilCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_VEIL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidVeilSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_VEIL_MAX) n = LONGER_VEIL_MAX;
-    return VEIL_SECS + 10 * n;
-  }
-
-  function longerHymnCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_HYMN_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function longerKnellCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_KNELL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function paidKnellSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_KNELL_MAX) n = LONGER_KNELL_MAX;
-    return KNELL_SECS + 10 * n;
-  }
-
-  function ashenTideCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= ASHEN_TIDE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function ossuaryCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= OSSUARY_MAX) return Infinity;
-    return OSSUARY_COST;
-  }
-
-  function nightTitheSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    return NIGHT_TITHE_SECS + 10 * n;
-  }
-
-  function nightSecs(level) {
-    return nightTitheSecs(level);
-  }
+  var hymnSecs = E.hymnSecs;
+
+  var hymnBonusSecs = E.hymnBonusSecs;
+
+  var hymnLeftAfterTribute = E.hymnLeftAfterTribute;
+
+  var hymnEdictCost = E.hymnEdictCost;
+
+  var wakeSecs = E.wakeSecs;
+
+  var wakeEdictStartsWake = E.wakeEdictStartsWake;
+
+  var wakeLeftAfterTribute = E.wakeLeftAfterTribute;
+
+  var wakeEdictCost = E.wakeEdictCost;
+
+  var processionSecs = E.processionSecs;
+
+  var processionEdictStartsProcession = E.processionEdictStartsProcession;
+
+  var processionLeftAfterTribute = E.processionLeftAfterTribute;
+
+  var processionEdictCost = E.processionEdictCost;
+
+  var tollSecs = E.tollSecs;
+
+  var tollEdictStartsToll = E.tollEdictStartsToll;
+
+  var tollLeftAfterTribute = E.tollLeftAfterTribute;
+
+  var tollEdictCost = E.tollEdictCost;
+
+  var veilSecs = E.veilSecs;
+
+  var veilEdictStartsVeil = E.veilEdictStartsVeil;
+
+  var veilLeftAfterTribute = E.veilLeftAfterTribute;
+
+  var veilEdictCost = E.veilEdictCost;
+
+  var knellSecs = E.knellSecs;
+
+  var knellEdictStartsKnell = E.knellEdictStartsKnell;
+
+  var knellLeftAfterTribute = E.knellLeftAfterTribute;
+
+  var knellEdictCost = E.knellEdictCost;
+
+  var nightEdictSecs = E.nightEdictSecs;
+
+  var nightEdictStartsNight = E.nightEdictStartsNight;
+
+  var nightLeftAfterTribute = E.nightLeftAfterTribute;
+
+  var nightEdictCost = E.nightEdictCost;
+
+  var choirEdictCost = E.choirEdictCost;
+  var edictCost = E.edictCost;
+  var memoryCost = E.memoryCost;
+  var echoCost = E.echoCost;
+  var seatCost = E.seatCost;
+  var kindleCost = E.kindleCost;
+  var ashenCost = E.ashenCost;
+  var depthCost = E.depthCost;
+  var quietCourtCost = E.quietCourtCost;
+  var quietCourtStartsLanternAutobind = E.quietCourtStartsLanternAutobind;
+  var quietCourtStartsFetterAutobind = E.quietCourtStartsFetterAutobind;
+  var quietCourtStartsPyreAutobind = E.quietCourtStartsPyreAutobind;
+  var quietCourtStartsChaliceAutobind = E.quietCourtStartsChaliceAutobind;
+  var quietCourtStartsUrnAutobind = E.quietCourtStartsUrnAutobind;
+  var quietCourtStartsHearthAutobind = E.quietCourtStartsHearthAutobind;
+  var quietCourtStartsBeaconAutobind = E.quietCourtStartsBeaconAutobind;
+  var quietCourtStartsSpireAutobind = E.quietCourtStartsSpireAutobind;
+  var quietCourtStartsObeliskAutobind = E.quietCourtStartsObeliskAutobind;
+  var smokeEdictCost = E.smokeEdictCost;
+  var smokeStartsCenserAutobind = E.smokeStartsCenserAutobind;
+  var embersEdictCost = E.embersEdictCost;
+  var embersStartsPyres = E.embersStartsPyres;
+  var urnEdictCost = E.urnEdictCost;
+  var urnEdictStartsUrns = E.urnEdictStartsUrns;
+  var hearthEdictCost = E.hearthEdictCost;
+  var hearthEdictStartsHearths = E.hearthEdictStartsHearths;
+  var beaconEdictCost = E.beaconEdictCost;
+  var beaconEdictStartsBeacons = E.beaconEdictStartsBeacons;
+  var spireEdictCost = E.spireEdictCost;
+  var spireEdictStartsSpires = E.spireEdictStartsSpires;
+  var obeliskEdictCost = E.obeliskEdictCost;
+  var obeliskEdictStartsObelisks = E.obeliskEdictStartsObelisks;
+  var cinderEdictCost = E.cinderEdictCost;
+  var cinderEdictStartsPyreAutobind = E.cinderEdictStartsPyreAutobind;
+  var cutEdictCost = E.cutEdictCost;
+  var cutEdictStartsUrnAutobind = E.cutEdictStartsUrnAutobind;
+  var tendingEdictCost = E.tendingEdictCost;
+  var tendingEdictStartsHearthAutobind = E.tendingEdictStartsHearthAutobind;
+  var gleamEdictCost = E.gleamEdictCost;
+  var gleamEdictStartsBeaconAutobind = E.gleamEdictStartsBeaconAutobind;
+  var riseEdictCost = E.riseEdictCost;
+  var riseEdictStartsSpireAutobind = E.riseEdictStartsSpireAutobind;
+  var cupEdictCost = E.cupEdictCost;
+  var cupStartsChalices = E.cupStartsChalices;
+  var draughtEdictCost = E.draughtEdictCost;
+  var draughtStartsChaliceAutobind = E.draughtStartsChaliceAutobind;
+
+  var remembranceCostFavor = E.remembranceCostFavor;
+  var remembranceFavorCost = E.remembranceFavorCost;
+  var deeperNightCost = E.deeperNightCost;
+  var longerProcessionCost = E.longerProcessionCost;
+  var paidProcessionSecs = E.paidProcessionSecs;
+  var deeperTollCost = E.deeperTollCost;
+  var paidTollSecs = E.paidTollSecs;
+  var longerWakeCost = E.longerWakeCost;
+  var paidWakeSecs = E.paidWakeSecs;
+  var longerTitheCost = E.longerTitheCost;
+  var paidTitheSecs = E.paidTitheSecs;
+  var longerVeilCost = E.longerVeilCost;
+  var paidVeilSecs = E.paidVeilSecs;
+  var longerHymnCost = E.longerHymnCost;
+  var longerKnellCost = E.longerKnellCost;
+  var paidKnellSecs = E.paidKnellSecs;
+  var ashenTideCost = E.ashenTideCost;
+  var ossuaryCost = E.ossuaryCost;
+  var nightTitheSecs = E.nightTitheSecs;
+  var nightSecs = E.nightSecs;
 
   var namesCompleteMult = C.namesCompleteMult;
 
-  function ashFromShadeFrac(level, choirLevel) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > ASHEN_TIDE_MAX) n = ASHEN_TIDE_MAX;
-    var c = Math.max(0, Math.floor(Number(choirLevel) || 0));
-    if (c > CHOIR_MAX) c = CHOIR_MAX;
-    return ASH_FROM_SHADE_FRAC + 0.005 * n + 0.005 * c;
-  }
+  var ashFromShadeFrac = E.ashFromShadeFrac;
 
-  function choirAshRate(choirLevel, ashenTide) {
-    return ashFromShadeFrac(ashenTide, choirLevel);
-  }
+  var choirAshRate = E.choirAshRate;
 
-  function namesFromPeak(peak) {
-    var p = num(peak);
-    var n = 0;
-    var i;
-    for (i = 0; i < NAME_THRESHOLDS.length; i++) {
-      if (N.cmp(p, NAME_THRESHOLDS[i]) >= 0) n += 1;
-      else break;
-    }
-    return n;
-  }
+  var namesFromPeak = E.namesFromPeak;
 
-  function siphonCost(level) {
-    return N.cost(SIPHON_COST_BASE, 3, level);
-  }
+  var siphonCost = E.siphonCost;
+  var levyCost = E.levyCost;
+  var cinderCost = E.cinderCost;
+  var urnRiteCost = E.urnRiteCost;
+  var hearthRiteCost = E.hearthRiteCost;
+  var beaconRiteCost = E.beaconRiteCost;
 
-  function levyCost(level) {
-    return N.cost(LEVY_COST_BASE, 3, level);
-  }
-
-  function cinderCost(level) {
-    return N.cost(CINDER_COST_BASE, CINDER_COST_MULT, level);
-  }
-
-  function urnRiteCost(level) {
-    return N.cost(URN_RITE_COST_BASE, URN_RITE_COST_MULT, level);
-  }
-
-  function hearthRiteCost(level) {
-    return N.cost(HEARTH_RITE_COST_BASE, HEARTH_RITE_COST_MULT, level);
-  }
-
-  function beaconRiteCost(level) {
-    return N.cost(BEACON_RITE_COST_BASE, BEACON_RITE_COST_MULT, level);
-  }
-
-  function spireRiteCost(level) {
-    return N.cost(SPIRE_RITE_COST_BASE, SPIRE_RITE_COST_MULT, level);
-  }
-
-  function bindingTollCost(level) {
-    return N.cost(BINDING_TOLL_COST_BASE, BINDING_TOLL_COST_MULT, level);
-  }
-
-  function bindingTollRateMult(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
-    return Math.pow(BINDING_TOLL_RATE, n);
-  }
-
-  function bindingTollCostMult(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > BINDING_TOLL_MAX) n = BINDING_TOLL_MAX;
-    return 1 + BINDING_TOLL_COST_BONUS * n;
-  }
+  var spireRiteCost = E.spireRiteCost;
+  var bindingTollCost = E.bindingTollCost;
+  var bindingTollRateMult = E.bindingTollRateMult;
+  var bindingTollCostMult = E.bindingTollCostMult;
 
   function bindingTollRowOpen() {
     if ((Number(state.bindingTollLevel) || 0) >= 1) return true;
@@ -1224,65 +518,17 @@
     return N.cmp(state.fetters, 5) >= 0 && (Number(state.favorEarned) || 0) >= 1;
   }
 
-  function siphonMult(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n < 40) return N.fromNumber(Math.pow(RITE_MULT_BASE, n));
-    return N.pow(N.fromNumber(RITE_MULT_BASE), n);
-  }
-
-  function levyMult(level) {
-    return siphonMult(level);
-  }
-
-  function cinderMult(level) {
-    return siphonMult(level);
-  }
-
-  function urnRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function hearthRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function beaconRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function spireRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function lanternMult(lanterns) {
-    if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
-      if (lanterns.e < 12) {
-        return N.fromNumber(1 + 0.05 * (N.toNumber(lanterns) || 0));
-      }
-      return N.add(1, N.mul(0.05, lanterns));
-    }
-    return N.fromNumber(1 + 0.05 * (Number(lanterns) || 0));
-  }
-
-  function fetterMult(fetters) {
-    if (fetters && typeof fetters === "object" && typeof fetters.m === "number") {
-      if (fetters.e < 12) {
-        return N.fromNumber(1 + 0.05 * (N.toNumber(fetters) || 0));
-      }
-      return N.add(1, N.mul(0.05, fetters));
-    }
-    return N.fromNumber(1 + 0.05 * (Number(fetters) || 0));
-  }
-
-  function emberMult(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n < 40) return N.fromNumber(Math.pow(1.25, n));
-    return N.pow(N.fromNumber(1.25), n);
-  }
-
-  function chainMult(level) {
-    return emberMult(level);
-  }
+  var siphonMult = E.siphonMult;
+  var levyMult = E.levyMult;
+  var cinderMult = E.cinderMult;
+  var urnRiteMult = E.urnRiteMult;
+  var hearthRiteMult = E.hearthRiteMult;
+  var beaconRiteMult = E.beaconRiteMult;
+  var spireRiteMult = E.spireRiteMult;
+  var lanternMult = E.lanternMult;
+  var fetterMult = E.fetterMult;
+  var emberMult = E.emberMult;
+  var chainMult = E.chainMult;
 
   var hollowMult = C.hollowMult;
 
@@ -1293,37 +539,9 @@
     return (Number(s.favorEarned) || 0) >= 2 && !!s.unlockedPyres;
   }
 
-  function hollowClearNeed(kind, stock) {
-    var fracPart = 0;
-    var n = N.toNumber(stock);
-    if (isFinite(n)) {
-      fracPart = Math.floor(HOLLOW_CLEAR_FRAC * Math.max(0, n));
-    } else {
-      var raw = N.floor(N.mul(N.max(N.from(stock), 0), HOLLOW_CLEAR_FRAC));
-      var rawN = N.toNumber(raw);
-      if (!isFinite(rawN)) {
-        fracPart = kind === "souls" ? HOLLOW_SOUL_CLEAR_CAP : 1e15;
-      } else {
-        fracPart = Math.floor(rawN);
-      }
-    }
-    if (kind === "souls") {
-      return Math.min(HOLLOW_SOUL_CLEAR_CAP, Math.max(HOLLOW_SOUL_CLEAR_FLOOR, fracPart));
-    }
-    if (kind === "ash") {
-      return Math.max(HOLLOW_ASH_CLEAR_FLOOR, fracPart);
-    }
-    if (kind === "shades") {
-      return Math.max(HOLLOW_SHADE_CLEAR_FLOOR, fracPart);
-    }
-    return 0;
-  }
+  var hollowClearNeed = E.hollowClearNeed;
 
-  function hollowSpendClears(kind, spent, stockBefore) {
-    if (kind !== "souls" && kind !== "ash" && kind !== "shades") return true;
-    var need = hollowClearNeed(kind, stockBefore);
-    return N.cmp(spent, need) >= 0;
-  }
+  var hollowSpendClears = E.hollowSpendClears;
 
   function noteHollowManualSpend(kind, spent, stockBefore, target) {
     var s = target || state;
@@ -1396,160 +614,8 @@
 
   var CHRONICLE_LINES = C.CHRONICLE_LINES;
 
-  function formatGoalNum(n) {
-    if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatNumber) {
-      return SoulgatherFormat.formatNumber(n);
-    }
-    if (n && typeof n === "object" && typeof n.m === "number") {
-      n = nVal(n);
-    }
-    if (n == null || !isFinite(n)) return "0";
-    if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
-    return Number(n).toFixed(1);
-  }
-
-  function nextGoal(view, format) {
-    view = view || {};
-    format = format || formatGoalNum;
-    var shades = nVal(view.shades);
-    var spirits = nVal(view.spirits);
-    var lifetimeSouls = nVal(view.lifetimeSouls);
-    var lifetimeShades = nVal(view.lifetimeShades);
-    var lanterns = nVal(view.lanterns);
-    var censers = nVal(view.censers);
-    var pyres = nVal(view.pyres);
-    var urns = nVal(view.urns);
-    var hearths = nVal(view.hearths);
-    var beacons = nVal(view.beacons);
-    var spires = nVal(view.spires);
-    var obelisks = nVal(view.obelisks);
-    var fetters = nVal(view.fetters);
-    var chalices = Number(view.chalices) || 0;
-    var unlockedSpirits = !!view.unlockedSpirits;
-    var unlockedVessels = !!view.unlockedVessels;
-    var unlockedThrones = !!view.unlockedThrones;
-    var favorEarned = Number(view.favorEarned) || 0;
-    var gain = favorGain(view.lifetimeSouls);
-    var sworn = normalizeAspect(view.aspect);
-    var marksBought =
-      (Number(view.emberLevel) || 0) +
-      (Number(view.chainLevel) || 0) +
-      (Number(view.hollowLevel) || 0);
-
-    if (favorEarned >= 1 && !sworn) {
-      return "Swear an Aspect. The GodKing waits.";
-    }
-
-    if (shades < 1 && lifetimeShades < 1 && !unlockedSpirits) {
-      return "Bind a Shade to wake the well.";
-    }
-    if (!unlockedSpirits) {
-      if (view.unlockedLanterns && lanterns < 1) {
-        return "Kindle a Lantern. A light for the echoes.";
-      }
-      return (
-        "The well thickens. Bound Spirits at 10 Shades. " +
-        format(view.shades != null ? view.shades : shades) +
-        " / 10 Shades"
-      );
-    }
-    if (!unlockedVessels) {
-      if (view.unlockedFetters && fetters < 1) {
-        return "Bind a Fetter. A chain that teaches the will to pull.";
-      }
-      return "Vessels at 5 Bound Spirits. " + format(view.spirits != null ? view.spirits : spirits) + " / 5";
-    }
-    if (!unlockedThrones) {
-      return "A throne at 1 Vessel.";
-    }
-    if (gain >= 1) {
-      if (favorEarned >= 1) {
-        var nextReady = nextFavorThreshold(view.lifetimeSouls);
-        var lifeReady = format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls);
-        var nextReadyFmt = format(nextReady);
-        return (
-          "Lay Tribute. " +
-          gain +
-          " Favor waits. The " +
-          favorOrdinal(gain + 1) +
-          " at " +
-          nextReadyFmt +
-          " — " +
-          lifeReady +
-          " / " +
-          nextReadyFmt +
-          "."
-        );
-      }
-      return "Lay Tribute. The GodKing will remember.";
-    }
-    if (view.unlockedLanterns && lanterns < 1) {
-      return "Kindle a Lantern. A light for the echoes.";
-    }
-    if (view.unlockedFetters && fetters < 1) {
-      return "Bind a Fetter. A chain that teaches the will to pull.";
-    }
-    var tollLevel = Number(view.bindingTollLevel) || 0;
-    var tollOpen =
-      !!view.unlockedBindingToll ||
-      tollLevel >= 1 ||
-      (fetters >= 5 && favorEarned >= 1);
-    if (tollOpen && tollLevel < 1) {
-      return "Pay the Binding Toll. The chain bites both ways.";
-    }
-    if (view.unlockedMarks && marksBought < 1) {
-      return "Press a Mark. Ash is what the well will not keep.";
-    }
-    if (view.unlockedCensers && censers < 1) {
-      return "Raise a Censer. They burn what the well discards.";
-    }
-    if (view.unlockedPyres && pyres < 1) {
-      return "Raise a Pyre. A pyre for what remains.";
-    }
-    if (view.unlockedUrns && urns < 1) {
-      return "Raise an Urn. What the fire would not finish.";
-    }
-    if (view.unlockedHearths && hearths < 1) {
-      return "Kindle a Hearth. The last heat.";
-    }
-    if (view.unlockedBeacons && beacons < 1) {
-      return "Raise a Beacon. A light after the fire.";
-    }
-    if (view.unlockedSpires && spires < 1) {
-      return "Raise a Spire. Height after the light.";
-    }
-    if (view.unlockedObelisks && obelisks < 1) {
-      return "Raise an Obelisk. Stone after the height.";
-    }
-    if (view.unlockedChalices && chalices < 1) {
-      return "Raise a Chalice. He drinks from the emptied well.";
-    }
-    if (favorEarned >= 1 && sworn && !normalizeVow(view.vow)) {
-      return "A vow may be sworn.";
-    }
-    if (favorEarned >= 1) {
-      var nextGather = nextFavorThreshold(view.lifetimeSouls);
-      var lifeGather = format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls);
-      var nextGatherFmt = format(nextGather);
-      return (
-        "The well gathers. Next Favor at " +
-        nextGatherFmt +
-        " — " +
-        lifeGather +
-        " / " +
-        nextGatherFmt +
-        "."
-      );
-    }
-    var nextFirst = nextFavorThreshold(view.lifetimeSouls);
-    return (
-      "Tribute when the GodKing will remember. " +
-      format(view.lifetimeSouls != null ? view.lifetimeSouls : lifetimeSouls) +
-      " / " +
-      format(nextFirst) +
-      " lifetime Souls."
-    );
-  }
+  var formatGoalNum = E.formatGoalNum;
+  var nextGoal = E.nextGoal;
 
   function normalizeChronicle(raw) {
     var out = [];
@@ -2262,22 +1328,13 @@
   var loadFailedRaw = null;
   var els = {};
 
-  function clamp(n, lo, hi) {
-    return Math.max(lo, Math.min(hi, n));
-  }
+  var clamp = E.clamp;
 
   function currentMult() {
-    return (
-      prodMult(
-        state.favorEarned,
-        state.thrones,
-        state.edictLevel,
-        throneWeight(normalizeAspect(state.aspect) === "dominion"),
-        state.crownWeight,
-        state.namesComplete,
-        state.chalices,
-        state.ossuaryLevel
-      ) * processionMult(processionActive())
+    return E.currentMult(
+      state.favorEarned, state.thrones, state.edictLevel,
+      state.aspect, state.crownWeight, state.namesComplete,
+      state.chalices, state.ossuaryLevel, processionActive()
     );
   }
 
@@ -2314,171 +1371,67 @@
   }
 
   function rateMult() {
-    return currentMult() * titheMult(titheActive()) * hollowMult(state.hollowStacks);
+    return E.rateMult(
+      state.favorEarned, state.thrones, state.edictLevel,
+      state.aspect, state.crownWeight, state.namesComplete,
+      state.chalices, state.ossuaryLevel, processionActive(),
+      titheActive(), state.hollowStacks
+    );
   }
 
   function clickPower() {
-    return N.mul(
-      N.mul(
-        N.mul(
-          N.mul(1 + (Number(state.wellDepth) || 0), rateMult()),
-          veilMult(veilActive())
-        ),
-        tollMult(tollActive())
-      ),
-      knellMult(knellActive())
+    return E.clickPower(
+      state.wellDepth, rateMult(), veilActive(), tollActive(),
+      knellActive(), state.hollowStacks
     );
   }
 
   function shadeSoulsPerSec(cachedRm) {
     var rm = cachedRm != null ? cachedRm : rateMult();
-    var base = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(
-              N.mul(N.mul(state.shades, SHADE_SOULS_PER_SEC), rm),
-              siphonMult(state.siphonLevel)
-            ),
-            harvestMult(normalizeAspect(state.aspect) === "harvest")
-          ),
-          lanternMult(state.lanterns)
-        ),
-        emberMult(state.emberLevel)
-      ),
-      nightMult(nightActive())
+    return E.shadeSoulsPerSec(
+      state.shades, state.siphonLevel, state.aspect, state.lanterns,
+      state.emberLevel, nightActive(), hymnActive(),
+      state.bindingTollLevel, rm
     );
-    base = N.mul(base, hymnMult(hymnActive()));
-    return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
   function soulsPerSec(cachedRm) {
-    var rate = shadeSoulsPerSec(cachedRm);
-    if (state.wellDraws) rate = N.add(rate, clickPower());
-    return rate;
+    var rm = cachedRm != null ? cachedRm : rateMult();
+    return E.soulsPerSec(
+      state.shades, state.siphonLevel, state.aspect, state.lanterns,
+      state.emberLevel, nightActive(), hymnActive(),
+      state.bindingTollLevel, rm,
+      state.wellDraws, state.wellDepth, veilActive(), tollActive(),
+      knellActive(), state.hollowStacks
+    );
   }
 
   function shadesPerSec(cachedRm) {
     var rm = cachedRm != null ? cachedRm : rateMult();
-    var base = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.spirits, SPIRIT_SHADES_PER_SEC), rm),
-            levyMult(state.levyLevel)
-          ),
-          bindingMult(normalizeAspect(state.aspect) === "binding")
-        ),
-        chainMult(state.chainLevel)
-      ),
-      fetterMult(state.fetters)
+    return E.shadesPerSec(
+      state.spirits, state.levyLevel, state.aspect, state.chainLevel,
+      state.fetters, hymnActive(), state.bindingTollLevel, rm
     );
-    base = N.mul(base, hymnMult(hymnActive()));
-    return N.mul(base, bindingTollRateMult(state.bindingTollLevel));
   }
 
   function spiritsPerSec(cachedRm) {
     var rm = cachedRm != null ? cachedRm : rateMult();
-    return N.mul(
-      N.mul(N.mul(state.vessels, VESSEL_SPIRITS_PER_SEC), rm),
-      emberMult(state.hollowLevel)
-    );
+    return E.spiritsPerSec(state.vessels, state.hollowLevel, rm);
   }
 
   function ashPerSec(cachedRm) {
     var rm = cachedRm != null ? cachedRm : rateMult();
-    var fromShades = N.mul(shadeSoulsPerSec(cachedRm), ashFromShadeFrac(state.ashenTideLevel, state.choirLevel));
-    var fromCensers = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(N.mul(state.censers, CENSER_ASH_PER_SEC), rm),
-          nightMult(nightActive())
-        ),
-        hymnMult(hymnActive())
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromPyres = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.pyres, PYRE_ASH_PER_SEC), rm),
-            nightMult(nightActive())
-          ),
-          hymnMult(hymnActive())
-        ),
-        cinderMult(state.cinderLevel)
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromUrns = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.urns, URN_ASH_PER_SEC), rm),
-            nightMult(nightActive())
-          ),
-          hymnMult(hymnActive())
-        ),
-        urnRiteMult(state.urnRiteLevel)
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromHearths = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.hearths, HEARTH_ASH_PER_SEC), rm),
-            nightMult(nightActive())
-          ),
-          hymnMult(hymnActive())
-        ),
-        hearthRiteMult(state.hearthRiteLevel)
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromBeacons = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.beacons, BEACON_ASH_PER_SEC), rm),
-            nightMult(nightActive())
-          ),
-          hymnMult(hymnActive())
-        ),
-        beaconRiteMult(state.beaconRiteLevel)
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromSpires = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(
-            N.mul(N.mul(state.spires, SPIRE_ASH_PER_SEC), rm),
-            nightMult(nightActive())
-          ),
-          hymnMult(hymnActive())
-        ),
-        spireRiteMult(state.spireRiteLevel)
-      ),
-      wakeMult(wakeActive())
-    );
-    var fromObelisks = N.mul(
-      N.mul(
-        N.mul(
-          N.mul(N.mul(state.obelisks, OBELISK_ASH_PER_SEC), rm),
-          nightMult(nightActive())
-        ),
-        hymnMult(hymnActive())
-      ),
-      wakeMult(wakeActive())
-    );
-    return N.add(
-      N.add(
-        N.add(N.add(N.add(N.add(N.add(fromShades, fromCensers), fromPyres), fromUrns), fromHearths), fromBeacons),
-        fromSpires
-      ),
-      fromObelisks
+    return E.ashPerSec(
+      state.shades, state.siphonLevel, state.aspect, state.lanterns,
+      state.emberLevel, nightActive(), hymnActive(),
+      state.bindingTollLevel, rm,
+      state.ashenTideLevel, state.choirLevel,
+      state.censers, state.pyres, state.cinderLevel,
+      state.urns, state.urnRiteLevel,
+      state.hearths, state.hearthRiteLevel,
+      state.beacons, state.beaconRiteLevel,
+      state.spires, state.spireRiteLevel,
+      state.obelisks, wakeActive()
     );
   }
 
@@ -2862,29 +1815,7 @@
   }
 
   function purchasePlan(owned, currency, base, mult, extraMult) {
-    if (base == null) base = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var one = N.cost(base, mult, owned);
-    if (em !== 1) one = N.mul(one, em);
-    var mode = state.buyMode;
-    if (mode === "10") {
-      var k10 = maxAffordable(base, owned, currency, mult, em);
-      if (k10 < 1) {
-        return { k: 0, cost: one, can: false };
-      }
-      if (k10 > 10) k10 = 10;
-      return { k: k10, cost: bulkCost(base, owned, k10, mult, em), can: true };
-    }
-    if (mode === "max") {
-      var k = maxAffordable(base, owned, currency, mult, em);
-      if (k < 1) {
-        return { k: 0, cost: one, can: false };
-      }
-      return { k: k, cost: bulkCost(base, owned, k, mult, em), can: true };
-    }
-    return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
+    return E.purchasePlan(owned, currency, base, mult, extraMult, state.buyMode);
   }
 
   function buyWell() {
@@ -3111,20 +2042,7 @@
   }
 
   function chalicePlan() {
-    var owned = Math.max(0, Math.min(CHALICE_MAX, Math.floor(Number(state.chalices) || 0)));
-    var room = CHALICE_MAX - owned;
-    if (room <= 0) {
-      return { k: 0, cost: N.fromNumber(0), can: false, capped: true, owned: owned };
-    }
-    var plan = purchasePlan(owned, state.ash, CHALICE_COST_BASE, CHALICE_COST_MULT);
-    if (plan.k > room) {
-      plan.k = room;
-      plan.cost = bulkCost(CHALICE_COST_BASE, owned, room, CHALICE_COST_MULT);
-      plan.can = N.cmp(state.ash, plan.cost) >= 0;
-    }
-    plan.capped = false;
-    plan.owned = owned;
-    return plan;
+    return E.chalicePlan(state.chalices, state.ash, state.buyMode);
   }
 
   function buyChalice() {
@@ -3642,11 +2560,7 @@
   }
 
   function currentTitheCost() {
-    var cost = titheCost(state.souls);
-    if (normalizeVow(state.vow) === "hunger") {
-      cost = N.mul(cost, 2);
-    }
-    return cost;
+    return E.currentTitheCost(state.souls, state.vow);
   }
 
   function payTithe() {
@@ -8772,355 +7686,351 @@
     boot();
   }
 
-  globalThis.SoulgatherEconomy = {
-    GAME_VERSION: GAME_VERSION,
-    shadeCost: shadeCost,
-    spiritCost: spiritCost,
-    vesselCost: vesselCost,
-    throneCost: throneCost,
-    wellCost: wellCost,
-    WELL_EARLY_MULT: WELL_EARLY_MULT,
-    WELL_COST_MULT: WELL_COST_MULT,
-    WELL_COST_BASE: WELL_COST_BASE,
-    lanternCost: lanternCost,
-    fetterCost: fetterCost,
-    censerCost: censerCost,
-    pyreCost: pyreCost,
-    urnCost: urnCost,
-    hearthCost: hearthCost,
-    beaconCost: beaconCost,
-    spireCost: spireCost,
-    obeliskCost: obeliskCost,
-    chaliceCost: chaliceCost,
-    markCost: markCost,
-    favorGain: favorGain,
-    FAVOR_SOULS_BASE: FAVOR_SOULS_BASE,
-    soulsForFavor: soulsForFavor,
-    nextFavorThreshold: nextFavorThreshold,
-    prestigeMult: prestigeMult,
-    prodMult: prodMult,
-    chaliceMult: chaliceMult,
-    ossuaryMult: ossuaryMult,
-    producerCost: producerCost,
-    bulkCost: bulkCost,
-    bulkCostLoop: bulkCostLoop,
-    maxAffordable: maxAffordable,
-    maxAffordableLoop: maxAffordableLoop,
-    wellMaxAffordable: wellMaxAffordable,
-    wellMaxAffordableLoop: wellMaxAffordableLoop,
-    wellBulkCost: wellBulkCost,
-    wellBulkCostLoop: wellBulkCostLoop,
-    setText: setText,
-    setTextWriteCount: function () { return setTextWriteCount; },
-    RENDER_HZ: RENDER_HZ,
-    RENDER_MS: RENDER_MS,
-    BULK_CAP: BULK_CAP,
-    edictCost: edictCost,
-    memoryCost: memoryCost,
-    echoCost: echoCost,
-    seatCost: seatCost,
-    kindleCost: kindleCost,
-    ashenCost: ashenCost,
-    depthCost: depthCost,
-    crownCost: crownCost,
-    longMemCost: longMemCost,
-    quietCourtCost: quietCourtCost,
-    quietCourtStartsLanternAutobind: quietCourtStartsLanternAutobind,
-    quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
-    quietCourtStartsPyreAutobind: quietCourtStartsPyreAutobind,
-    quietCourtStartsChaliceAutobind: quietCourtStartsChaliceAutobind,
-    quietCourtStartsUrnAutobind: quietCourtStartsUrnAutobind,
-    quietCourtStartsHearthAutobind: quietCourtStartsHearthAutobind,
-    quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
-    quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
-    quietCourtStartsObeliskAutobind: quietCourtStartsObeliskAutobind,
-    applyEdictStartingStock: applyEdictStartingStock,
-    applyAutobindStarts: applyAutobindStarts,
-    TRIBUTE_AUTOBIND_STARTS: TRIBUTE_AUTOBIND_STARTS,
-    hotkeyDefaultGuard: hotkeyDefaultGuard,
-    HOTKEYS: HOTKEYS,
-    resolveHotkey: resolveHotkey,
-    TOAST_MS: TOAST_MS,
-    TOAST_FAST_MS: TOAST_FAST_MS,
-    TOAST_QUEUE_MAX: TOAST_QUEUE_MAX,
-    toastOverflowLabel: toastOverflowLabel,
-    toastOverflowCount: toastOverflowCount,
-    capEnqueueToast: capEnqueueToast,
-    formatGiftBatchSummary: formatGiftBatchSummary,
-    UNLOCK_AUTOBIND_URNS: UNLOCK_AUTOBIND_URNS,
-    UNLOCK_AUTOBIND_HEARTHS: UNLOCK_AUTOBIND_HEARTHS,
-    UNLOCK_AUTOBIND_BEACONS: UNLOCK_AUTOBIND_BEACONS,
-    UNLOCK_AUTOBIND_SPIRES: UNLOCK_AUTOBIND_SPIRES,
-    UNLOCK_AUTOBIND_OBELISKS: UNLOCK_AUTOBIND_OBELISKS,
-    smokeEdictCost: smokeEdictCost,
-    smokeStartsCenserAutobind: smokeStartsCenserAutobind,
-    embersEdictCost: embersEdictCost,
-    embersStartsPyres: embersStartsPyres,
-    urnEdictCost: urnEdictCost,
-    urnEdictStartsUrns: urnEdictStartsUrns,
-    hearthEdictCost: hearthEdictCost,
-    hearthEdictStartsHearths: hearthEdictStartsHearths,
-    beaconEdictCost: beaconEdictCost,
-    beaconEdictStartsBeacons: beaconEdictStartsBeacons,
-    spireEdictCost: spireEdictCost,
-    spireEdictStartsSpires: spireEdictStartsSpires,
-    obeliskEdictCost: obeliskEdictCost,
-    obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
-    cinderEdictCost: cinderEdictCost,
-    cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
-    cutEdictCost: cutEdictCost,
-    cutEdictStartsUrnAutobind: cutEdictStartsUrnAutobind,
-    tendingEdictCost: tendingEdictCost,
-    tendingEdictStartsHearthAutobind: tendingEdictStartsHearthAutobind,
-    gleamEdictCost: gleamEdictCost,
-    gleamEdictStartsBeaconAutobind: gleamEdictStartsBeaconAutobind,
-    riseEdictCost: riseEdictCost,
-    riseEdictStartsSpireAutobind: riseEdictStartsSpireAutobind,
-    cupEdictCost: cupEdictCost,
-    cupStartsChalices: cupStartsChalices,
-    draughtEdictCost: draughtEdictCost,
-    draughtStartsChaliceAutobind: draughtStartsChaliceAutobind,
-    namesCompleteMult: namesCompleteMult,
-    remembranceCostFavor: remembranceCostFavor,
-    remembranceFavorCost: remembranceFavorCost,
-    deeperNightCost: deeperNightCost,
-    longerProcessionCost: longerProcessionCost,
-    paidProcessionSecs: paidProcessionSecs,
-    LONGER_PROCESSION_MAX: LONGER_PROCESSION_MAX,
-    deeperTollCost: deeperTollCost,
-    paidTollSecs: paidTollSecs,
-    DEEPER_TOLL_MAX: DEEPER_TOLL_MAX,
-    longerWakeCost: longerWakeCost,
-    paidWakeSecs: paidWakeSecs,
-    LONGER_WAKE_MAX: LONGER_WAKE_MAX,
-    longerTitheCost: longerTitheCost,
-    paidTitheSecs: paidTitheSecs,
-    LONGER_TITHE_MAX: LONGER_TITHE_MAX,
-    longerVeilCost: longerVeilCost,
-    paidVeilSecs: paidVeilSecs,
-    LONGER_VEIL_MAX: LONGER_VEIL_MAX,
-    longerHymnCost: longerHymnCost,
-    hymnBonusSecs: hymnBonusSecs,
-    LONGER_HYMN_MAX: LONGER_HYMN_MAX,
-    longerKnellCost: longerKnellCost,
-    paidKnellSecs: paidKnellSecs,
-    LONGER_KNELL_MAX: LONGER_KNELL_MAX,
-    ashenTideCost: ashenTideCost,
-    ossuaryCost: ossuaryCost,
-    choirAshRate: choirAshRate,
-    choirEdictCost: choirEdictCost,
-    hymnEdictCost: hymnEdictCost,
-    hymnMult: hymnMult,
-    hymnSecs: hymnSecs,
-    hymnLeftAfterTribute: hymnLeftAfterTribute,
-    wakeEdictCost: wakeEdictCost,
-    wakeSecs: wakeSecs,
-    wakeEdictStartsWake: wakeEdictStartsWake,
-    wakeLeftAfterTribute: wakeLeftAfterTribute,
-    processionEdictCost: processionEdictCost,
-    processionSecs: processionSecs,
-    processionEdictStartsProcession: processionEdictStartsProcession,
-    processionLeftAfterTribute: processionLeftAfterTribute,
-    tollEdictCost: tollEdictCost,
-    tollSecs: tollSecs,
-    tollEdictStartsToll: tollEdictStartsToll,
-    tollLeftAfterTribute: tollLeftAfterTribute,
-    veilEdictCost: veilEdictCost,
-    veilSecs: veilSecs,
-    veilEdictStartsVeil: veilEdictStartsVeil,
-    veilLeftAfterTribute: veilLeftAfterTribute,
-    knellEdictCost: knellEdictCost,
-    knellSecs: knellSecs,
-    knellEdictStartsKnell: knellEdictStartsKnell,
-    knellLeftAfterTribute: knellLeftAfterTribute,
-    nightEdictCost: nightEdictCost,
-    nightEdictSecs: nightEdictSecs,
-    nightEdictStartsNight: nightEdictStartsNight,
-    nightLeftAfterTribute: nightLeftAfterTribute,
-    formatBlessing: formatBlessing,
-    nightTitheSecs: nightTitheSecs,
-    nightSecs: nightSecs,
-    ashFromShadeFrac: ashFromShadeFrac,
-    vowExtraFavor: vowExtraFavor,
-    vowsKnownCount: vowsKnownCount,
-    normalizeVow: normalizeVow,
-    siphonCost: siphonCost,
-    levyCost: levyCost,
-    cinderCost: cinderCost,
-    urnRiteCost: urnRiteCost,
-    hearthRiteCost: hearthRiteCost,
-    beaconRiteCost: beaconRiteCost,
-    spireRiteCost: spireRiteCost,
-    bindingTollCost: bindingTollCost,
-    bindingTollRateMult: bindingTollRateMult,
-    bindingTollCostMult: bindingTollCostMult,
-    BINDING_TOLL_MAX: BINDING_TOLL_MAX,
-    BINDING_TOLL_RATE: BINDING_TOLL_RATE,
-    BINDING_TOLL_COST_BONUS: BINDING_TOLL_COST_BONUS,
-    siphonMult: siphonMult,
-    levyMult: levyMult,
-    cinderMult: cinderMult,
-    urnRiteMult: urnRiteMult,
-    hearthRiteMult: hearthRiteMult,
-    beaconRiteMult: beaconRiteMult,
-    spireRiteMult: spireRiteMult,
-    CINDER_COST_BASE: CINDER_COST_BASE,
-    CINDER_COST_MULT: CINDER_COST_MULT,
-    URN_RITE_COST_BASE: URN_RITE_COST_BASE,
-    URN_RITE_COST_MULT: URN_RITE_COST_MULT,
-    HEARTH_RITE_COST_BASE: HEARTH_RITE_COST_BASE,
-    HEARTH_RITE_COST_MULT: HEARTH_RITE_COST_MULT,
-    BEACON_RITE_COST_BASE: BEACON_RITE_COST_BASE,
-    BEACON_RITE_COST_MULT: BEACON_RITE_COST_MULT,
-    SPIRE_RITE_COST_BASE: SPIRE_RITE_COST_BASE,
-    SPIRE_RITE_COST_MULT: SPIRE_RITE_COST_MULT,
-    HEARTH_RITE_COST: HEARTH_RITE_COST,
-    BEACON_RITE_COST: BEACON_RITE_COST,
-    SPIRE_RITE_COST: SPIRE_RITE_COST,
-    RITE_MULT_BASE: RITE_MULT_BASE,
-    SIPHON_COST_BASE: SIPHON_COST_BASE,
-    LEVY_COST_BASE: LEVY_COST_BASE,
-    CINDER_COST: CINDER_COST,
-    URN_RITE_COST: URN_RITE_COST,
-    harvestMult: harvestMult,
-    bindingMult: bindingMult,
-    throneWeight: throneWeight,
-    lanternMult: lanternMult,
-    fetterMult: fetterMult,
-    emberMult: emberMult,
-    chainMult: chainMult,
-    hollowMult: hollowMult,
-    stacksWantedFromIdle: stacksWantedFromIdle,
-    hollowHungerActive: hollowHungerActive,
-    noteHollowManualSpend: noteHollowManualSpend,
-    hollowClearNeed: hollowClearNeed,
-    hollowSpendClears: hollowSpendClears,
-    HOLLOW_GRACE: HOLLOW_GRACE,
-    HOLLOW_INTERVAL: HOLLOW_INTERVAL,
-    HOLLOW_MAX: HOLLOW_MAX,
-    HOLLOW_PENALTY: HOLLOW_PENALTY,
-    HOLLOW_SOUL_CLEAR_CAP: HOLLOW_SOUL_CLEAR_CAP,
-    HOLLOW_SOUL_CLEAR_FLOOR: HOLLOW_SOUL_CLEAR_FLOOR,
-    HOLLOW_ASH_CLEAR_FLOOR: HOLLOW_ASH_CLEAR_FLOOR,
-    HOLLOW_SHADE_CLEAR_FLOOR: HOLLOW_SHADE_CLEAR_FLOOR,
-    HOLLOW_CLEAR_FRAC: HOLLOW_CLEAR_FRAC,
-    MAX_DT: MAX_DT,
-    LIVE_FRAME_MAX: LIVE_FRAME_MAX,
-    AWAY_SUMMARY_DT: AWAY_SUMMARY_DT,
-    normalizeAspect: normalizeAspect,
-    nextGoal: nextGoal,
-    titheCost: titheCost,
-    titheMult: titheMult,
-    nightTitheCost: nightTitheCost,
-    nightMult: nightMult,
-    veilCost: veilCost,
-    veilMult: veilMult,
-    tollMult: tollMult,
-    TOLL_COST: TOLL_COST,
-    TOLL_SECS: TOLL_SECS,
-    wakeMult: wakeMult,
-    WAKE_COST: WAKE_COST,
-    WAKE_SECS: WAKE_SECS,
-    processionMult: processionMult,
-    PROCESSION_COST: PROCESSION_COST,
-    PROCESSION_SECS: PROCESSION_SECS,
-    knellMult: knellMult,
-    KNELL_COST: KNELL_COST,
-    KNELL_SECS: KNELL_SECS,
-    ashPerSec: ashPerSec,
-    isSaveShape: isSaveShape,
-    isFiniteStock: isFiniteStock,
-    loadCount: loadCount,
-    loadNum: loadNum,
-    applySaveData: applySaveData,
-    tripwireSanity: tripwireSanity,
-    getState: function () { return state; },
-    __setStateForTest: function (partial) {
-      if (partial && typeof partial === "object") {
-        var keys = Object.keys(partial);
-        for (var i = 0; i < keys.length; i++) state[keys[i]] = partial[keys[i]];
-      }
-    },
-    freshState: freshState,
-    applyDt: applyDt,
-    harvest: harvest,
-    tryAutobind: tryAutobind,
-    tryAutobindSpirits: tryAutobindSpirits,
-    tryAutobindVessels: tryAutobindVessels,
-    tryAutobindLanterns: tryAutobindLanterns,
-    tryAutobindFetters: tryAutobindFetters,
-    tryAutobindCensers: tryAutobindCensers,
-    tryAutobindThrones: tryAutobindThrones,
-    tryAutobindPyres: tryAutobindPyres,
-    tryAutobindUrns: tryAutobindUrns,
-    tryAutobindHearths: tryAutobindHearths,
-    tryAutobindBeacons: tryAutobindBeacons,
-    tryAutobindSpires: tryAutobindSpires,
-    tryAutobindObelisks: tryAutobindObelisks,
-    tryAutobindChalices: tryAutobindChalices,
-    buyShade: buyShade,
-    buySpirit: buySpirit,
-    buyVessel: buyVessel,
-    buyThrone: buyThrone,
-    buyWell: buyWell,
-    buyLantern: buyLantern,
-    buyFetter: buyFetter,
-    buyCenser: buyCenser,
-    buyPyre: buyPyre,
-    buyUrn: buyUrn,
-    buyHearth: buyHearth,
-    buyBeacon: buyBeacon,
-    buySpire: buySpire,
-    buyObelisk: buyObelisk,
-    buyChalice: buyChalice,
-    buyWellDraws: buyWellDraws,
-    buySiphon: buySiphon,
-    buyLevy: buyLevy,
-    buyBindingToll: buyBindingToll,
-    serializeState: serializeState,
-    layTribute: layTribute,
-    FIELDS: FIELDS,
-    FIELDS_KEYS: FIELDS_KEYS,
-    GIFTS: GIFTS,
-    GIFTS_BY_STAT: GIFTS_BY_STAT,
-    GIFT_FLAGS: GIFT_FLAGS,
-    BONUS_TO_GIFT: BONUS_TO_GIFT,
-    PEAK_STATS: PEAK_STATS,
-    tryMilestoneGifts: tryMilestoneGifts,
-    checkUnlock: checkUnlock,
-    rebuildUngrantedCount: rebuildUngrantedCount,
-    GIFT_STAT_KEYS: GIFT_STAT_KEYS,
-    getGiftCmpCount: function () { return _giftCmpCount; },
-    getGiftMeetsCount: function () { return _giftMeetsCount; },
-    getGiftUngrantedCount: function () { return _giftUngrantedCount; },
-    getBumpPeakShadesCount: function () { return _bumpPeakShadesCount; },
-    resetGiftLastSeen: function () { _giftLastSeen = null; },
-    resetToScope: resetToScope,
-    SAVE_FIELDS: SAVE_FIELDS,
-    SAVE_KEY: SAVE_KEY,
-    SAVE_BAK1_KEY: SAVE_BAK1_KEY,
-    SAVE_BAK2_KEY: SAVE_BAK2_KEY,
-    BAK1_MS: BAK1_MS,
-    BAK2_MS: BAK2_MS,
-    COST_BASE: COST_BASE,
-    COST_MULT: COST_MULT,
-    save: save,
-    flushSave: flushSave,
-    markSaveDirty: markSaveDirty,
-    getSaveDirty: function () { return saveDirty; },
-    beginLoadFailure: beginLoadFailure,
-    getLoadFailed: function () { return loadFailed; },
-    setLoadFailed: function (v) { loadFailed = !!v; },
-    getLoadFailedRaw: function () { return loadFailedRaw; },
-    setLoadFailedRaw: function (v) { loadFailedRaw = v == null ? null : String(v); },
-    announce: announce,
-    ANNOUNCE_THROTTLE_MS: ANNOUNCE_THROTTLE_MS,
-    reduceMotionActive: reduceMotionActive,
-    setReduceMotion: setReduceMotion,
-    _getReduceMotion: function () { return _reduceMotion; },
-    _getAnnounceQueue: function () { return _announceQueue; },
-    _getAnnounceLastMs: function () { return _announceLastMs; },
-    _resetAnnouncer: function () { _announceLastMs = 0; _announceQueue = []; if (_announceTimer) { clearTimeout(_announceTimer); _announceTimer = null; } },
-    spawnRipple: spawnRipple
+  var _eco = globalThis.SoulgatherEconomy;
+  _eco.GAME_VERSION = GAME_VERSION;
+  _eco.vesselCost = vesselCost;
+  _eco.throneCost = throneCost;
+  _eco.wellCost = wellCost;
+  _eco.WELL_EARLY_MULT = WELL_EARLY_MULT;
+  _eco.WELL_COST_MULT = WELL_COST_MULT;
+  _eco.WELL_COST_BASE = WELL_COST_BASE;
+  _eco.lanternCost = lanternCost;
+  _eco.fetterCost = fetterCost;
+  _eco.censerCost = censerCost;
+  _eco.pyreCost = pyreCost;
+  _eco.urnCost = urnCost;
+  _eco.hearthCost = hearthCost;
+  _eco.beaconCost = beaconCost;
+  _eco.spireCost = spireCost;
+  _eco.obeliskCost = obeliskCost;
+  _eco.chaliceCost = chaliceCost;
+  _eco.markCost = markCost;
+  _eco.favorGain = favorGain;
+  _eco.FAVOR_SOULS_BASE = FAVOR_SOULS_BASE;
+  _eco.soulsForFavor = soulsForFavor;
+  _eco.nextFavorThreshold = nextFavorThreshold;
+  _eco.prestigeMult = prestigeMult;
+  _eco.prodMult = prodMult;
+  _eco.chaliceMult = chaliceMult;
+  _eco.ossuaryMult = ossuaryMult;
+  _eco.producerCost = producerCost;
+  _eco.bulkCost = bulkCost;
+  _eco.bulkCostLoop = bulkCostLoop;
+  _eco.maxAffordable = maxAffordable;
+  _eco.maxAffordableLoop = maxAffordableLoop;
+  _eco.wellMaxAffordable = wellMaxAffordable;
+  _eco.wellMaxAffordableLoop = wellMaxAffordableLoop;
+  _eco.wellBulkCost = wellBulkCost;
+  _eco.wellBulkCostLoop = wellBulkCostLoop;
+  _eco.setText = setText;
+  _eco.setTextWriteCount = function () { return setTextWriteCount; };
+  _eco.RENDER_HZ = RENDER_HZ;
+  _eco.RENDER_MS = RENDER_MS;
+  _eco.BULK_CAP = BULK_CAP;
+  _eco.edictCost = edictCost;
+  _eco.memoryCost = memoryCost;
+  _eco.echoCost = echoCost;
+  _eco.seatCost = seatCost;
+  _eco.kindleCost = kindleCost;
+  _eco.ashenCost = ashenCost;
+  _eco.depthCost = depthCost;
+  _eco.crownCost = crownCost;
+  _eco.longMemCost = longMemCost;
+  _eco.quietCourtCost = quietCourtCost;
+  _eco.quietCourtStartsLanternAutobind = quietCourtStartsLanternAutobind;
+  _eco.quietCourtStartsFetterAutobind = quietCourtStartsFetterAutobind;
+  _eco.quietCourtStartsPyreAutobind = quietCourtStartsPyreAutobind;
+  _eco.quietCourtStartsChaliceAutobind = quietCourtStartsChaliceAutobind;
+  _eco.quietCourtStartsUrnAutobind = quietCourtStartsUrnAutobind;
+  _eco.quietCourtStartsHearthAutobind = quietCourtStartsHearthAutobind;
+  _eco.quietCourtStartsBeaconAutobind = quietCourtStartsBeaconAutobind;
+  _eco.quietCourtStartsSpireAutobind = quietCourtStartsSpireAutobind;
+  _eco.quietCourtStartsObeliskAutobind = quietCourtStartsObeliskAutobind;
+  _eco.applyEdictStartingStock = applyEdictStartingStock;
+  _eco.applyAutobindStarts = applyAutobindStarts;
+  _eco.TRIBUTE_AUTOBIND_STARTS = TRIBUTE_AUTOBIND_STARTS;
+  _eco.hotkeyDefaultGuard = hotkeyDefaultGuard;
+  _eco.HOTKEYS = HOTKEYS;
+  _eco.resolveHotkey = resolveHotkey;
+  _eco.TOAST_MS = TOAST_MS;
+  _eco.TOAST_FAST_MS = TOAST_FAST_MS;
+  _eco.TOAST_QUEUE_MAX = TOAST_QUEUE_MAX;
+  _eco.toastOverflowLabel = toastOverflowLabel;
+  _eco.toastOverflowCount = toastOverflowCount;
+  _eco.capEnqueueToast = capEnqueueToast;
+  _eco.formatGiftBatchSummary = formatGiftBatchSummary;
+  _eco.UNLOCK_AUTOBIND_URNS = UNLOCK_AUTOBIND_URNS;
+  _eco.UNLOCK_AUTOBIND_HEARTHS = UNLOCK_AUTOBIND_HEARTHS;
+  _eco.UNLOCK_AUTOBIND_BEACONS = UNLOCK_AUTOBIND_BEACONS;
+  _eco.UNLOCK_AUTOBIND_SPIRES = UNLOCK_AUTOBIND_SPIRES;
+  _eco.UNLOCK_AUTOBIND_OBELISKS = UNLOCK_AUTOBIND_OBELISKS;
+  _eco.smokeEdictCost = smokeEdictCost;
+  _eco.smokeStartsCenserAutobind = smokeStartsCenserAutobind;
+  _eco.embersEdictCost = embersEdictCost;
+  _eco.embersStartsPyres = embersStartsPyres;
+  _eco.urnEdictCost = urnEdictCost;
+  _eco.urnEdictStartsUrns = urnEdictStartsUrns;
+  _eco.hearthEdictCost = hearthEdictCost;
+  _eco.hearthEdictStartsHearths = hearthEdictStartsHearths;
+  _eco.beaconEdictCost = beaconEdictCost;
+  _eco.beaconEdictStartsBeacons = beaconEdictStartsBeacons;
+  _eco.spireEdictCost = spireEdictCost;
+  _eco.spireEdictStartsSpires = spireEdictStartsSpires;
+  _eco.obeliskEdictCost = obeliskEdictCost;
+  _eco.obeliskEdictStartsObelisks = obeliskEdictStartsObelisks;
+  _eco.cinderEdictCost = cinderEdictCost;
+  _eco.cinderEdictStartsPyreAutobind = cinderEdictStartsPyreAutobind;
+  _eco.cutEdictCost = cutEdictCost;
+  _eco.cutEdictStartsUrnAutobind = cutEdictStartsUrnAutobind;
+  _eco.tendingEdictCost = tendingEdictCost;
+  _eco.tendingEdictStartsHearthAutobind = tendingEdictStartsHearthAutobind;
+  _eco.gleamEdictCost = gleamEdictCost;
+  _eco.gleamEdictStartsBeaconAutobind = gleamEdictStartsBeaconAutobind;
+  _eco.riseEdictCost = riseEdictCost;
+  _eco.riseEdictStartsSpireAutobind = riseEdictStartsSpireAutobind;
+  _eco.cupEdictCost = cupEdictCost;
+  _eco.cupStartsChalices = cupStartsChalices;
+  _eco.draughtEdictCost = draughtEdictCost;
+  _eco.draughtStartsChaliceAutobind = draughtStartsChaliceAutobind;
+  _eco.namesCompleteMult = namesCompleteMult;
+  _eco.remembranceCostFavor = remembranceCostFavor;
+  _eco.remembranceFavorCost = remembranceFavorCost;
+  _eco.deeperNightCost = deeperNightCost;
+  _eco.longerProcessionCost = longerProcessionCost;
+  _eco.paidProcessionSecs = paidProcessionSecs;
+  _eco.LONGER_PROCESSION_MAX = LONGER_PROCESSION_MAX;
+  _eco.deeperTollCost = deeperTollCost;
+  _eco.paidTollSecs = paidTollSecs;
+  _eco.DEEPER_TOLL_MAX = DEEPER_TOLL_MAX;
+  _eco.longerWakeCost = longerWakeCost;
+  _eco.paidWakeSecs = paidWakeSecs;
+  _eco.LONGER_WAKE_MAX = LONGER_WAKE_MAX;
+  _eco.longerTitheCost = longerTitheCost;
+  _eco.paidTitheSecs = paidTitheSecs;
+  _eco.LONGER_TITHE_MAX = LONGER_TITHE_MAX;
+  _eco.longerVeilCost = longerVeilCost;
+  _eco.paidVeilSecs = paidVeilSecs;
+  _eco.LONGER_VEIL_MAX = LONGER_VEIL_MAX;
+  _eco.longerHymnCost = longerHymnCost;
+  _eco.hymnBonusSecs = hymnBonusSecs;
+  _eco.LONGER_HYMN_MAX = LONGER_HYMN_MAX;
+  _eco.longerKnellCost = longerKnellCost;
+  _eco.paidKnellSecs = paidKnellSecs;
+  _eco.LONGER_KNELL_MAX = LONGER_KNELL_MAX;
+  _eco.ashenTideCost = ashenTideCost;
+  _eco.ossuaryCost = ossuaryCost;
+  _eco.choirAshRate = choirAshRate;
+  _eco.choirEdictCost = choirEdictCost;
+  _eco.hymnEdictCost = hymnEdictCost;
+  _eco.hymnMult = hymnMult;
+  _eco.hymnSecs = hymnSecs;
+  _eco.hymnLeftAfterTribute = hymnLeftAfterTribute;
+  _eco.wakeEdictCost = wakeEdictCost;
+  _eco.wakeSecs = wakeSecs;
+  _eco.wakeEdictStartsWake = wakeEdictStartsWake;
+  _eco.wakeLeftAfterTribute = wakeLeftAfterTribute;
+  _eco.processionEdictCost = processionEdictCost;
+  _eco.processionSecs = processionSecs;
+  _eco.processionEdictStartsProcession = processionEdictStartsProcession;
+  _eco.processionLeftAfterTribute = processionLeftAfterTribute;
+  _eco.tollEdictCost = tollEdictCost;
+  _eco.tollSecs = tollSecs;
+  _eco.tollEdictStartsToll = tollEdictStartsToll;
+  _eco.tollLeftAfterTribute = tollLeftAfterTribute;
+  _eco.veilEdictCost = veilEdictCost;
+  _eco.veilSecs = veilSecs;
+  _eco.veilEdictStartsVeil = veilEdictStartsVeil;
+  _eco.veilLeftAfterTribute = veilLeftAfterTribute;
+  _eco.knellEdictCost = knellEdictCost;
+  _eco.knellSecs = knellSecs;
+  _eco.knellEdictStartsKnell = knellEdictStartsKnell;
+  _eco.knellLeftAfterTribute = knellLeftAfterTribute;
+  _eco.nightEdictCost = nightEdictCost;
+  _eco.nightEdictSecs = nightEdictSecs;
+  _eco.nightEdictStartsNight = nightEdictStartsNight;
+  _eco.nightLeftAfterTribute = nightLeftAfterTribute;
+  _eco.formatBlessing = formatBlessing;
+  _eco.nightTitheSecs = nightTitheSecs;
+  _eco.nightSecs = nightSecs;
+  _eco.ashFromShadeFrac = ashFromShadeFrac;
+  _eco.vowExtraFavor = vowExtraFavor;
+  _eco.vowsKnownCount = vowsKnownCount;
+  _eco.normalizeVow = normalizeVow;
+  _eco.siphonCost = siphonCost;
+  _eco.levyCost = levyCost;
+  _eco.cinderCost = cinderCost;
+  _eco.urnRiteCost = urnRiteCost;
+  _eco.hearthRiteCost = hearthRiteCost;
+  _eco.beaconRiteCost = beaconRiteCost;
+  _eco.spireRiteCost = spireRiteCost;
+  _eco.bindingTollCost = bindingTollCost;
+  _eco.bindingTollRateMult = bindingTollRateMult;
+  _eco.bindingTollCostMult = bindingTollCostMult;
+  _eco.BINDING_TOLL_MAX = BINDING_TOLL_MAX;
+  _eco.BINDING_TOLL_RATE = BINDING_TOLL_RATE;
+  _eco.BINDING_TOLL_COST_BONUS = BINDING_TOLL_COST_BONUS;
+  _eco.siphonMult = siphonMult;
+  _eco.levyMult = levyMult;
+  _eco.cinderMult = cinderMult;
+  _eco.urnRiteMult = urnRiteMult;
+  _eco.hearthRiteMult = hearthRiteMult;
+  _eco.beaconRiteMult = beaconRiteMult;
+  _eco.spireRiteMult = spireRiteMult;
+  _eco.CINDER_COST_BASE = CINDER_COST_BASE;
+  _eco.CINDER_COST_MULT = CINDER_COST_MULT;
+  _eco.URN_RITE_COST_BASE = URN_RITE_COST_BASE;
+  _eco.URN_RITE_COST_MULT = URN_RITE_COST_MULT;
+  _eco.HEARTH_RITE_COST_BASE = HEARTH_RITE_COST_BASE;
+  _eco.HEARTH_RITE_COST_MULT = HEARTH_RITE_COST_MULT;
+  _eco.BEACON_RITE_COST_BASE = BEACON_RITE_COST_BASE;
+  _eco.BEACON_RITE_COST_MULT = BEACON_RITE_COST_MULT;
+  _eco.SPIRE_RITE_COST_BASE = SPIRE_RITE_COST_BASE;
+  _eco.SPIRE_RITE_COST_MULT = SPIRE_RITE_COST_MULT;
+  _eco.HEARTH_RITE_COST = HEARTH_RITE_COST;
+  _eco.BEACON_RITE_COST = BEACON_RITE_COST;
+  _eco.SPIRE_RITE_COST = SPIRE_RITE_COST;
+  _eco.RITE_MULT_BASE = RITE_MULT_BASE;
+  _eco.SIPHON_COST_BASE = SIPHON_COST_BASE;
+  _eco.LEVY_COST_BASE = LEVY_COST_BASE;
+  _eco.CINDER_COST = CINDER_COST;
+  _eco.URN_RITE_COST = URN_RITE_COST;
+  _eco.harvestMult = harvestMult;
+  _eco.bindingMult = bindingMult;
+  _eco.throneWeight = throneWeight;
+  _eco.lanternMult = lanternMult;
+  _eco.fetterMult = fetterMult;
+  _eco.emberMult = emberMult;
+  _eco.chainMult = chainMult;
+  _eco.hollowMult = hollowMult;
+  _eco.stacksWantedFromIdle = stacksWantedFromIdle;
+  _eco.hollowHungerActive = hollowHungerActive;
+  _eco.noteHollowManualSpend = noteHollowManualSpend;
+  _eco.hollowClearNeed = hollowClearNeed;
+  _eco.hollowSpendClears = hollowSpendClears;
+  _eco.HOLLOW_GRACE = HOLLOW_GRACE;
+  _eco.HOLLOW_INTERVAL = HOLLOW_INTERVAL;
+  _eco.HOLLOW_MAX = HOLLOW_MAX;
+  _eco.HOLLOW_PENALTY = HOLLOW_PENALTY;
+  _eco.HOLLOW_SOUL_CLEAR_CAP = HOLLOW_SOUL_CLEAR_CAP;
+  _eco.HOLLOW_SOUL_CLEAR_FLOOR = HOLLOW_SOUL_CLEAR_FLOOR;
+  _eco.HOLLOW_ASH_CLEAR_FLOOR = HOLLOW_ASH_CLEAR_FLOOR;
+  _eco.HOLLOW_SHADE_CLEAR_FLOOR = HOLLOW_SHADE_CLEAR_FLOOR;
+  _eco.HOLLOW_CLEAR_FRAC = HOLLOW_CLEAR_FRAC;
+  _eco.MAX_DT = MAX_DT;
+  _eco.LIVE_FRAME_MAX = LIVE_FRAME_MAX;
+  _eco.AWAY_SUMMARY_DT = AWAY_SUMMARY_DT;
+  _eco.normalizeAspect = normalizeAspect;
+  _eco.nextGoal = nextGoal;
+  _eco.titheCost = titheCost;
+  _eco.titheMult = titheMult;
+  _eco.nightTitheCost = nightTitheCost;
+  _eco.nightMult = nightMult;
+  _eco.veilCost = veilCost;
+  _eco.veilMult = veilMult;
+  _eco.tollMult = tollMult;
+  _eco.TOLL_COST = TOLL_COST;
+  _eco.TOLL_SECS = TOLL_SECS;
+  _eco.wakeMult = wakeMult;
+  _eco.WAKE_COST = WAKE_COST;
+  _eco.WAKE_SECS = WAKE_SECS;
+  _eco.processionMult = processionMult;
+  _eco.PROCESSION_COST = PROCESSION_COST;
+  _eco.PROCESSION_SECS = PROCESSION_SECS;
+  _eco.knellMult = knellMult;
+  _eco.KNELL_COST = KNELL_COST;
+  _eco.KNELL_SECS = KNELL_SECS;
+  _eco.isSaveShape = isSaveShape;
+  _eco.isFiniteStock = isFiniteStock;
+  _eco.loadCount = loadCount;
+  _eco.loadNum = loadNum;
+  _eco.applySaveData = applySaveData;
+  _eco.tripwireSanity = tripwireSanity;
+  _eco.getState = function () { return state; };
+  _eco.__setStateForTest = function (partial) {
+    if (partial && typeof partial === "object") {
+      var keys = Object.keys(partial);
+      for (var i = 0; i < keys.length; i++) state[keys[i]] = partial[keys[i]];
+    }
   };
+  _eco.freshState = freshState;
+  _eco.applyDt = applyDt;
+  _eco.harvest = harvest;
+  _eco.tryAutobind = tryAutobind;
+  _eco.tryAutobindSpirits = tryAutobindSpirits;
+  _eco.tryAutobindVessels = tryAutobindVessels;
+  _eco.tryAutobindLanterns = tryAutobindLanterns;
+  _eco.tryAutobindFetters = tryAutobindFetters;
+  _eco.tryAutobindCensers = tryAutobindCensers;
+  _eco.tryAutobindThrones = tryAutobindThrones;
+  _eco.tryAutobindPyres = tryAutobindPyres;
+  _eco.tryAutobindUrns = tryAutobindUrns;
+  _eco.tryAutobindHearths = tryAutobindHearths;
+  _eco.tryAutobindBeacons = tryAutobindBeacons;
+  _eco.tryAutobindSpires = tryAutobindSpires;
+  _eco.tryAutobindObelisks = tryAutobindObelisks;
+  _eco.tryAutobindChalices = tryAutobindChalices;
+  _eco.buyShade = buyShade;
+  _eco.buySpirit = buySpirit;
+  _eco.buyVessel = buyVessel;
+  _eco.buyThrone = buyThrone;
+  _eco.buyWell = buyWell;
+  _eco.buyLantern = buyLantern;
+  _eco.buyFetter = buyFetter;
+  _eco.buyCenser = buyCenser;
+  _eco.buyPyre = buyPyre;
+  _eco.buyUrn = buyUrn;
+  _eco.buyHearth = buyHearth;
+  _eco.buyBeacon = buyBeacon;
+  _eco.buySpire = buySpire;
+  _eco.buyObelisk = buyObelisk;
+  _eco.buyChalice = buyChalice;
+  _eco.buyWellDraws = buyWellDraws;
+  _eco.buySiphon = buySiphon;
+  _eco.buyLevy = buyLevy;
+  _eco.buyBindingToll = buyBindingToll;
+  _eco.serializeState = serializeState;
+  _eco.layTribute = layTribute;
+  _eco.FIELDS = FIELDS;
+  _eco.FIELDS_KEYS = FIELDS_KEYS;
+  _eco.GIFTS = GIFTS;
+  _eco.GIFTS_BY_STAT = GIFTS_BY_STAT;
+  _eco.GIFT_FLAGS = GIFT_FLAGS;
+  _eco.BONUS_TO_GIFT = BONUS_TO_GIFT;
+  _eco.PEAK_STATS = PEAK_STATS;
+  _eco.tryMilestoneGifts = tryMilestoneGifts;
+  _eco.checkUnlock = checkUnlock;
+  _eco.rebuildUngrantedCount = rebuildUngrantedCount;
+  _eco.GIFT_STAT_KEYS = GIFT_STAT_KEYS;
+  _eco.getGiftCmpCount = function () { return _giftCmpCount; };
+  _eco.getGiftMeetsCount = function () { return _giftMeetsCount; };
+  _eco.getGiftUngrantedCount = function () { return _giftUngrantedCount; };
+  _eco.getBumpPeakShadesCount = function () { return _bumpPeakShadesCount; };
+  _eco.resetGiftLastSeen = function () { _giftLastSeen = null; };
+  _eco.resetToScope = resetToScope;
+  _eco.SAVE_FIELDS = SAVE_FIELDS;
+  _eco.SAVE_KEY = SAVE_KEY;
+  _eco.SAVE_BAK1_KEY = SAVE_BAK1_KEY;
+  _eco.SAVE_BAK2_KEY = SAVE_BAK2_KEY;
+  _eco.BAK1_MS = BAK1_MS;
+  _eco.BAK2_MS = BAK2_MS;
+  _eco.COST_BASE = COST_BASE;
+  _eco.COST_MULT = COST_MULT;
+  _eco.save = save;
+  _eco.flushSave = flushSave;
+  _eco.markSaveDirty = markSaveDirty;
+  _eco.getSaveDirty = function () { return saveDirty; };
+  _eco.beginLoadFailure = beginLoadFailure;
+  _eco.getLoadFailed = function () { return loadFailed; };
+  _eco.setLoadFailed = function (v) { loadFailed = !!v; };
+  _eco.getLoadFailedRaw = function () { return loadFailedRaw; };
+  _eco.setLoadFailedRaw = function (v) { loadFailedRaw = v == null ? null : String(v); };
+  _eco.announce = announce;
+  _eco.ANNOUNCE_THROTTLE_MS = ANNOUNCE_THROTTLE_MS;
+  _eco.reduceMotionActive = reduceMotionActive;
+  _eco.setReduceMotion = setReduceMotion;
+  _eco._getReduceMotion = function () { return _reduceMotion; };
+  _eco._getAnnounceQueue = function () { return _announceQueue; };
+  _eco._getAnnounceLastMs = function () { return _announceLastMs; };
+  _eco._resetAnnouncer = function () { _announceLastMs = 0; _announceQueue = []; if (_announceTimer) { clearTimeout(_announceTimer); _announceTimer = null; } };
+  _eco.spawnRipple = spawnRipple;
 })();
