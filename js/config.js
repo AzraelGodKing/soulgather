@@ -1,7 +1,7 @@
 (function (global) {
   "use strict";
 
-  var GAME_VERSION = "6.9.1";
+  var GAME_VERSION = "6.10.0";
   var SAVE_KEY = "soulgather-v0";
   var SAVE_BAK1_KEY = "soulgather-v0.bak1";
   var SAVE_BAK2_KEY = "soulgather-v0.bak2";
@@ -9,6 +9,10 @@
   var BAK2_MS = 60 * 60 * 1000;
   var COST_BASE = 10;
   var COST_MULT = 1.15;
+  /** Floor for Favor-driven producer cost mult (AZR-181 option 2). */
+  var COST_MULT_FLOOR = 1.06;
+  /** Favor scale for approaching COST_MULT_FLOOR (higher = slower approach). */
+  var COST_MULT_FAVOR_SCALE = 40;
   var WELL_COST_BASE = 25;
   var WELL_COST_MULT = 1.5;
   var WELL_EARLY_MULT = 1.35;
@@ -610,7 +614,11 @@
   }
 
   function prestigeMult(favorEarned) {
-    return 1 + 0.5 * (Number(favorEarned) || 0);
+    var f = Math.max(0, Number(favorEarned) || 0);
+    if (!isFinite(f)) f = 0;
+    // Soft early linear for first Tributes + compound so deep Favor never asymptotes.
+    // Main late lever remains producerCostMult (AZR-181 option 2).
+    return Math.pow(1.02, f) * (1 + 0.2 * Math.min(f, 4));
   }
 
   function harvestMult(on) {
@@ -638,7 +646,8 @@
   }
 
   function namesCompleteMult(on) {
-    return on ? 1.05 : 1;
+    // 12 Names gate at 50,000 peak Shades — headline mult, not a rounding error (AZR-181).
+    return on ? 1.5 : 1;
   }
 
   function titheMult(on) {
@@ -703,6 +712,8 @@
     BAK2_MS: BAK2_MS,
     COST_BASE: COST_BASE,
     COST_MULT: COST_MULT,
+    COST_MULT_FLOOR: COST_MULT_FLOOR,
+    COST_MULT_FAVOR_SCALE: COST_MULT_FAVOR_SCALE,
     WELL_COST_BASE: WELL_COST_BASE,
     WELL_COST_MULT: WELL_COST_MULT,
     WELL_EARLY_MULT: WELL_EARLY_MULT,
