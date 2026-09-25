@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-176).
+ * Soulgather v6.10.0 economy smoke test (AZR-176 / AZR-181).
  * Loads the real shipped js/game.js under Node (boot deferred) and asserts
  * against the live SoulgatherEconomy exports.  No regex over source text.
  */

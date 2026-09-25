@@ -242,10 +242,10 @@ console.log("\n─── Test 11: is-hidden intact ───");
 const hiddenMatch = css.match(/\.card\.is-hidden\s*\{[^}]*display:\s*none/);
 ok(hiddenMatch, ".card.is-hidden { display: none } intact");
 
-// ─── Test 12: version string v6.9.1 ────────────────────────────────────────
+// ─── Test 12: version string v6.10.0 ───────────────────────────────────────
 console.log("\n─── Test 12: version string ───");
-ok(html.includes("v6.9.1"), "footer version string v6.9.1");
-ok(E.GAME_VERSION === "6.9.1", "GAME_VERSION is 6.9.1");
+ok(html.includes("v6.10.0"), "footer version string v6.10.0");
+ok(E.GAME_VERSION === "6.10.0", "GAME_VERSION is 6.10.0");
 
 // ─── Test 13: gift announcements batched, not per-gift ──────────────────────
 console.log("\n─── Test 13: gift announce batching ───");
