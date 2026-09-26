@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 AZR-165 + AZR-168 load-failure / save-sanitise tests.
+ * Soulgather v6.10.0 AZR-165 + AZR-168 load-failure / save-sanitise tests.
  * Source contracts + unit tests with mocked localStorage (boot deferred).
  */
 import fs from "fs";

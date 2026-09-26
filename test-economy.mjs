@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Soulgather v6.9.1 economy smoke test (AZR-176).
+ * Soulgather v6.10.0 economy smoke test (AZR-176 / AZR-181).
  * Loads the real shipped js/game.js under Node (boot deferred) and asserts
  * against the live SoulgatherEconomy exports.  No regex over source text.
  */
@@ -231,7 +231,10 @@ for (let n = 1; n <= 50; n++) {
 }
 
 assertEqual("prestigeMult(0)", G.prestigeMult(0), 1);
-assertEqual("prestigeMult(2)", G.prestigeMult(2), 2);
+{
+  const p2 = Math.pow(1.02, 2) * (1 + 0.2 * 2);
+  assertTrue("prestigeMult(2) ≈ " + p2, Math.abs(G.prestigeMult(2) - p2) < 1e-9);
+}
 
 assertEqual("shadeCost(2)", G.shadeCost(2), Math.floor(10 * Math.pow(1.15, 2)));
 assertEqual("spiritCost matches shadeCost for n=7", unwrap(G.spiritCost(7)), unwrap(G.shadeCost(7)));
@@ -251,8 +254,12 @@ assertEqual("throneCost(10)", G.throneCost(10), 40);
 assertEqual("bulkCost(10,0,1)", G.bulkCost(10, 0, 1), 10);
 assertEqual("bulkCost(10,0,2)", G.bulkCost(10, 0, 2), 21);
 
-assertEqual("prestigeMult(favorEarned=2)", G.prestigeMult(2), 2);
-assertEqual("prodMult(2,1,1)", G.prodMult(2, 1, 1), 2.75);
+{
+  const p2 = Math.pow(1.02, 2) * (1 + 0.2 * 2);
+  assertTrue("prestigeMult(favorEarned=2)", Math.abs(G.prestigeMult(2) - p2) < 1e-9);
+  const expected = p2 * (1 + 0.1 * 1) * (1 + 0.25 * 1);
+  assertTrue("prodMult(2,1,1)", Math.abs(G.prodMult(2, 1, 1) - expected) < 1e-9);
+}
 
 assertEqual("edictCost(0)", G.edictCost(0), 1);
 assertEqual("edictCost(1)", G.edictCost(1), 2);
@@ -522,8 +529,8 @@ assertEqual("crownCost(0)", G.crownCost(0), 6);
 assertEqual("crownCost(1)", G.crownCost(1), 12);
 assertEqual("longMemCost(0)", G.longMemCost(0), 5);
 assertEqual("prodMult(0,0,0,false,0)", G.prodMult(0, 0, 0, false, 0), 1);
-assertEqual("prodMult(0,0,0,false,2)", G.prodMult(0, 0, 0, false, 2), 1.2);
-assertEqual("prodMult crownWeight 2 other factors 1", G.prodMult(0, 0, 0, 0.1, 2), 1.2);
+assertTrue("prodMult(0,0,0,false,2)", Math.abs(G.prodMult(0, 0, 0, false, 2) - G.crownProdFactor(2)) < 1e-9);
+assertTrue("prodMult crownWeight 2 other factors 1", Math.abs(G.prodMult(0, 0, 0, 0.1, 2) - G.crownProdFactor(2)) < 1e-9);
 
 assertEqual("nextGoal fetter half-step",
   G.nextGoal({ shades: 10, spirits: 3, unlockedSpirits: true, unlockedFetters: true, fetters: 0 }, fmtPlain),
@@ -557,13 +564,13 @@ assertEqual("paidVeilSecs(0)", G.paidVeilSecs(0), 20);
 assertEqual("paidVeilSecs(2)", G.paidVeilSecs(2), 40);
 assertEqual("ashenTideCost(0)", G.ashenTideCost(0), 1);
 assertEqual("ashenTideCost(1)", G.ashenTideCost(1), 2);
-assertEqual("namesCompleteMult true", G.namesCompleteMult(true), 1.05);
+assertEqual("namesCompleteMult true", G.namesCompleteMult(true), 1.5);
 assertEqual("namesCompleteMult false", G.namesCompleteMult(false), 1);
 assertEqual("nightTitheSecs(0)", G.nightTitheSecs(0), 30);
 assertEqual("nightTitheSecs(1)", G.nightTitheSecs(1), 40);
 assertEqual("nightSecs(0)", G.nightSecs(0), 30);
 assertEqual("nightSecs(2)", G.nightSecs(2), 50);
-assertEqual("prodMult namesComplete", G.prodMult(0, 0, 0, 0.1, 0, true), 1.05);
+assertEqual("prodMult namesComplete", G.prodMult(0, 0, 0, 0.1, 0, true), 1.5);
 
 assertEqual("choirAshRate base", G.choirAshRate(0), 0.01);
 assertEqual("choirAshRate choir 2 no tide", G.choirAshRate(2), 0.02);
@@ -1237,6 +1244,59 @@ assertEqual("TRIBUTE_AUTOBIND_STARTS length 16", G.TRIBUTE_AUTOBIND_STARTS.lengt
   const st = G.getState();
   assertEqual("applyDt night expiry: nightLeft is 0", st.nightLeft, 0);
   assertTrue("applyDt night expiry: no NaN souls", isFinite(N.toNumber(st.souls)));
+}
+
+// ─── AZR-181: cost-reduction prestige + track reward/cost ───────────────────────
+{
+  assertEqual("producerCostMult(0)", G.producerCostMult(0), G.COST_MULT);
+  assertTrue("producerCostMult(40) < COST_MULT", G.producerCostMult(40) < G.COST_MULT);
+  assertTrue("producerCostMult(40) >= FLOOR", G.producerCostMult(40) >= G.COST_MULT_FLOOR - 1e-12);
+  assertTrue(
+    "producerCostMult deep approaches floor",
+    Math.abs(G.producerCostMult(500) - G.COST_MULT_FLOOR) < 0.005
+  );
+
+  // Effective production proxy: rate mult × shades affordable for a fixed soul budget.
+  function shadesAffordable(favor, soulBudget) {
+    const mult = G.producerCostMult(favor);
+    let owned = 0;
+    let spent = 0;
+    while (owned < 5000) {
+      const c = N.toNumber(G.bulkCost(G.COST_BASE, owned, 1, mult));
+      if (!isFinite(c) || spent + c > soulBudget) break;
+      spent += c;
+      owned += 1;
+    }
+    return owned * G.prestigeMult(favor);
+  }
+  const at10 = shadesAffordable(10, 1e12);
+  const at50 = shadesAffordable(50, 1e12);
+  const at200 = shadesAffordable(200, 1e12);
+  assertTrue("effective prod Favor 50 > Favor 10", at50 > at10);
+  assertTrue("effective prod Favor 200 > Favor 50", at200 > at50);
+  // Faster than linear in the deep region (marginal gain accelerates).
+  assertTrue("deep Favor accelerates vs mid", (at200 - at50) > (at50 - at10));
+  assertTrue(
+    "Favor 200 beats linear extrapolate from 10",
+    at200 > at10 * (200 / 10)
+  );
+
+  // Crown marginal reward/cost must not collapse across 0..40.
+  function crownMarginal(n) {
+    if (n <= 0) return G.crownProdFactor(0) / Math.max(1, G.crownCost(0));
+    return (G.crownProdFactor(n) - G.crownProdFactor(n - 1)) / G.crownCost(n);
+  }
+  const earlyMarg = crownMarginal(5);
+  const lateMarg = crownMarginal(40);
+  assertTrue("crown early marginal > 0", earlyMarg > 0);
+  assertTrue("crown late marginal >= 5% of early", lateMarg >= earlyMarg * 0.05);
+  for (let n = 1; n <= 40; n++) {
+    assertTrue("crownCost rising at " + n, G.crownCost(n) > G.crownCost(n - 1));
+  }
+
+  assertEqual("crownCost(8) classic", G.crownCost(8), 6 * Math.pow(2, 8));
+  assertTrue("crownCost(9) linear soft", G.crownCost(9) < 6 * Math.pow(2, 9));
+  assertTrue("crownCost(9) > crownCost(8)", G.crownCost(9) > G.crownCost(8));
 }
 
 // ─── Confirmation ───────────────────────────────────────────────────────────────

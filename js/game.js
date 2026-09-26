@@ -3,7 +3,7 @@
 
   var N = globalThis.SoulgatherNum;
 
-  var GAME_VERSION = "6.9.1";
+  var GAME_VERSION = "6.10.0";
   var SAVE_KEY = "soulgather-v0";
   var SAVE_BAK1_KEY = "soulgather-v0.bak1";
   var SAVE_BAK2_KEY = "soulgather-v0.bak2";
@@ -11,6 +11,10 @@
   var BAK2_MS = 60 * 60 * 1000;
   var COST_BASE = 10;
   var COST_MULT = 1.15;
+  /** Floor for Favor-driven producer cost mult (AZR-181 option 2). */
+  var COST_MULT_FLOOR = 1.06;
+  /** Favor scale for approaching COST_MULT_FLOOR (higher = slower approach). */
+  var COST_MULT_FAVOR_SCALE = 40;
   var WELL_COST_BASE = 25;
   var WELL_COST_MULT = 1.5;
   var WELL_EARLY_MULT = 1.35;
@@ -295,7 +299,25 @@
   }
 
   function producerCost(owned) {
-    return N.cost(COST_BASE, COST_MULT, owned);
+    return N.cost(COST_BASE, currentProducerCostMult(), owned);
+  }
+
+  /**
+   * AZR-181 option 2: Favor lowers the Shade/Spirit/Vessel/Throne/Censer cost multiplier
+   * from COST_MULT toward COST_MULT_FLOOR (attacks the exponent, not just a rate coefficient).
+   */
+  function producerCostMult(favorEarned) {
+    var f = Math.max(0, Number(favorEarned) || 0);
+    if (!isFinite(f)) f = 0;
+    var span = COST_MULT - COST_MULT_FLOOR;
+    var reduction = span * (1 - Math.exp(-f / COST_MULT_FAVOR_SCALE));
+    var m = COST_MULT - reduction;
+    if (m < COST_MULT_FLOOR) m = COST_MULT_FLOOR;
+    return m;
+  }
+
+  function currentProducerCostMult() {
+    return producerCostMult(state && state.favorEarned);
   }
 
   function shadeCost(owned) {
@@ -495,7 +517,7 @@
   function bulkCostLoop(base, owned, k, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
+    if (mult == null) mult = currentProducerCostMult();
     var em = extraMult == null ? 1 : Number(extraMult);
     if (!isFinite(em) || em <= 0) em = 1;
     var n = Math.max(0, Math.floor(k));
@@ -513,7 +535,7 @@
   function maxAffordableLoop(base, owned, currency, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
+    if (mult == null) mult = currentProducerCostMult();
     var em = extraMult == null ? 1 : Number(extraMult);
     if (!isFinite(em) || em <= 0) em = 1;
     var remaining = num(currency);
@@ -531,7 +553,7 @@
   function bulkCost(base, owned, k, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
+    if (mult == null) mult = currentProducerCostMult();
     var em = extraMult == null ? 1 : Number(extraMult);
     if (!isFinite(em) || em <= 0) em = 1;
     var n = Math.max(0, Math.floor(k));
@@ -554,7 +576,7 @@
   function maxAffordable(base, owned, currency, mult, extraMult) {
     var b = Number(base);
     if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
+    if (mult == null) mult = currentProducerCostMult();
     var em = extraMult == null ? 1 : Number(extraMult);
     if (!isFinite(em) || em <= 0) em = 1;
     var cur = num(currency);
@@ -645,7 +667,11 @@
   }
 
   function prestigeMult(favorEarned) {
-    return 1 + 0.5 * (Number(favorEarned) || 0);
+    var f = Math.max(0, Number(favorEarned) || 0);
+    if (!isFinite(f)) f = 0;
+    // Soft early linear for first Tributes + compound so deep Favor never asymptotes.
+    // Main late lever remains producerCostMult (AZR-181 option 2).
+    return Math.pow(1.02, f) * (1 + 0.2 * Math.min(f, 4));
   }
 
   function harvestMult(on) {
@@ -672,6 +698,13 @@
     return 1 + 0.05 * k;
   }
 
+  function crownProdFactor(crownWeight) {
+    var n = Math.max(0, Number(crownWeight) || 0);
+    if (!isFinite(n)) n = 0;
+    // Scales with level so late Crown buys stay worth it (AZR-181).
+    return Math.pow(1.1, n);
+  }
+
   function prodMult(favorEarned, thrones, edictLevel, weight, crownWeight, namesComplete, chalices, ossuary) {
     var w = weight == null ? 0.1 : Number(weight);
     if (!isFinite(w)) w = 0.1;
@@ -679,7 +712,7 @@
       prestigeMult(favorEarned) *
       (1 + w * (Number(thrones) || 0)) *
       (1 + 0.25 * (Number(edictLevel) || 0)) *
-      (1 + 0.10 * (Number(crownWeight) || 0)) *
+      crownProdFactor(crownWeight) *
       namesCompleteMult(namesComplete) *
       chaliceMult(chalices) *
       ossuaryMult(ossuary)
@@ -687,8 +720,11 @@
   }
 
   function crownCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 6 * Math.pow(2, n);
+    var n = Math.max(0, Math.floor(Number(level) || 0));
+    // Classic ×2 through level 8, then linear Favor add so the track is not a trap (AZR-181).
+    if (n <= 8) return 6 * Math.pow(2, n);
+    var base = 6 * Math.pow(2, 8);
+    return base + (n - 8) * base * 0.25;
   }
 
   function longMemCost(level) {
@@ -1208,7 +1244,8 @@
   }
 
   function namesCompleteMult(on) {
-    return on ? 1.05 : 1;
+    // 12 Names gate at 50,000 peak Shades — headline mult, not a rounding error (AZR-181).
+    return on ? 1.5 : 1;
   }
 
   function ashFromShadeFrac(level, choirLevel) {
@@ -3312,7 +3349,7 @@
 
   function purchasePlan(owned, currency, base, mult, extraMult) {
     if (base == null) base = COST_BASE;
-    if (mult == null) mult = COST_MULT;
+    if (mult == null) mult = currentProducerCostMult();
     var em = extraMult == null ? 1 : Number(extraMult);
     if (!isFinite(em) || em <= 0) em = 1;
     var one = N.cost(base, mult, owned);
@@ -3355,7 +3392,7 @@
       state.shades,
       state.souls,
       COST_BASE,
-      COST_MULT,
+      currentProducerCostMult(),
       bindingTollCostMult(state.bindingTollLevel)
     );
     if (!plan.can || plan.k < 1) return;
@@ -3376,7 +3413,7 @@
       state.spirits,
       state.shades,
       COST_BASE,
-      COST_MULT,
+      currentProducerCostMult(),
       bindingTollCostMult(state.bindingTollLevel)
     );
     if (!plan.can || plan.k < 1) return;
@@ -3456,7 +3493,7 @@
 
   function buyCenser() {
     if (!state.unlockedCensers) return;
-    var plan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
+    var plan = purchasePlan(state.censers, state.vessels, COST_BASE, currentProducerCostMult());
     if (!plan.can || plan.k < 1) return;
     var hollowBefore = state.vessels;
     state.vessels = N.sub(state.vessels, plan.cost);
@@ -6676,7 +6713,7 @@
       state.shades,
       state.souls,
       COST_BASE,
-      COST_MULT,
+      currentProducerCostMult(),
       bindingTollCostMult(state.bindingTollLevel)
     );
     var canShade = shadePlan.can;
@@ -6706,7 +6743,7 @@
         state.spirits,
         state.shades,
         COST_BASE,
-        COST_MULT,
+        currentProducerCostMult(),
         bindingTollCostMult(state.bindingTollLevel)
       );
       setText(els.spiritOwned, F.formatNumber(state.spirits));
@@ -6744,7 +6781,7 @@
     }
 
     if (state.unlockedCensers) {
-      var censerPlan = purchasePlan(state.censers, state.vessels, COST_BASE, COST_MULT);
+      var censerPlan = purchasePlan(state.censers, state.vessels, COST_BASE, currentProducerCostMult());
       var censerRate = N.mul(
         N.mul(
           N.mul(
@@ -9253,6 +9290,7 @@
     nextFavorThreshold: nextFavorThreshold,
     prestigeMult: prestigeMult,
     prodMult: prodMult,
+    crownProdFactor: crownProdFactor,
     chaliceMult: chaliceMult,
     ossuaryMult: ossuaryMult,
     producerCost: producerCost,
@@ -9558,6 +9596,10 @@
     BAK2_MS: BAK2_MS,
     COST_BASE: COST_BASE,
     COST_MULT: COST_MULT,
+    COST_MULT_FLOOR: COST_MULT_FLOOR,
+    COST_MULT_FAVOR_SCALE: COST_MULT_FAVOR_SCALE,
+    producerCostMult: producerCostMult,
+    currentProducerCostMult: currentProducerCostMult,
     save: save,
     flushSave: flushSave,
     markSaveDirty: markSaveDirty,
