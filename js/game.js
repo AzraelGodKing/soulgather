@@ -218,7 +218,6 @@
   var saveDirty = false;
   function markSaveDirty() { saveDirty = true; }
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
-  function markRenderDirty() { markDirty(); }
 
   function addOwned(owned, i) {
     i = Number(i) || 0;
@@ -1861,15 +1860,7 @@
   };
 
   function formatGoalNum(n) {
-    if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatNumber) {
-      return SoulgatherFormat.formatNumber(n);
-    }
-    if (n && typeof n === "object" && typeof n.m === "number") {
-      n = nVal(n);
-    }
-    if (n == null || !isFinite(n)) return "0";
-    if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
-    return Number(n).toFixed(1);
+    return SoulgatherFormat.formatNumber(n);
   }
 
   function nextGoal(view, format) {
@@ -4987,10 +4978,6 @@
     markDirty();
   }
 
-  function beginKnell() {
-    soundKnell();
-  }
-
   function raiseChoir() {
     if (!state.unlockedChoir) return;
     var level = Math.max(0, Math.floor(Number(state.choirLevel) || 0));
@@ -5070,8 +5057,6 @@
     markSaveDirty();
     markDirty();
   }
-
-  var SAVE_FIELDS = FIELDS_KEYS;
 
   function dumpNum(v) {
     return N.dump(v);
@@ -6081,18 +6066,7 @@
   }
 
   function formatBlessing(m) {
-    if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatBlessing) {
-      return SoulgatherFormat.formatBlessing(m);
-    }
-    if (m && typeof m === "object" && typeof m.m === "number") {
-      m = N.toNumber(m);
-    }
-    if (!isFinite(m)) m = 1;
-    var tenth = m * 10;
-    if (Math.abs(tenth - Math.round(tenth)) < 1e-8) {
-      return "\u00d7" + m.toFixed(1);
-    }
-    return "\u00d7" + m.toFixed(2);
+    return SoulgatherFormat.formatBlessing(m);
   }
 
   function formatMult(m) {
@@ -9588,7 +9562,6 @@
     getBumpPeakShadesCount: function () { return _bumpPeakShadesCount; },
     resetGiftLastSeen: function () { _giftLastSeen = null; },
     resetToScope: resetToScope,
-    SAVE_FIELDS: SAVE_FIELDS,
     SAVE_KEY: SAVE_KEY,
     SAVE_BAK1_KEY: SAVE_BAK1_KEY,
     SAVE_BAK2_KEY: SAVE_BAK2_KEY,
