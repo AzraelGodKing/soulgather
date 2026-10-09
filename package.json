@@ -3,7 +3,7 @@
   "private": true,
   "version": "6.10.0",
   "scripts": {
-    "test": "node test-economy.mjs && node sim-firstrun.mjs && node test-gifts.mjs && node test-a11y.mjs",
+    "test": "node --check js/game.js && node --check js/num.js && node --check js/format.js && node test-economy.mjs && node sim-firstrun.mjs && node test-load-safety.mjs && node test-fields.mjs && node test-gifts.mjs && node test-a11y.mjs && npx --yes eslint@8 js/ --no-eslintrc --env browser,es6 --parser-options ecmaVersion:2020 --rule '{\"no-dupe-keys\":\"error\",\"no-redeclare\":\"error\"}'",
     "check": "node --check js/game.js && node --check js/num.js && node --check js/format.js"
   }
 }
