@@ -376,23 +376,15 @@ assertTrue("siphonMult(5) finite", N.isFinite(N.from(G.siphonMult(5))));
 assertTrue("siphonMult(5) ≈ 1.55^5", Math.abs(N.toNumber(N.from(G.siphonMult(5))) - Math.pow(1.55, 5)) < 1e-9);
 assertTrue("siphonMult(20) finite no NaN", N.isFinite(N.from(G.siphonMult(20))));
 assertEqual("cinderEdictCost(0)", G.cinderEdictCost(0), 8);
-assertTrue("cinderEdictStartsPyreAutobind(0) is false", !G.cinderEdictStartsPyreAutobind(0));
-assertTrue("cinderEdictStartsPyreAutobind(1) is true", G.cinderEdictStartsPyreAutobind(1));
+assertTrue("autobindStartsPredicate(0) is false", !G.autobindStartsPredicate(0));
+assertTrue("autobindStartsPredicate(1) is true", G.autobindStartsPredicate(1));
 assertEqual("cutEdictCost(0)", G.cutEdictCost(0), 11);
-assertTrue("cutEdictStartsUrnAutobind(0) is false", !G.cutEdictStartsUrnAutobind(0));
-assertTrue("cutEdictStartsUrnAutobind(1) is true", G.cutEdictStartsUrnAutobind(1));
 assertEqual("tendingEdictCost(0)", G.tendingEdictCost(0), 12);
 assertEqual("tendingEdictCost(1)", G.tendingEdictCost(1), 24);
-assertTrue("tendingEdictStartsHearthAutobind(0) is false", !G.tendingEdictStartsHearthAutobind(0));
-assertTrue("tendingEdictStartsHearthAutobind(1) is true", G.tendingEdictStartsHearthAutobind(1));
 assertEqual("gleamEdictCost(0)", G.gleamEdictCost(0), 13);
 assertEqual("gleamEdictCost(1)", G.gleamEdictCost(1), 26);
-assertTrue("gleamEdictStartsBeaconAutobind(0) is false", !G.gleamEdictStartsBeaconAutobind(0));
-assertTrue("gleamEdictStartsBeaconAutobind(1) is true", G.gleamEdictStartsBeaconAutobind(1));
 assertEqual("riseEdictCost(0)", G.riseEdictCost(0), 14);
 assertEqual("riseEdictCost(1)", G.riseEdictCost(1), 28);
-assertTrue("riseEdictStartsSpireAutobind(0) is false", !G.riseEdictStartsSpireAutobind(0));
-assertTrue("riseEdictStartsSpireAutobind(1) is true", G.riseEdictStartsSpireAutobind(1));
 assertEqual("chaliceMult(0)", G.chaliceMult(0), 1);
 assertEqual("chaliceMult(1)", G.chaliceMult(1), 1.08);
 assertEqual("chaliceCost(0)", G.chaliceCost(0), 32);
@@ -657,28 +649,12 @@ assertEqual("processionLeftAfterTribute(1)", G.processionLeftAfterTribute(1), 60
 assertEqual("veilCost(20)", G.veilCost(20), 20);
 assertEqual("veilCost(200)", G.veilCost(200), 30);
 
-assertTrue("quietCourtStartsLanternAutobind(0) is false", !G.quietCourtStartsLanternAutobind(0));
-assertTrue("quietCourtStartsLanternAutobind(1) is true", G.quietCourtStartsLanternAutobind(1));
-assertTrue("quietCourtStartsFetterAutobind(0) is false", !G.quietCourtStartsFetterAutobind(0));
-assertTrue("quietCourtStartsFetterAutobind(1) is true", G.quietCourtStartsFetterAutobind(1));
-assertTrue("quietCourtStartsPyreAutobind(0) is false", !G.quietCourtStartsPyreAutobind(0));
-assertTrue("quietCourtStartsPyreAutobind(1) is true", G.quietCourtStartsPyreAutobind(1));
-assertTrue("quietCourtStartsChaliceAutobind(0) is false", !G.quietCourtStartsChaliceAutobind(0));
-assertTrue("quietCourtStartsChaliceAutobind(1) is true", G.quietCourtStartsChaliceAutobind(1));
-assertTrue("quietCourtStartsUrnAutobind(0) is false", !G.quietCourtStartsUrnAutobind(0));
-assertTrue("quietCourtStartsUrnAutobind(1) is true", G.quietCourtStartsUrnAutobind(1));
-assertTrue("quietCourtStartsHearthAutobind(0) is false", !G.quietCourtStartsHearthAutobind(0));
-assertTrue("quietCourtStartsHearthAutobind(1) is true", G.quietCourtStartsHearthAutobind(1));
-assertTrue("quietCourtStartsBeaconAutobind(0) is false", !G.quietCourtStartsBeaconAutobind(0));
-assertTrue("quietCourtStartsBeaconAutobind(1) is true", G.quietCourtStartsBeaconAutobind(1));
-assertTrue("quietCourtStartsSpireAutobind(0) is false", !G.quietCourtStartsSpireAutobind(0));
-assertTrue("quietCourtStartsSpireAutobind(1) is true", G.quietCourtStartsSpireAutobind(1));
-assertTrue("quietCourtStartsObeliskAutobind(0) is false", !G.quietCourtStartsObeliskAutobind(0));
-assertTrue("quietCourtStartsObeliskAutobind(1) is true", G.quietCourtStartsObeliskAutobind(1));
+assertTrue("autobindStartsPredicate(0) coerces falsy", !G.autobindStartsPredicate(0));
+assertTrue("autobindStartsPredicate(1) coerces truthy", G.autobindStartsPredicate(1));
+assertTrue("autobindStartsPredicate(undefined) is false", !G.autobindStartsPredicate(undefined));
+assertTrue("autobindStartsPredicate('2') is true", G.autobindStartsPredicate("2"));
 
 assertEqual("draughtEdictCost(0)", G.draughtEdictCost(0), 10);
-assertTrue("draughtStartsChaliceAutobind(0) is false", !G.draughtStartsChaliceAutobind(0));
-assertTrue("draughtStartsChaliceAutobind(1) is true", G.draughtStartsChaliceAutobind(1));
 
 assertEqual("ossuaryMult(0)", G.ossuaryMult(0), 1);
 assertEqual("ossuaryMult(1)", G.ossuaryMult(1), 1.05);
@@ -687,8 +663,6 @@ assertEqual("prodMult ossuary 8 fold", G.prodMult(0, 0, 0, 0.1, 0, false, 0, 8),
 assertEqual("ossuaryCost(0)", G.ossuaryCost(0), 1);
 
 assertEqual("smokeEdictCost(0)", G.smokeEdictCost(0), 6);
-assertTrue("smokeStartsCenserAutobind(0) is false", !G.smokeStartsCenserAutobind(0));
-assertTrue("smokeStartsCenserAutobind(1) is true", G.smokeStartsCenserAutobind(1));
 
 assertEqual("pyreCost(0)", G.pyreCost(0), 2);
 assertEqual("embersEdictCost(0)", G.embersEdictCost(0), 7);

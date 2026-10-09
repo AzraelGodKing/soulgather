@@ -961,49 +961,13 @@
     return 8 * Math.pow(2, n);
   }
 
-  function quietCourtStartsLanternAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsFetterAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsObeliskAutobind(level) {
+  function autobindStartsPredicate(level) {
     return (Number(level) || 0) >= 1;
   }
 
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
-  }
-
-  function smokeStartsCenserAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function embersEdictCost(level) {
@@ -1071,17 +1035,9 @@
     return 8 * Math.pow(2, n);
   }
 
-  function cinderEdictStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function cutEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 11 * Math.pow(2, n);
-  }
-
-  function cutEdictStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function tendingEdictCost(level) {
@@ -1089,26 +1045,14 @@
     return 12 * Math.pow(2, n);
   }
 
-  function tendingEdictStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function gleamEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 13 * Math.pow(2, n);
   }
 
-  function gleamEdictStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function riseEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 14 * Math.pow(2, n);
-  }
-
-  function riseEdictStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function cupEdictCost(level) {
@@ -1125,10 +1069,6 @@
   function draughtEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 10 * Math.pow(2, n);
-  }
-
-  function draughtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function remembranceCostFavor() {
@@ -5799,7 +5739,7 @@
 
   var TRIBUTE_AUTOBIND_STARTS = [
     {
-      predicate: quietCourtStartsLanternAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindLanterns",
       unlockedKey: "unlockedAutobindLanterns",
@@ -5808,7 +5748,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsFetterAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindFetters",
       unlockedKey: "unlockedAutobindFetters",
@@ -5817,7 +5757,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsPyreAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindPyres",
       unlockedKey: "unlockedAutobindPyres",
@@ -5826,7 +5766,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsChaliceAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindChalices",
       unlockedKey: "unlockedAutobindChalices",
@@ -5835,7 +5775,7 @@
       numberStock: true
     },
     {
-      predicate: quietCourtStartsUrnAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindUrns",
       unlockedKey: "unlockedAutobindUrns",
@@ -5844,7 +5784,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsHearthAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindHearths",
       unlockedKey: "unlockedAutobindHearths",
@@ -5853,7 +5793,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsBeaconAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindBeacons",
       unlockedKey: "unlockedAutobindBeacons",
@@ -5862,7 +5802,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsSpireAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindSpires",
       unlockedKey: "unlockedAutobindSpires",
@@ -5871,7 +5811,7 @@
       numberStock: false
     },
     {
-      predicate: quietCourtStartsObeliskAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "quietCourtLevel",
       autobindKey: "autobindObelisks",
       unlockedKey: "unlockedAutobindObelisks",
@@ -5880,7 +5820,7 @@
       numberStock: false
     },
     {
-      predicate: smokeStartsCenserAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "smokeEdictLevel",
       autobindKey: "autobindCensers",
       unlockedKey: "unlockedAutobindCensers",
@@ -5889,7 +5829,7 @@
       numberStock: false
     },
     {
-      predicate: cinderEdictStartsPyreAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "cinderEdictLevel",
       autobindKey: "autobindPyres",
       unlockedKey: "unlockedAutobindPyres",
@@ -5898,7 +5838,7 @@
       numberStock: false
     },
     {
-      predicate: cutEdictStartsUrnAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "cutEdictLevel",
       autobindKey: "autobindUrns",
       unlockedKey: "unlockedAutobindUrns",
@@ -5907,7 +5847,7 @@
       numberStock: false
     },
     {
-      predicate: tendingEdictStartsHearthAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "tendingEdictLevel",
       autobindKey: "autobindHearths",
       unlockedKey: "unlockedAutobindHearths",
@@ -5916,7 +5856,7 @@
       numberStock: false
     },
     {
-      predicate: gleamEdictStartsBeaconAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "gleamEdictLevel",
       autobindKey: "autobindBeacons",
       unlockedKey: "unlockedAutobindBeacons",
@@ -5925,7 +5865,7 @@
       numberStock: false
     },
     {
-      predicate: riseEdictStartsSpireAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "riseEdictLevel",
       autobindKey: "autobindSpires",
       unlockedKey: "unlockedAutobindSpires",
@@ -5934,7 +5874,7 @@
       numberStock: false
     },
     {
-      predicate: draughtStartsChaliceAutobind,
+      predicate: autobindStartsPredicate,
       levelKey: "draughtEdictLevel",
       autobindKey: "autobindChalices",
       unlockedKey: "unlockedAutobindChalices",
@@ -8028,7 +7968,7 @@
       var qcN = Number(state.quietCourtLevel) || 0;
       if (els.crownCourtEffect) {
         setText(els.crownCourtEffect,
-          quietCourtStartsUrnAutobind(qcN)
+          autobindStartsPredicate(qcN)
             ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute"
             : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute");
       }
@@ -9317,15 +9257,7 @@
     crownCost: crownCost,
     longMemCost: longMemCost,
     quietCourtCost: quietCourtCost,
-    quietCourtStartsLanternAutobind: quietCourtStartsLanternAutobind,
-    quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
-    quietCourtStartsPyreAutobind: quietCourtStartsPyreAutobind,
-    quietCourtStartsChaliceAutobind: quietCourtStartsChaliceAutobind,
-    quietCourtStartsUrnAutobind: quietCourtStartsUrnAutobind,
-    quietCourtStartsHearthAutobind: quietCourtStartsHearthAutobind,
-    quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
-    quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
-    quietCourtStartsObeliskAutobind: quietCourtStartsObeliskAutobind,
+    autobindStartsPredicate: autobindStartsPredicate,
     applyEdictStartingStock: applyEdictStartingStock,
     applyAutobindStarts: applyAutobindStarts,
     TRIBUTE_AUTOBIND_STARTS: TRIBUTE_AUTOBIND_STARTS,
@@ -9345,7 +9277,6 @@
     UNLOCK_AUTOBIND_SPIRES: UNLOCK_AUTOBIND_SPIRES,
     UNLOCK_AUTOBIND_OBELISKS: UNLOCK_AUTOBIND_OBELISKS,
     smokeEdictCost: smokeEdictCost,
-    smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,
     embersStartsPyres: embersStartsPyres,
     urnEdictCost: urnEdictCost,
@@ -9359,19 +9290,13 @@
     obeliskEdictCost: obeliskEdictCost,
     obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
     cinderEdictCost: cinderEdictCost,
-    cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
     cutEdictCost: cutEdictCost,
-    cutEdictStartsUrnAutobind: cutEdictStartsUrnAutobind,
     tendingEdictCost: tendingEdictCost,
-    tendingEdictStartsHearthAutobind: tendingEdictStartsHearthAutobind,
     gleamEdictCost: gleamEdictCost,
-    gleamEdictStartsBeaconAutobind: gleamEdictStartsBeaconAutobind,
     riseEdictCost: riseEdictCost,
-    riseEdictStartsSpireAutobind: riseEdictStartsSpireAutobind,
     cupEdictCost: cupEdictCost,
     cupStartsChalices: cupStartsChalices,
     draughtEdictCost: draughtEdictCost,
-    draughtStartsChaliceAutobind: draughtStartsChaliceAutobind,
     namesCompleteMult: namesCompleteMult,
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,
