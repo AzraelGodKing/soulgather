@@ -119,6 +119,7 @@ loadScript("js/config.js");
 loadScript("js/economy.js");
 loadScript("js/state.js");
 loadScript("js/actions.js");
+loadScript("js/ui.js");
 loadScript("js/game.js");
 
 const E = sandbox.SoulgatherEconomy;
@@ -174,8 +175,9 @@ E.setReduceMotion(true);
 ok(E.reduceMotionActive(), "reduceMotionActive() is true when setting on");
 
 const gameJsSrc = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-ok(gameJsSrc.includes("function spawnRipple"), "spawnRipple function exists");
-ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(gameJsSrc),
+const uiJsSrc = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");
+ok(uiJsSrc.includes("function spawnRipple"), "spawnRipple function exists");
+ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(uiJsSrc),
    "spawnRipple guards on reduceMotionActive()");
 
 E.setReduceMotion(false);
@@ -239,7 +241,7 @@ if (soulsCountMatch) {
 
 // ─── Test 10b: no per-frame aria-label rewrite ──────────────────────────────
 console.log("\n─── Test 10b: no per-frame aria-label rewrite ───");
-ok(!gameJsSrc.includes('setAttribute("aria-label", "Souls:'), "no per-frame aria-label rewrite on souls-count");
+ok(!(gameJsSrc + uiJsSrc).includes('setAttribute("aria-label", "Souls:'), "no per-frame aria-label rewrite on souls-count");
 
 // ─── Test 11: .is-hidden still display:none ─────────────────────────────────
 console.log("\n─── Test 11: is-hidden intact ───");
@@ -258,8 +260,8 @@ ok(grantGiftSrc, "grantGift function found in source");
 if (grantGiftSrc) {
   ok(!grantGiftSrc[0].includes("announce("), "grantGift does NOT call announce() directly (batched via flushGiftToasts)");
 }
-ok(gameJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
-ok(/announce\(\s*msgs\.length\s*\+/.test(gameJsSrc), "multi-gift batch announces count summary");
+ok(uiJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
+ok(/announce\(\s*msgs\.length\s*\+/.test(uiJsSrc), "multi-gift batch announces count summary");
 
 // ─── Summary ────────────────────────────────────────────────────────────────
 console.log("\n" + (failed ? "FAILED " + failed + " / " + (passed + failed) : "all " + passed + " a11y assertions passed"));
