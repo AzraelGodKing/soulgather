@@ -14,101 +14,26 @@
 
 import fs from "fs";
 import path from "path";
-import vm from "vm";
 import { fileURLToPath } from "url";
+import { createTestSandbox } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-function createStorage(initial) {
-  const map = new Map(Object.entries(initial || {}));
-  return {
-    getItem(k) { return map.has(k) ? map.get(k) : null; },
-    setItem(k, v) { map.set(String(k), String(v)); },
-    removeItem(k) { map.delete(k); },
-    clear() { map.clear(); },
-    _map: map
-  };
-}
-
-function makeEl(id) {
-  return {
-    id, value: "", disabled: false,
-    classList: {
-      _set: new Set(id === "load-fail-notice" ? ["is-hidden"] : []),
-      add(c) { this._set.add(c); },
-      remove(c) { this._set.delete(c); },
-      contains(c) { return this._set.has(c); }
-    },
-    style: {}, dataset: {}, textContent: "", innerHTML: "", open: false,
-    focus() {}, select() {},
-    setAttribute() {}, getAttribute() { return null; },
-    addEventListener() {}, removeEventListener() {},
-    querySelectorAll() { return []; },
-    querySelector() { return null; },
-    closest() { return null; }
-  };
-}
-
-const elsById = {};
-[
-  "load-fail-notice", "load-fail-raw", "load-fail-export",
-  "load-fail-restore", "load-fail-fresh", "toast",
-  "memory-panel", "memory-text", "memory-export", "memory-import",
-  "reset-btn", "gather-btn", "souls-count", "souls-rate",
-  "hollow-status", "souls-ash", "souls-favor", "souls-hymn",
-  "souls-wake", "souls-knell", "next-goal", "buy-mode",
-  "buy-mode-hint", "buy-mode-hint-dismiss", "chronicle-list",
-  "names-bound", "names-bound-list", "vow-status"
-].forEach((id) => { elsById[id] = makeEl(id); });
-
-const storage = createStorage();
-const documentMock = {
-  readyState: "loading",
-  hidden: false,
-  body: makeEl("body"),
-  documentElement: makeEl("html"),
-  getElementById(id) {
-    if (!elsById[id]) elsById[id] = makeEl(id);
-    return elsById[id];
-  },
-  querySelector() { return null; },
-  querySelectorAll() { return []; },
-  addEventListener() {},
-  removeEventListener() {},
-  createElement() { return makeEl("anon"); },
-  execCommand() { return false; }
-};
-
-const sandbox = {
-  console, Date, Math, JSON, Number, String, Boolean, Array, Object,
-  Error, TypeError, RegExp, parseInt, parseFloat, isFinite, isNaN,
-  Infinity, NaN, undefined,
-  localStorage: storage,
-  document: documentMock,
-  navigator: {},
-  confirm() { return false; },
-  prompt() { return null; },
-  setTimeout() { return 0; },
-  clearTimeout() {},
-  setInterval() { return 0; },
-  clearInterval() {},
-  requestAnimationFrame() { return 0; },
-  addEventListener() {},
-  removeEventListener() {},
-  getComputedStyle() { return {}; }
-};
-sandbox.window = sandbox;
-sandbox.globalThis = sandbox;
-vm.createContext(sandbox);
-
-function loadScript(rel) {
-  const code = fs.readFileSync(path.join(root, rel), "utf8");
-  vm.runInContext(code, sandbox, { filename: rel });
-}
+const { sandbox, storage, loadScript } = createTestSandbox(root);
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
+loadScript("js/edicts.js");
+loadScript("js/economy.js");
+loadScript("js/state.js");
+loadScript("js/prestige.js");
+loadScript("js/actions.js");
+loadScript("js/panels.js");
+loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;
@@ -419,8 +344,8 @@ console.log("\n─── Test 6: bonus → gift migration ───");
 // ─── Test 7: no hand-written gift branches ──────────────────────────────────────
 console.log("\n─── Test 7: no hand-written gift branches in tryMilestoneGifts ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const funcMatch = src.match(/function tryMilestoneGifts\(\)[\s\S]*?^  \}/m);
+  const src = fs.readFileSync(path.join(root, "js", "progression.js"), "utf8");
+  const funcMatch = src.match(/^([ \t]*)function tryMilestoneGifts\(\)[\s\S]*?^\1\}/m);
   assertTrue("tryMilestoneGifts found", !!funcMatch);
   if (funcMatch) {
     const funcSrc = funcMatch[0];
@@ -741,6 +666,37 @@ console.log("\n─── Test 18: tributesLaid dirty → only tribute gifts chec
     meetsCount <= tributeBucket.length
   );
   assertTrue("tributesLaid dirty: checks > 0", meetsCount > 0);
+}
+
+// ─── Test 19: Reset rebuilds the ungranted count ───────────────────────────────
+console.log("\n─── Test 19: Reset rebuilds the ungranted count ───");
+{
+  resetState({ souls: N.fromNumber(10), lifetimeSouls: N.fromNumber(10), allTimeSouls: N.fromNumber(10) });
+  const before = G.getState();
+  for (const g of G.GIFTS) before[g.flag] = g.flag !== "giftLifetimeSouls";
+  G.rebuildUngrantedCount();
+  assertEqual("one gift left before reset", G.getGiftUngrantedCount(), 1);
+
+  sandbox.confirm = function () { return true; };
+  sandbox.SoulgatherGame.resetGame();
+  sandbox.confirm = function () { return false; };
+
+  // A stale count of 1 reaches exactly 0 after one grant; with every name bound that is the early-out.
+  const st = G.getState();
+  st.namesBound = 12;
+  st.namesComplete = true;
+  st.giftFirstName = true;
+  st.giftNamesComplete = true;
+  st.lifetimeSouls = N.fromNumber(150);
+  st.allTimeSouls = N.fromNumber(150);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftLifetimeSouls granted", st.giftLifetimeSouls === true);
+  st.lifetimeSouls = N.fromNumber(2000);
+  st.allTimeSouls = N.fromNumber(2000);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftThousandSouls not skipped", st.giftThousandSouls === true);
+  const left = G.GIFTS.filter((g) => !st[g.flag]).length;
+  assertEqual("after reset: ungranted count matches flags", G.getGiftUngrantedCount(), left);
 }
 
 // ─── Done ───────────────────────────────────────────────────────────────────────
