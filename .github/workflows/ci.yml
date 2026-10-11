@@ -14,7 +14,7 @@ jobs:
           node-version: 22
 
       - name: Syntax check
-        run: node --check js/game.js && node --check js/num.js && node --check js/format.js
+        run: npm run check
 
       - name: Economy tests
         run: node test-economy.mjs
