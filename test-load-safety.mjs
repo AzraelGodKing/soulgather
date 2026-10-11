@@ -30,6 +30,7 @@ function assertEqual(label, a, b) {
 }
 
 const gameSrc = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+const configSrc = fs.readFileSync(path.join(root, "js/config.js"), "utf8");
 
 // --- Source contracts ---
 assertTrue(
@@ -46,19 +47,19 @@ assertTrue(
 );
 assertTrue(
   "AZR-165 SAVE_BAK1_KEY exists",
-  /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(gameSrc)
+  /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(gameSrc) || /SAVE_BAK1_KEY\s*=\s*"soulgather-v0\.bak1"/.test(configSrc)
 );
 assertTrue(
   "AZR-165 SAVE_BAK2_KEY exists",
-  /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(gameSrc)
+  /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(gameSrc) || /SAVE_BAK2_KEY\s*=\s*"soulgather-v0\.bak2"/.test(configSrc)
 );
 assertTrue(
   "AZR-165 BAK1_MS = 60s",
-  /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(gameSrc)
+  /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(gameSrc) || /BAK1_MS\s*=\s*60\s*\*\s*1000/.test(configSrc)
 );
 assertTrue(
   "AZR-165 BAK2_MS = 1h",
-  /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(gameSrc)
+  /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(gameSrc) || /BAK2_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/.test(configSrc)
 );
 assertTrue(
   "AZR-165 beginLoadFailure helper exists",
@@ -69,8 +70,8 @@ assertTrue(
   /function rotateBackups\s*\(/.test(gameSrc)
 );
 assertTrue(
-  "AZR-165 load-fail notice id in game.js",
-  /load-fail-notice/.test(gameSrc)
+  "AZR-165 load-fail notice id bound in main.js",
+  /load-fail-notice/.test(fs.readFileSync(path.join(root, "js/main.js"), "utf8"))
 );
 assertTrue(
   "AZR-165 no mid-load save before known-good comment/path",
@@ -270,7 +271,17 @@ function loadScript(rel) {
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
+loadScript("js/edicts.js");
+loadScript("js/economy.js");
+loadScript("js/state.js");
+loadScript("js/prestige.js");
+loadScript("js/actions.js");
+loadScript("js/panels.js");
+loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const Eco = sandbox.SoulgatherEconomy;
 assertTrue("AZR-165 SoulgatherEconomy exported", !!Eco);
@@ -410,9 +421,11 @@ assertEqual("AZR-168 loadCount(3, 2) caps", Eco.loadCount(3, 2), 2);
 
 // Source: no Number(data. leftover in applySaveData
 {
-  const applyStart = gameSrc.indexOf("function applySaveData");
-  const applyEnd = gameSrc.indexOf("function adoptSave");
-  const applyFn = gameSrc.slice(applyStart, applyEnd);
+  const stateSrc = fs.readFileSync(path.join(root, "js/state.js"), "utf8");
+  const applyStart = stateSrc.indexOf("function applySaveData");
+  const applyEnd = stateSrc.indexOf("global.SoulgatherState", applyStart);
+  const applyFn = applyStart >= 0 && applyEnd > applyStart ? stateSrc.slice(applyStart, applyEnd) : "";
+  assertTrue("AZR-168 source: applySaveData body found in state.js", applyFn.length > 2000);
   assertTrue(
     "AZR-168 source: no Number(data. in applySaveData",
     !/Number\(data\./.test(applyFn)
