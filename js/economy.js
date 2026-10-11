@@ -206,18 +206,6 @@
 
   /* ── Bulk / max-affordable ───────────────────────────────────────── */
 
-  function wellBulkCostLoop(owned, k) {
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    var total = N.fromNumber(0);
-    var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
-    var i;
-    for (i = 0; i < n; i++) {
-      total = N.add(total, wellCost(baseDepth + i));
-    }
-    return total;
-  }
-
   function wellMaxAffordableLoop(owned, currency) {
     var remaining = num(currency);
     var baseDepth = Math.max(0, Math.floor(Number(owned) || 0));
@@ -330,24 +318,6 @@
       return { k: k, cost: wellBulkCost(owned, k), can: true };
     }
     return { k: 1, cost: one, can: N.cmp(currency, one) >= 0 };
-  }
-
-  function bulkCostLoop(base, owned, k, mult, extraMult) {
-    var b = Number(base);
-    if (!isFinite(b) || b <= 0) b = COST_BASE;
-    if (mult == null) mult = COST_MULT;
-    var em = extraMult == null ? 1 : Number(extraMult);
-    if (!isFinite(em) || em <= 0) em = 1;
-    var n = Math.max(0, Math.floor(k));
-    if (n > BULK_CAP) n = BULK_CAP;
-    var total = N.fromNumber(0);
-    var i;
-    for (i = 0; i < n; i++) {
-      var unit = N.cost(b, mult, addOwned(owned, i));
-      if (em !== 1) unit = N.mul(unit, em);
-      total = N.add(total, unit);
-    }
-    return total;
   }
 
   function maxAffordableLoop(base, owned, currency, mult, extraMult) {
@@ -1072,12 +1042,10 @@
     chaliceCost: chaliceCost,
     markCost: markCost,
     wellCost: wellCost,
-    wellBulkCostLoop: wellBulkCostLoop,
     wellMaxAffordableLoop: wellMaxAffordableLoop,
     wellBulkCost: wellBulkCost,
     wellMaxAffordable: wellMaxAffordable,
     wellPurchasePlan: wellPurchasePlan,
-    bulkCostLoop: bulkCostLoop,
     maxAffordableLoop: maxAffordableLoop,
     bulkCost: bulkCost,
     maxAffordable: maxAffordable,

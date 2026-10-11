@@ -6,10 +6,6 @@
    * Idle-safe arithmetic so costs and stocks never become Infinity/NaN.
    */
 
-  function make(m, e) {
-    return normalize(m, e);
-  }
-
   function normalize(m, e) {
     m = Number(m);
     e = Number(e);
@@ -177,10 +173,6 @@
     return cmp(a, b) >= 0 ? from(a) : from(b);
   }
 
-  function min(a, b) {
-    return cmp(a, b) <= 0 ? from(a) : from(b);
-  }
-
   function floor(a) {
     a = from(a);
     if (!numIsFinite(a)) return clone(a);
@@ -303,14 +295,12 @@
     pow: pow,
     cmp: cmp,
     max: max,
-    min: min,
     floor: floor,
     isFinite: numIsFinite,
     isZero: isZero,
     clone: clone,
     cost: cost,
     dump: dump,
-    load: load,
-    make: make
+    load: load
   };
 })(typeof window !== "undefined" ? window : globalThis);

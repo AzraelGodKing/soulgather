@@ -115,10 +115,6 @@
     return E.wellPurchasePlan(owned, currency, state.buyMode);
   }
 
-  function bulkCostLoop(base, owned, k, mult, extraMult) {
-    return E.bulkCostLoop(base, owned, k, mult == null ? currentProducerCostMult() : mult, extraMult);
-  }
-
   function maxAffordableLoop(base, owned, currency, mult, extraMult) {
     return E.maxAffordableLoop(base, owned, currency, mult == null ? currentProducerCostMult() : mult, extraMult);
   }
@@ -1426,7 +1422,6 @@
   _eco.ashPerSec = ashPerSec;
   _eco.currentProducerCostMult = currentProducerCostMult;
   _eco.bulkCost = bulkCost;
-  _eco.bulkCostLoop = bulkCostLoop;
   _eco.maxAffordable = maxAffordable;
   _eco.maxAffordableLoop = maxAffordableLoop;
   _eco.setText = setText;
@@ -1487,7 +1482,6 @@
   _eco.layTribute = layTribute;
   _eco.GIFTS = C.GIFTS;
   _eco.GIFTS_BY_STAT = C.GIFTS_BY_STAT;
-  _eco.GIFT_FLAGS = C.GIFT_FLAGS;
   _eco.tryMilestoneGifts = tryMilestoneGifts;
   _eco.checkUnlock = checkUnlock;
   _eco.rebuildUngrantedCount = rebuildUngrantedCount;

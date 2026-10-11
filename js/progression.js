@@ -561,56 +561,6 @@
       syncChronicle();
     }
 
-    function bumpPeakShades() {
-      var state = host.getState();
-      state.peakShades = N.max(num(state.peakShades), num(state.shades));
-    }
-
-    function bumpPeakLanterns() {
-      var state = host.getState();
-      state.peakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
-    }
-
-    function bumpPeakFetters() {
-      var state = host.getState();
-      state.peakFetters = N.max(num(state.peakFetters), num(state.fetters));
-    }
-
-    function bumpPeakCensers() {
-      var state = host.getState();
-      state.peakCensers = N.max(num(state.peakCensers), num(state.censers));
-    }
-
-    function bumpPeakPyres() {
-      var state = host.getState();
-      state.peakPyres = N.max(num(state.peakPyres), num(state.pyres));
-    }
-
-    function bumpPeakUrns() {
-      var state = host.getState();
-      state.peakUrns = N.max(num(state.peakUrns), num(state.urns));
-    }
-
-    function bumpPeakHearths() {
-      var state = host.getState();
-      state.peakHearths = N.max(num(state.peakHearths), num(state.hearths));
-    }
-
-    function bumpPeakBeacons() {
-      var state = host.getState();
-      state.peakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
-    }
-
-    function bumpPeakSpires() {
-      var state = host.getState();
-      state.peakSpires = N.max(num(state.peakSpires), num(state.spires));
-    }
-
-    function bumpPeakObelisks() {
-      var state = host.getState();
-      state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
-    }
-
     function rebuildUngrantedCount() {
       var state = host.getState();
       var n = 0;
@@ -834,16 +784,6 @@
       markChronicle: markChronicle,
       syncChronicle: syncChronicle,
       checkUnlock: checkUnlock,
-      bumpPeakShades: bumpPeakShades,
-      bumpPeakLanterns: bumpPeakLanterns,
-      bumpPeakFetters: bumpPeakFetters,
-      bumpPeakCensers: bumpPeakCensers,
-      bumpPeakPyres: bumpPeakPyres,
-      bumpPeakUrns: bumpPeakUrns,
-      bumpPeakHearths: bumpPeakHearths,
-      bumpPeakBeacons: bumpPeakBeacons,
-      bumpPeakSpires: bumpPeakSpires,
-      bumpPeakObelisks: bumpPeakObelisks,
       rebuildUngrantedCount: rebuildUngrantedCount,
       snapshotGiftStats: snapshotGiftStats,
       giftStatValue: giftStatValue,
