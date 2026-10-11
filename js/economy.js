@@ -674,15 +674,7 @@
   /* ── Goal text ───────────────────────────────────────────────────── */
 
   function formatGoalNum(n) {
-    if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatNumber) {
-      return SoulgatherFormat.formatNumber(n);
-    }
-    if (n && typeof n === "object" && typeof n.m === "number") {
-      n = nVal(n);
-    }
-    if (n == null || !isFinite(n)) return "0";
-    if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
-    return Number(n).toFixed(1);
+    return SoulgatherFormat.formatNumber(n);
   }
 
   function nextGoal(view, format) {

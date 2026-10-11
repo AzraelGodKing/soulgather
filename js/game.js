@@ -30,8 +30,6 @@
   var saveDirty = false;
   function markSaveDirty() { saveDirty = true; }
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
-  function markRenderDirty() { markDirty(); }
-
   /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
 
   /* ─── Reduced-motion (in-game setting, independent of OS) ──────────── */
@@ -813,8 +811,6 @@
     markDirty();
   }
 
-  var SAVE_FIELDS = FIELDS_KEYS;
-
   function serializeState() {
     return S.serializeState(state);
   }
@@ -1502,7 +1498,6 @@
   _eco.getBumpPeakShadesCount = Pg.getBumpPeakShadesCount;
   _eco.resetGiftLastSeen = Pg.resetGiftLastSeen;
   _eco.resetToScope = resetToScope;
-  _eco.SAVE_FIELDS = SAVE_FIELDS;
   _eco.save = save;
   _eco.flushSave = flushSave;
   _eco.markSaveDirty = markSaveDirty;
