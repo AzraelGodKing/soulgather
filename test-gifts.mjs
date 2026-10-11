@@ -23,7 +23,17 @@ const { sandbox, storage, loadScript } = createTestSandbox(root);
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
+loadScript("js/edicts.js");
+loadScript("js/economy.js");
+loadScript("js/state.js");
+loadScript("js/prestige.js");
+loadScript("js/actions.js");
+loadScript("js/panels.js");
+loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;
@@ -334,8 +344,8 @@ console.log("\n─── Test 6: bonus → gift migration ───");
 // ─── Test 7: no hand-written gift branches ──────────────────────────────────────
 console.log("\n─── Test 7: no hand-written gift branches in tryMilestoneGifts ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const funcMatch = src.match(/function tryMilestoneGifts\(\)[\s\S]*?^  \}/m);
+  const src = fs.readFileSync(path.join(root, "js", "progression.js"), "utf8");
+  const funcMatch = src.match(/^([ \t]*)function tryMilestoneGifts\(\)[\s\S]*?^\1\}/m);
   assertTrue("tryMilestoneGifts found", !!funcMatch);
   if (funcMatch) {
     const funcSrc = funcMatch[0];
@@ -656,6 +666,37 @@ console.log("\n─── Test 18: tributesLaid dirty → only tribute gifts chec
     meetsCount <= tributeBucket.length
   );
   assertTrue("tributesLaid dirty: checks > 0", meetsCount > 0);
+}
+
+// ─── Test 19: Reset rebuilds the ungranted count ───────────────────────────────
+console.log("\n─── Test 19: Reset rebuilds the ungranted count ───");
+{
+  resetState({ souls: N.fromNumber(10), lifetimeSouls: N.fromNumber(10), allTimeSouls: N.fromNumber(10) });
+  const before = G.getState();
+  for (const g of G.GIFTS) before[g.flag] = g.flag !== "giftLifetimeSouls";
+  G.rebuildUngrantedCount();
+  assertEqual("one gift left before reset", G.getGiftUngrantedCount(), 1);
+
+  sandbox.confirm = function () { return true; };
+  sandbox.SoulgatherGame.resetGame();
+  sandbox.confirm = function () { return false; };
+
+  // A stale count of 1 reaches exactly 0 after one grant; with every name bound that is the early-out.
+  const st = G.getState();
+  st.namesBound = 12;
+  st.namesComplete = true;
+  st.giftFirstName = true;
+  st.giftNamesComplete = true;
+  st.lifetimeSouls = N.fromNumber(150);
+  st.allTimeSouls = N.fromNumber(150);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftLifetimeSouls granted", st.giftLifetimeSouls === true);
+  st.lifetimeSouls = N.fromNumber(2000);
+  st.allTimeSouls = N.fromNumber(2000);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftThousandSouls not skipped", st.giftThousandSouls === true);
+  const left = G.GIFTS.filter((g) => !st[g.flag]).length;
+  assertEqual("after reset: ungranted count matches flags", G.getGiftUngrantedCount(), left);
 }
 
 // ─── Done ───────────────────────────────────────────────────────────────────────

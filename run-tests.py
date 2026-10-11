@@ -6,11 +6,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent
 
-checks = [
-    ["node", "--check", "js/game.js"],
-    ["node", "--check", "js/num.js"],
-    ["node", "--check", "js/format.js"],
-]
+checks = [["node", "--check", str(f.relative_to(root))] for f in sorted((root / "js").glob("*.js"))]
 suites = [
     root / "test-economy.mjs",
     root / "sim-firstrun.mjs",
