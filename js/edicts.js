@@ -80,12 +80,12 @@
     return WAKE_SECS + 15 * n;
   }
 
-  function wakeEdictStartsWake(level) {
+  function autobindStartsPredicate(level) {
     return (Number(level) || 0) >= 1;
   }
 
   function wakeLeftAfterTribute(level) {
-    if (!wakeEdictStartsWake(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return wakeSecs(level);
   }
 
@@ -99,12 +99,8 @@
     return PROCESSION_SECS + 15 * n;
   }
 
-  function processionEdictStartsProcession(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function processionLeftAfterTribute(level) {
-    if (!processionEdictStartsProcession(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return processionSecs(level);
   }
 
@@ -118,12 +114,8 @@
     return TOLL_SECS + 10 * n;
   }
 
-  function tollEdictStartsToll(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function tollLeftAfterTribute(level) {
-    if (!tollEdictStartsToll(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return tollSecs(level);
   }
 
@@ -137,12 +129,8 @@
     return VEIL_SECS + 10 * n;
   }
 
-  function veilEdictStartsVeil(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function veilLeftAfterTribute(level) {
-    if (!veilEdictStartsVeil(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return veilSecs(level);
   }
 
@@ -156,12 +144,8 @@
     return KNELL_SECS + 10 * n;
   }
 
-  function knellEdictStartsKnell(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function knellLeftAfterTribute(level) {
-    if (!knellEdictStartsKnell(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return knellSecs(level);
   }
 
@@ -175,12 +159,8 @@
     return NIGHT_TITHE_SECS + 15 * n;
   }
 
-  function nightEdictStartsNight(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function nightLeftAfterTribute(level) {
-    if (!nightEdictStartsNight(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return nightEdictSecs(level);
   }
 
@@ -237,49 +217,9 @@
     return 8 * Math.pow(2, n);
   }
 
-  function quietCourtStartsLanternAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsFetterAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
-  function quietCourtStartsObeliskAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function smokeEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 6 * Math.pow(2, n);
-  }
-
-  function smokeStartsCenserAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function embersEdictCost(level) {
@@ -347,17 +287,9 @@
     return 8 * Math.pow(2, n);
   }
 
-  function cinderEdictStartsPyreAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function cutEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 11 * Math.pow(2, n);
-  }
-
-  function cutEdictStartsUrnAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function tendingEdictCost(level) {
@@ -365,26 +297,14 @@
     return 12 * Math.pow(2, n);
   }
 
-  function tendingEdictStartsHearthAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function gleamEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 13 * Math.pow(2, n);
   }
 
-  function gleamEdictStartsBeaconAutobind(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function riseEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 14 * Math.pow(2, n);
-  }
-
-  function riseEdictStartsSpireAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function cupEdictCost(level) {
@@ -401,10 +321,6 @@
   function draughtEdictCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 10 * Math.pow(2, n);
-  }
-
-  function draughtStartsChaliceAutobind(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function remembranceCostFavor() {
@@ -555,27 +471,22 @@
     hymnLeftAfterTribute: hymnLeftAfterTribute,
     hymnEdictCost: hymnEdictCost,
     wakeSecs: wakeSecs,
-    wakeEdictStartsWake: wakeEdictStartsWake,
+    autobindStartsPredicate: autobindStartsPredicate,
     wakeLeftAfterTribute: wakeLeftAfterTribute,
     wakeEdictCost: wakeEdictCost,
     processionSecs: processionSecs,
-    processionEdictStartsProcession: processionEdictStartsProcession,
     processionLeftAfterTribute: processionLeftAfterTribute,
     processionEdictCost: processionEdictCost,
     tollSecs: tollSecs,
-    tollEdictStartsToll: tollEdictStartsToll,
     tollLeftAfterTribute: tollLeftAfterTribute,
     tollEdictCost: tollEdictCost,
     veilSecs: veilSecs,
-    veilEdictStartsVeil: veilEdictStartsVeil,
     veilLeftAfterTribute: veilLeftAfterTribute,
     veilEdictCost: veilEdictCost,
     knellSecs: knellSecs,
-    knellEdictStartsKnell: knellEdictStartsKnell,
     knellLeftAfterTribute: knellLeftAfterTribute,
     knellEdictCost: knellEdictCost,
     nightEdictSecs: nightEdictSecs,
-    nightEdictStartsNight: nightEdictStartsNight,
     nightLeftAfterTribute: nightLeftAfterTribute,
     nightEdictCost: nightEdictCost,
     choirEdictCost: choirEdictCost,
@@ -587,17 +498,7 @@
     ashenCost: ashenCost,
     depthCost: depthCost,
     quietCourtCost: quietCourtCost,
-    quietCourtStartsLanternAutobind: quietCourtStartsLanternAutobind,
-    quietCourtStartsFetterAutobind: quietCourtStartsFetterAutobind,
-    quietCourtStartsPyreAutobind: quietCourtStartsPyreAutobind,
-    quietCourtStartsChaliceAutobind: quietCourtStartsChaliceAutobind,
-    quietCourtStartsUrnAutobind: quietCourtStartsUrnAutobind,
-    quietCourtStartsHearthAutobind: quietCourtStartsHearthAutobind,
-    quietCourtStartsBeaconAutobind: quietCourtStartsBeaconAutobind,
-    quietCourtStartsSpireAutobind: quietCourtStartsSpireAutobind,
-    quietCourtStartsObeliskAutobind: quietCourtStartsObeliskAutobind,
     smokeEdictCost: smokeEdictCost,
-    smokeStartsCenserAutobind: smokeStartsCenserAutobind,
     embersEdictCost: embersEdictCost,
     embersStartsPyres: embersStartsPyres,
     urnEdictCost: urnEdictCost,
@@ -611,19 +512,13 @@
     obeliskEdictCost: obeliskEdictCost,
     obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
     cinderEdictCost: cinderEdictCost,
-    cinderEdictStartsPyreAutobind: cinderEdictStartsPyreAutobind,
     cutEdictCost: cutEdictCost,
-    cutEdictStartsUrnAutobind: cutEdictStartsUrnAutobind,
     tendingEdictCost: tendingEdictCost,
-    tendingEdictStartsHearthAutobind: tendingEdictStartsHearthAutobind,
     gleamEdictCost: gleamEdictCost,
-    gleamEdictStartsBeaconAutobind: gleamEdictStartsBeaconAutobind,
     riseEdictCost: riseEdictCost,
-    riseEdictStartsSpireAutobind: riseEdictStartsSpireAutobind,
     cupEdictCost: cupEdictCost,
     cupStartsChalices: cupStartsChalices,
     draughtEdictCost: draughtEdictCost,
-    draughtStartsChaliceAutobind: draughtStartsChaliceAutobind,
     remembranceCostFavor: remembranceCostFavor,
     remembranceFavorCost: remembranceFavorCost,
     deeperNightCost: deeperNightCost,

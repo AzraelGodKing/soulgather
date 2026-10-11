@@ -6,6 +6,7 @@
   var N = global.SoulgatherNum;
   var C = global.SoulgatherConfig;
   var E = global.SoulgatherEconomy;
+  var autobindStartsPredicate = E.autobindStartsPredicate;
   var ASHEN_TIDE_MAX = C.ASHEN_TIDE_MAX;
   var ASPECT_NAMES = C.ASPECT_NAMES;
   var BINDING_TOLL_COST_BONUS = C.BINDING_TOLL_COST_BONUS;
@@ -68,7 +69,6 @@
   var hymnSecs = E.hymnSecs;
   var kindleCost = E.kindleCost;
   var knellEdictCost = E.knellEdictCost;
-  var knellEdictStartsKnell = E.knellEdictStartsKnell;
   var knellSecs = E.knellSecs;
   var levyCost = E.levyCost;
   var levyMult = E.levyMult;
@@ -83,7 +83,6 @@
   var memoryCost = E.memoryCost;
   var nightEdictCost = E.nightEdictCost;
   var nightEdictSecs = E.nightEdictSecs;
-  var nightEdictStartsNight = E.nightEdictStartsNight;
   var nightSecs = E.nightSecs;
   var nightTitheCost = E.nightTitheCost;
   var obeliskEdictCost = E.obeliskEdictCost;
@@ -96,10 +95,8 @@
   var paidVeilSecs = E.paidVeilSecs;
   var paidWakeSecs = E.paidWakeSecs;
   var processionEdictCost = E.processionEdictCost;
-  var processionEdictStartsProcession = E.processionEdictStartsProcession;
   var processionSecs = E.processionSecs;
   var quietCourtCost = E.quietCourtCost;
-  var quietCourtStartsUrnAutobind = E.quietCourtStartsUrnAutobind;
   var remembranceFavorCost = E.remembranceFavorCost;
   var riseEdictCost = E.riseEdictCost;
   var seatCost = E.seatCost;
@@ -112,7 +109,6 @@
   var spireRiteMult = E.spireRiteMult;
   var tendingEdictCost = E.tendingEdictCost;
   var tollEdictCost = E.tollEdictCost;
-  var tollEdictStartsToll = E.tollEdictStartsToll;
   var tollSecs = E.tollSecs;
   var urnEdictCost = E.urnEdictCost;
   var urnEdictStartsUrns = E.urnEdictStartsUrns;
@@ -120,10 +116,8 @@
   var urnRiteMult = E.urnRiteMult;
   var veilCost = E.veilCost;
   var veilEdictCost = E.veilEdictCost;
-  var veilEdictStartsVeil = E.veilEdictStartsVeil;
   var veilSecs = E.veilSecs;
   var wakeEdictCost = E.wakeEdictCost;
-  var wakeEdictStartsWake = E.wakeEdictStartsWake;
   var wakeSecs = E.wakeSecs;
 
   function create(ui) {
@@ -1077,7 +1071,7 @@
 
         var weCost = wakeEdictCost(state.wakeEdictLevel);
         var wakeEdictN = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
-        var wakeDur = wakeEdictStartsWake(wakeEdictN) ? wakeSecs(wakeEdictN) : 0;
+        var wakeDur = autobindStartsPredicate(wakeEdictN) ? wakeSecs(wakeEdictN) : 0;
         if (els.wakeEdictEffect) {
           setText(els.wakeEdictEffect, "Wake " + wakeDur + "s at tribute");
         }
@@ -1088,7 +1082,7 @@
 
         var peCost = processionEdictCost(state.processionEdictLevel);
         var processionEdictN = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
-        var processionDur = processionEdictStartsProcession(processionEdictN) ? processionSecs(processionEdictN) : 0;
+        var processionDur = autobindStartsPredicate(processionEdictN) ? processionSecs(processionEdictN) : 0;
         if (els.processionEdictEffect) {
           setText(els.processionEdictEffect, "Procession " + processionDur + "s at tribute");
         }
@@ -1099,7 +1093,7 @@
 
         var teCost = tollEdictCost(state.tollEdictLevel);
         var tollEdictN = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
-        var tollDur = tollEdictStartsToll(tollEdictN) ? tollSecs(tollEdictN) : 0;
+        var tollDur = autobindStartsPredicate(tollEdictN) ? tollSecs(tollEdictN) : 0;
         if (els.tollEdictEffect) {
           setText(els.tollEdictEffect, "Toll " + tollDur + "s at tribute");
         }
@@ -1110,7 +1104,7 @@
 
         var veCost = veilEdictCost(state.veilEdictLevel);
         var veilEdictN = Math.max(0, Math.floor(Number(state.veilEdictLevel) || 0));
-        var veilDur = veilEdictStartsVeil(veilEdictN) ? veilSecs(veilEdictN) : 0;
+        var veilDur = autobindStartsPredicate(veilEdictN) ? veilSecs(veilEdictN) : 0;
         if (els.veilEdictEffect) {
           setText(els.veilEdictEffect, "Veil " + veilDur + "s at tribute");
         }
@@ -1121,7 +1115,7 @@
 
         var keCost = knellEdictCost(state.knellEdictLevel);
         var knellEdictN = Math.max(0, Math.floor(Number(state.knellEdictLevel) || 0));
-        var knellDur = knellEdictStartsKnell(knellEdictN) ? knellSecs(knellEdictN) : 0;
+        var knellDur = autobindStartsPredicate(knellEdictN) ? knellSecs(knellEdictN) : 0;
         if (els.knellEdictEffect) {
           setText(els.knellEdictEffect, "Knell " + knellDur + "s at tribute");
         }
@@ -1132,7 +1126,7 @@
 
         var neCost = nightEdictCost(state.nightEdictLevel);
         var nightEdictN = Math.max(0, Math.floor(Number(state.nightEdictLevel) || 0));
-        var nightDur = nightEdictStartsNight(nightEdictN) ? nightEdictSecs(nightEdictN) : 0;
+        var nightDur = autobindStartsPredicate(nightEdictN) ? nightEdictSecs(nightEdictN) : 0;
         if (els.nightEdictEffect) {
           setText(els.nightEdictEffect, "Night " + nightDur + "s at tribute");
         }
@@ -1178,7 +1172,7 @@
         var qcN = Number(state.quietCourtLevel) || 0;
         if (els.crownCourtEffect) {
           setText(els.crownCourtEffect,
-            quietCourtStartsUrnAutobind(qcN)
+            autobindStartsPredicate(qcN)
               ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute"
               : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute");
         }
