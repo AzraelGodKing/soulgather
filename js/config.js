@@ -1,7 +1,7 @@
 (function (global) {
   "use strict";
 
-  var GAME_VERSION = "6.10.0";
+  var GAME_VERSION = "6.10.1";
   var SAVE_KEY = "soulgather-v0";
   var SAVE_BAK1_KEY = "soulgather-v0.bak1";
   var SAVE_BAK2_KEY = "soulgather-v0.bak2";
