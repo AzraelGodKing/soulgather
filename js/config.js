@@ -769,13 +769,11 @@
   ];
 
   var GIFTS_BY_STAT = {};
-  var GIFT_FLAGS = [];
   var GIFT_STAT_KEYS = [];
   (function () {
     var seenStats = {};
     for (var i = 0; i < GIFTS.length; i++) {
       var g = GIFTS[i];
-      GIFT_FLAGS.push(g.flag);
       var key = g.stat;
       if (!GIFTS_BY_STAT[key]) GIFTS_BY_STAT[key] = [];
       GIFTS_BY_STAT[key].push(g);
@@ -791,7 +789,6 @@
   global.SoulgatherConfig = {
     GIFTS: GIFTS,
     GIFTS_BY_STAT: GIFTS_BY_STAT,
-    GIFT_FLAGS: GIFT_FLAGS,
     GIFT_STAT_KEYS: GIFT_STAT_KEYS,
     GAME_VERSION: GAME_VERSION,
     SAVE_KEY: SAVE_KEY,
