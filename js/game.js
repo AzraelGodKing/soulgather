@@ -3651,349 +3651,50 @@
     markDirty();
   }
 
-  function buyEdict() {
-    var cost = edictCost(state.edictLevel);
-    if (state.favor < cost) return;
+  function buyFavorUpgrade(levelKey, costFn, chronicleId) {
+    var cost = costFn(state[levelKey]);
+    if (!isFinite(cost) || state.favor < cost) return;
     var hollowBefore = state.favor;
     state.favor -= cost;
     noteHollowManualSpend("favor", cost, hollowBefore);
-    state.edictLevel += 1;
+    state[levelKey] += 1;
+    if (chronicleId) markChronicle(chronicleId);
     markSaveDirty();
     markDirty();
   }
 
-  function buyMemory() {
-    var cost = memoryCost(state.memoryLevel);
-    if (state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.memoryLevel += 1;
-    markSaveDirty();
-    markDirty();
-  }
-
+  function buyEdict() { buyFavorUpgrade("edictLevel", edictCost); }
+  function buyMemory() { buyFavorUpgrade("memoryLevel", memoryCost); }
   function buyEcho() {
     if ((Number(state.echoLevel) || 0) >= 1) return;
-    var cost = echoCost(state.echoLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.echoLevel = 1;
-    markChronicle("echo");
-    markSaveDirty();
-    markDirty();
+    buyFavorUpgrade("echoLevel", echoCost, "echo");
   }
-
-  function buySeat() {
-    var cost = seatCost(state.seatLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.seatLevel += 1;
-    markChronicle("seat");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyKindle() {
-    var cost = kindleCost(state.kindleLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.kindleLevel += 1;
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyAshen() {
-    var cost = ashenCost(state.ashenLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.ashenLevel += 1;
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyDepth() {
-    var cost = depthCost(state.depthLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.depthLevel += 1;
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyChoirEdict() {
-    var cost = choirEdictCost(state.choirEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.choirEdictLevel += 1;
-    markChronicle("choirEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyHymnEdict() {
-    var cost = hymnEdictCost(state.hymnEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.hymnEdictLevel += 1;
-    markChronicle("hymnEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buySmokeEdict() {
-    var cost = smokeEdictCost(state.smokeEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.smokeEdictLevel += 1;
-    markChronicle("smokeEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyEmbersEdict() {
-    var cost = embersEdictCost(state.embersEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.embersEdictLevel += 1;
-    markChronicle("embersEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyUrnEdict() {
-    var cost = urnEdictCost(state.urnEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.urnEdictLevel += 1;
-    markChronicle("urnEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyHearthEdict() {
-    var cost = hearthEdictCost(state.hearthEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.hearthEdictLevel += 1;
-    markChronicle("hearthEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyBeaconEdict() {
-    var cost = beaconEdictCost(state.beaconEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.beaconEdictLevel += 1;
-    markChronicle("beaconEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buySpireEdict() {
-    var cost = spireEdictCost(state.spireEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.spireEdictLevel += 1;
-    markChronicle("spireEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyObeliskEdict() {
-    var cost = obeliskEdictCost(state.obeliskEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.obeliskEdictLevel += 1;
-    markChronicle("obeliskEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyCinderEdict() {
-    var cost = cinderEdictCost(state.cinderEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.cinderEdictLevel += 1;
-    markChronicle("cinderEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyCutEdict() {
-    var cost = cutEdictCost(state.cutEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.cutEdictLevel += 1;
-    markChronicle("cutEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyTendingEdict() {
-    var cost = tendingEdictCost(state.tendingEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.tendingEdictLevel += 1;
-    markChronicle("tendingEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyGleamEdict() {
-    var cost = gleamEdictCost(state.gleamEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.gleamEdictLevel += 1;
-    markChronicle("gleamEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyRiseEdict() {
-    var cost = riseEdictCost(state.riseEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.riseEdictLevel += 1;
-    markChronicle("riseEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyCupEdict() {
-    var cost = cupEdictCost(state.cupEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.cupEdictLevel += 1;
-    markChronicle("cupEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyDraughtEdict() {
-    var cost = draughtEdictCost(state.draughtEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.draughtEdictLevel += 1;
-    markChronicle("draughtEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyWakeEdict() {
-    var cost = wakeEdictCost(state.wakeEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.wakeEdictLevel += 1;
-    markChronicle("wakeEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyProcessionEdict() {
-    var cost = processionEdictCost(state.processionEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.processionEdictLevel += 1;
-    markChronicle("processionEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyTollEdict() {
-    var cost = tollEdictCost(state.tollEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.tollEdictLevel += 1;
-    markChronicle("tollEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyVeilEdict() {
-    var cost = veilEdictCost(state.veilEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.veilEdictLevel += 1;
-    markChronicle("veilEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyKnellEdict() {
-    var cost = knellEdictCost(state.knellEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.knellEdictLevel += 1;
-    markChronicle("knellEdict");
-    markSaveDirty();
-    markDirty();
-  }
-
-  function buyNightEdict() {
-    var cost = nightEdictCost(state.nightEdictLevel);
-    if (!isFinite(cost) || state.favor < cost) return;
-    var hollowBefore = state.favor;
-    state.favor -= cost;
-    noteHollowManualSpend("favor", cost, hollowBefore);
-    state.nightEdictLevel += 1;
-    markChronicle("nightEdict");
-    markSaveDirty();
-    markDirty();
-  }
+  function buySeat() { buyFavorUpgrade("seatLevel", seatCost, "seat"); }
+  function buyKindle() { buyFavorUpgrade("kindleLevel", kindleCost); }
+  function buyAshen() { buyFavorUpgrade("ashenLevel", ashenCost); }
+  function buyDepth() { buyFavorUpgrade("depthLevel", depthCost); }
+  function buyChoirEdict() { buyFavorUpgrade("choirEdictLevel", choirEdictCost, "choirEdict"); }
+  function buyHymnEdict() { buyFavorUpgrade("hymnEdictLevel", hymnEdictCost, "hymnEdict"); }
+  function buySmokeEdict() { buyFavorUpgrade("smokeEdictLevel", smokeEdictCost, "smokeEdict"); }
+  function buyEmbersEdict() { buyFavorUpgrade("embersEdictLevel", embersEdictCost, "embersEdict"); }
+  function buyUrnEdict() { buyFavorUpgrade("urnEdictLevel", urnEdictCost, "urnEdict"); }
+  function buyHearthEdict() { buyFavorUpgrade("hearthEdictLevel", hearthEdictCost, "hearthEdict"); }
+  function buyBeaconEdict() { buyFavorUpgrade("beaconEdictLevel", beaconEdictCost, "beaconEdict"); }
+  function buySpireEdict() { buyFavorUpgrade("spireEdictLevel", spireEdictCost, "spireEdict"); }
+  function buyObeliskEdict() { buyFavorUpgrade("obeliskEdictLevel", obeliskEdictCost, "obeliskEdict"); }
+  function buyCinderEdict() { buyFavorUpgrade("cinderEdictLevel", cinderEdictCost, "cinderEdict"); }
+  function buyCutEdict() { buyFavorUpgrade("cutEdictLevel", cutEdictCost, "cutEdict"); }
+  function buyTendingEdict() { buyFavorUpgrade("tendingEdictLevel", tendingEdictCost, "tendingEdict"); }
+  function buyGleamEdict() { buyFavorUpgrade("gleamEdictLevel", gleamEdictCost, "gleamEdict"); }
+  function buyRiseEdict() { buyFavorUpgrade("riseEdictLevel", riseEdictCost, "riseEdict"); }
+  function buyCupEdict() { buyFavorUpgrade("cupEdictLevel", cupEdictCost, "cupEdict"); }
+  function buyDraughtEdict() { buyFavorUpgrade("draughtEdictLevel", draughtEdictCost, "draughtEdict"); }
+  function buyWakeEdict() { buyFavorUpgrade("wakeEdictLevel", wakeEdictCost, "wakeEdict"); }
+  function buyProcessionEdict() { buyFavorUpgrade("processionEdictLevel", processionEdictCost, "processionEdict"); }
+  function buyTollEdict() { buyFavorUpgrade("tollEdictLevel", tollEdictCost, "tollEdict"); }
+  function buyVeilEdict() { buyFavorUpgrade("veilEdictLevel", veilEdictCost, "veilEdict"); }
+  function buyKnellEdict() { buyFavorUpgrade("knellEdictLevel", knellEdictCost, "knellEdict"); }
+  function buyNightEdict() { buyFavorUpgrade("nightEdictLevel", nightEdictCost, "nightEdict"); }
 
   function buySiphon() {
     var cost = siphonCost(state.siphonLevel);
