@@ -3,7 +3,8 @@
 
   var N = globalThis.SoulgatherNum;
   var C = globalThis.SoulgatherConfig;
-  var E = globalThis.SoulgatherEconomy;
+  // Snapshot: the export block below overwrites same-named keys on the global with state-reading wrappers.
+  var E = Object.assign({}, globalThis.SoulgatherEconomy);
 
   var GAME_VERSION = C.GAME_VERSION;
   var SAVE_KEY = C.SAVE_KEY;
