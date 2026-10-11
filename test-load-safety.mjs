@@ -273,6 +273,7 @@ loadScript("js/num.js");
 loadScript("js/format.js");
 loadScript("js/config.js");
 loadScript("js/economy.js");
+loadScript("js/state.js");
 loadScript("js/game.js");
 
 const Eco = sandbox.SoulgatherEconomy;
