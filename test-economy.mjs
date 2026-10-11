@@ -106,6 +106,7 @@ loadScript("js/format.js");
 loadScript("js/config.js");
 loadScript("js/economy.js");
 loadScript("js/state.js");
+loadScript("js/actions.js");
 loadScript("js/game.js");
 
 const N = sandbox.SoulgatherNum;
