@@ -163,18 +163,7 @@
     }
 
     function formatBlessing(m) {
-      if (typeof SoulgatherFormat !== "undefined" && SoulgatherFormat.formatBlessing) {
-        return SoulgatherFormat.formatBlessing(m);
-      }
-      if (m && typeof m === "object" && typeof m.m === "number") {
-        m = N.toNumber(m);
-      }
-      if (!isFinite(m)) m = 1;
-      var tenth = m * 10;
-      if (Math.abs(tenth - Math.round(tenth)) < 1e-8) {
-        return "\u00d7" + m.toFixed(1);
-      }
-      return "\u00d7" + m.toFixed(2);
+      return SoulgatherFormat.formatBlessing(m);
     }
 
     function formatMult(m) {

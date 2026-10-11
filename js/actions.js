@@ -791,10 +791,6 @@
       markDirty();
     }
 
-    function beginKnell() {
-      soundKnell();
-    }
-
     function raiseChoir() {
       var state = host.getState();
       if (!state.unlockedChoir) return;
@@ -901,7 +897,6 @@
       thinVeil: thinVeil,
       beginProcession: beginProcession,
       soundKnell: soundKnell,
-      beginKnell: beginKnell,
       raiseChoir: raiseChoir,
       swearAspect: swearAspect,
       swearVow: swearVow
