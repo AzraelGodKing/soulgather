@@ -5,6 +5,7 @@
   var C = globalThis.SoulgatherConfig;
   // Snapshot: the export block below overwrites same-named keys on the global with state-reading wrappers.
   var E = Object.assign({}, globalThis.SoulgatherEconomy);
+  var S = globalThis.SoulgatherState;
 
   var GAME_VERSION = C.GAME_VERSION;
   var SAVE_KEY = C.SAVE_KEY;
@@ -628,14 +629,7 @@
   }
 
   function seedVowsKnown(raw) {
-    var known = normalizeVowsKnown(raw);
-    if (hasChronicle("vowStillness")) known.stillness = true;
-    if (hasChronicle("vowPoverty")) known.poverty = true;
-    if (hasChronicle("vowHunger")) known.hunger = true;
-    if (hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow")) known.ember = true;
-    var v = normalizeVow(state.vow);
-    if (v) known[v] = true;
-    return known;
+    return S.seedVowsKnown(raw, state);
   }
 
   var normalizeBuyMode = C.normalizeBuyMode;
@@ -647,42 +641,8 @@
   var formatGoalNum = E.formatGoalNum;
   var nextGoal = E.nextGoal;
 
-  function normalizeChronicle(raw) {
-    var out = [];
-    var seen = {};
-    function push(id, at) {
-      if (CHRONICLE_LINES[id] == null || seen[id]) return;
-      seen[id] = true;
-      var n = Number(at);
-      if (!isFinite(n) || n < 0) n = 0;
-      out.push({ id: id, at: n });
-    }
-    if (Array.isArray(raw)) {
-      var i;
-      for (i = 0; i < raw.length; i++) {
-        var row = raw[i];
-        if (!row || typeof row !== "object") continue;
-        push(row.id, row.at);
-      }
-      return out;
-    }
-    if (raw && typeof raw === "object") {
-      var j;
-      for (j = 0; j < CHRONICLE_ORDER.length; j++) {
-        var id = CHRONICLE_ORDER[j];
-        if (raw[id]) push(id, 0);
-      }
-    }
-    return out;
-  }
-
   function hasChronicle(id) {
-    if (!state.chronicle) return false;
-    var i;
-    for (i = 0; i < state.chronicle.length; i++) {
-      if (state.chronicle[i].id === id) return true;
-    }
-    return false;
+    return S.hasChronicle(state, id);
   }
 
   function chronicleAt() {
@@ -946,279 +906,8 @@
     return false;
   }
 
-  // ─── FIELDS: declarative persistence policy (AZR-178) ──────────────────────────
-  // kind:  num    = N big-number      count = non-negative integer
-  //        flag   = boolean           str   = string (normalizer optional)
-  //        list   = array             time  = Date.now() timestamp
-  //        obj    = plain object
-  // scope: run    = wiped on Tribute/Reset
-  //        account = survives Tribute, wiped on Reset
-  // max:   optional cap for count fields
-  // dflt:  override default (function → called each time, else literal)
-  // save:  optional serialize normalizer   load: optional load normalizer
-  var FIELDS = {
-    // ── Resources (num, run) ──
-    souls:            { kind: "num",   scope: "run" },
-    lifetimeSouls:    { kind: "num",   scope: "run" },
-    lifetimeShades:   { kind: "num",   scope: "run" },
-    lifetimeSpirits:  { kind: "num",   scope: "run" },
-    shades:           { kind: "num",   scope: "run" },
-    spirits:          { kind: "num",   scope: "run" },
-    vessels:          { kind: "num",   scope: "run" },
-    thrones:          { kind: "count", scope: "run" },
-    chalices:         { kind: "count", scope: "run", max: CHALICE_MAX },
-    wellDepth:        { kind: "count", scope: "run" },
-    lanterns:         { kind: "num",   scope: "run" },
-    ash:              { kind: "num",   scope: "run" },
-    censers:          { kind: "num",   scope: "run" },
-    pyres:            { kind: "num",   scope: "run" },
-    urns:             { kind: "num",   scope: "run" },
-    hearths:          { kind: "num",   scope: "run" },
-    beacons:          { kind: "num",   scope: "run" },
-    spires:           { kind: "num",   scope: "run" },
-    obelisks:         { kind: "num",   scope: "run" },
-    fetters:          { kind: "num",   scope: "run" },
-    // ── Upgrade levels (count, run) ──
-    emberLevel:       { kind: "count", scope: "run" },
-    chainLevel:       { kind: "count", scope: "run" },
-    hollowLevel:      { kind: "count", scope: "run" },
-    // ── Unlock flags (flag, run) ──
-    unlockedSpirits:          { kind: "flag", scope: "run" },
-    unlockedVessels:          { kind: "flag", scope: "run" },
-    unlockedWell:             { kind: "flag", scope: "run" },
-    unlockedThrones:          { kind: "flag", scope: "run" },
-    unlockedChalices:         { kind: "flag", scope: "run" },
-    unlockedLanterns:         { kind: "flag", scope: "run" },
-    unlockedMarks:            { kind: "flag", scope: "run" },
-    unlockedCensers:          { kind: "flag", scope: "run" },
-    unlockedPyres:            { kind: "flag", scope: "run" },
-    unlockedUrns:             { kind: "flag", scope: "run" },
-    unlockedHearths:          { kind: "flag", scope: "run" },
-    unlockedBeacons:          { kind: "flag", scope: "run" },
-    unlockedSpires:           { kind: "flag", scope: "run" },
-    unlockedObelisks:         { kind: "flag", scope: "run" },
-    unlockedFetters:          { kind: "flag", scope: "run" },
-    unlockedAutobind:         { kind: "flag", scope: "run" },
-    unlockedAutobindSpirits:  { kind: "flag", scope: "run" },
-    unlockedAutobindVessels:  { kind: "flag", scope: "run" },
-    unlockedAutobindLanterns: { kind: "flag", scope: "run" },
-    unlockedAutobindFetters:  { kind: "flag", scope: "run" },
-    unlockedAutobindCensers:  { kind: "flag", scope: "run" },
-    unlockedAutobindThrones:  { kind: "flag", scope: "run" },
-    unlockedAutobindPyres:    { kind: "flag", scope: "run" },
-    unlockedAutobindChalices: { kind: "flag", scope: "run" },
-    unlockedAutobindUrns:     { kind: "flag", scope: "run" },
-    unlockedAutobindHearths:  { kind: "flag", scope: "run" },
-    unlockedAutobindBeacons:  { kind: "flag", scope: "run" },
-    unlockedAutobindSpires:   { kind: "flag", scope: "run" },
-    unlockedAutobindObelisks: { kind: "flag", scope: "run" },
-    unlockedNightTithe:       { kind: "flag", scope: "run" },
-    unlockedVeil:             { kind: "flag", scope: "run" },
-    unlockedWake:             { kind: "flag", scope: "run" },
-    unlockedToll:             { kind: "flag", scope: "run" },
-    // ── Toast flags (flag, run) ──
-    toastShown:          { kind: "flag", scope: "run" },
-    vesselToastShown:    { kind: "flag", scope: "run" },
-    throneToastShown:    { kind: "flag", scope: "run" },
-    lanternToastShown:   { kind: "flag", scope: "run" },
-    censerToastShown:    { kind: "flag", scope: "run" },
-    // ── Reliquary (account) ──
-    favor:            { kind: "count", scope: "account" },
-    favorEarned:      { kind: "count", scope: "account" },
-    edictLevel:       { kind: "count", scope: "account" },
-    memoryLevel:      { kind: "count", scope: "account" },
-    echoLevel:        { kind: "count", scope: "account", max: 1 },
-    seatLevel:        { kind: "count", scope: "account" },
-    kindleLevel:      { kind: "count", scope: "account" },
-    ashenLevel:       { kind: "count", scope: "account" },
-    depthLevel:       { kind: "count", scope: "account" },
-    // ── UI prefs (account) ──
-    buyMode:              { kind: "str",  scope: "account", dflt: "1", load: normalizeBuyMode },
-    buyModeHintDismissed: { kind: "flag", scope: "account" },
-    // ── Rite levels (count, run) ──
-    siphonLevel:      { kind: "count", scope: "run" },
-    levyLevel:        { kind: "count", scope: "run" },
-    cinderLevel:      { kind: "count", scope: "run" },
-    urnRiteLevel:     { kind: "count", scope: "run" },
-    hearthRiteLevel:  { kind: "count", scope: "run" },
-    beaconRiteLevel:  { kind: "count", scope: "run" },
-    spireRiteLevel:   { kind: "count", scope: "run" },
-    bindingTollLevel: { kind: "count", scope: "run", max: BINDING_TOLL_MAX },
-    unlockedBindingToll: { kind: "flag", scope: "run" },
-    // ── Hollow (run) ──
-    hollowStacks:  { kind: "count", scope: "run", max: HOLLOW_MAX },
-    hollowIdle:    { kind: "count", scope: "run" },
-    hollowWarned:  { kind: "flag",  scope: "run" },
-    // ── Well draws (run) ──
-    wellDraws:         { kind: "flag", scope: "run" },
-    unlockedWellDraws: { kind: "flag", scope: "run" },
-    // ── Aspect / vow (str, run) ──
-    aspect: { kind: "str", scope: "run", save: normalizeAspect, load: normalizeAspect },
-    // ── Timestamps (time) ──
-    lastTick:      { kind: "time", scope: "run" },
-    simulatedUntil:{ kind: "time", scope: "run" },
-    // ── Chronicle (list, account) ──
-    chronicle: { kind: "list", scope: "account", load: normalizeChronicle },
-    // ── Timers (count, run) ──
-    titheLeft:      { kind: "count", scope: "run" },
-    nightLeft:      { kind: "count", scope: "run" },
-    tithePaid:      { kind: "flag",  scope: "run" },
-    autobind:           { kind: "flag", scope: "run" },
-    autobindSpirits:    { kind: "flag", scope: "run" },
-    autobindVessels:    { kind: "flag", scope: "run" },
-    autobindLanterns:   { kind: "flag", scope: "run" },
-    autobindFetters:    { kind: "flag", scope: "run" },
-    autobindCensers:    { kind: "flag", scope: "run" },
-    autobindThrones:    { kind: "flag", scope: "run" },
-    autobindPyres:      { kind: "flag", scope: "run" },
-    autobindChalices:   { kind: "flag", scope: "run" },
-    autobindUrns:       { kind: "flag", scope: "run" },
-    autobindHearths:    { kind: "flag", scope: "run" },
-    autobindBeacons:    { kind: "flag", scope: "run" },
-    autobindSpires:     { kind: "flag", scope: "run" },
-    autobindObelisks:   { kind: "flag", scope: "run" },
-    clicksThisRun:  { kind: "count", scope: "run" },
-    veilLeft:       { kind: "count", scope: "run" },
-    tollLeft:       { kind: "count", scope: "run" },
-    wakeLeft:       { kind: "count", scope: "run" },
-    processionLeft: { kind: "count", scope: "run" },
-    knellLeft:      { kind: "count", scope: "run" },
-    // ── Peaks (num, account) ──
-    peakShades:    { kind: "num", scope: "account" },
-    peakLanterns:  { kind: "num", scope: "account" },
-    peakFetters:   { kind: "num", scope: "account" },
-    peakCensers:   { kind: "num", scope: "account" },
-    peakPyres:     { kind: "num", scope: "account" },
-    peakUrns:      { kind: "num", scope: "account" },
-    peakHearths:   { kind: "num", scope: "account" },
-    peakBeacons:   { kind: "num", scope: "account" },
-    peakSpires:    { kind: "num", scope: "account" },
-    peakObelisks:  { kind: "num", scope: "account" },
-    // ── Gift flags — renamed from bonus* (flag, account) ──
-    giftLifetimeSouls:   { kind: "flag", scope: "account" },
-    giftPeakShades:      { kind: "flag", scope: "account" },
-    giftFirstVessel:     { kind: "flag", scope: "account" },
-    giftFirstTribute:    { kind: "flag", scope: "account" },
-    giftThousandSouls:   { kind: "flag", scope: "account" },
-    giftFirstLantern:    { kind: "flag", scope: "account" },
-    giftFirstCenser:     { kind: "flag", scope: "account" },
-    giftFirstFetter:     { kind: "flag", scope: "account" },
-    giftTenThousandSouls:{ kind: "flag", scope: "account" },
-    giftFirstThrone:     { kind: "flag", scope: "account" },
-    // ── Gift flags (flag, account) ──
-    giftCrown:              { kind: "flag", scope: "account" },
-    giftFirstName:          { kind: "flag", scope: "account" },
-    giftFiveTributes:       { kind: "flag", scope: "account" },
-    giftNamesComplete:      { kind: "flag", scope: "account" },
-    giftFirstVeil:          { kind: "flag", scope: "account" },
-    giftFirstWake:          { kind: "flag", scope: "account" },
-    giftPeakLanterns:       { kind: "flag", scope: "account" },
-    giftPeakFetters:        { kind: "flag", scope: "account" },
-    giftPeakCensers:        { kind: "flag", scope: "account" },
-    giftFirstPyre:          { kind: "flag", scope: "account" },
-    giftFirstUrn:           { kind: "flag", scope: "account" },
-    giftFirstHearth:        { kind: "flag", scope: "account" },
-    giftFirstBeacon:        { kind: "flag", scope: "account" },
-    giftFirstSpire:         { kind: "flag", scope: "account" },
-    giftFirstObelisk:       { kind: "flag", scope: "account" },
-    giftEightTributes:      { kind: "flag", scope: "account" },
-    giftPeakPyres:          { kind: "flag", scope: "account" },
-    giftPeakUrns:           { kind: "flag", scope: "account" },
-    giftPeakHearths:        { kind: "flag", scope: "account" },
-    giftPeakBeacons:        { kind: "flag", scope: "account" },
-    giftPeakSpires:         { kind: "flag", scope: "account" },
-    giftPeakObelisks:       { kind: "flag", scope: "account" },
-    giftFirstCinders:       { kind: "flag", scope: "account" },
-    giftFirstUrnRite:       { kind: "flag", scope: "account" },
-    giftFirstHearthRite:    { kind: "flag", scope: "account" },
-    giftFirstBeaconRite:    { kind: "flag", scope: "account" },
-    giftFirstSpireRite:     { kind: "flag", scope: "account" },
-    giftFirstChalice:       { kind: "flag", scope: "account" },
-    giftTwelveTributes:     { kind: "flag", scope: "account" },
-    giftSixteenTributes:    { kind: "flag", scope: "account" },
-    giftTwentyTributes:     { kind: "flag", scope: "account" },
-    giftTwentyFourTributes: { kind: "flag", scope: "account" },
-    giftTwentyEightTributes:{ kind: "flag", scope: "account" },
-    giftThirtyTwoTributes:  { kind: "flag", scope: "account" },
-    giftThirtySixTributes:  { kind: "flag", scope: "account" },
-    giftFortyTributes:      { kind: "flag", scope: "account" },
-    giftFullCup:            { kind: "flag", scope: "account" },
-    giftThreeChalices:      { kind: "flag", scope: "account" },
-    giftFirstOssuary:       { kind: "flag", scope: "account" },
-    giftFullOssuary:        { kind: "flag", scope: "account" },
-    giftHundredDraws:       { kind: "flag", scope: "account" },
-    giftTwoHundredDraws:    { kind: "flag", scope: "account" },
-    giftThreeHundredDraws:  { kind: "flag", scope: "account" },
-    giftFirstEmberVow:      { kind: "flag", scope: "account" },
-    giftTwoVows:            { kind: "flag", scope: "account" },
-    giftThreeVows:          { kind: "flag", scope: "account" },
-    giftAllVows:            { kind: "flag", scope: "account" },
-    giftFirstProcession:        { kind: "flag", scope: "account" },
-    giftFirstLongerProcession:  { kind: "flag", scope: "account" },
-    giftFirstDeeperToll:        { kind: "flag", scope: "account" },
-    giftFirstLongerWake:        { kind: "flag", scope: "account" },
-    giftFirstLongerTithe:       { kind: "flag", scope: "account" },
-    giftFirstLongerVeil:        { kind: "flag", scope: "account" },
-    giftFirstLongerHymn:        { kind: "flag", scope: "account" },
-    giftFirstLongerKnell:       { kind: "flag", scope: "account" },
-    giftFirstToll:              { kind: "flag", scope: "account" },
-    giftFirstKnell:             { kind: "flag", scope: "account" },
-    // ── Choir / edict levels (account) ──
-    choirLevel:        { kind: "count", scope: "run", max: CHOIR_MAX },
-    unlockedChoir:     { kind: "flag",  scope: "run" },
-    choirEdictLevel:   { kind: "count", scope: "account" },
-    hymnEdictLevel:    { kind: "count", scope: "account" },
-    smokeEdictLevel:   { kind: "count", scope: "account" },
-    embersEdictLevel:  { kind: "count", scope: "account" },
-    urnEdictLevel:     { kind: "count", scope: "account" },
-    hearthEdictLevel:  { kind: "count", scope: "account" },
-    beaconEdictLevel:  { kind: "count", scope: "account" },
-    spireEdictLevel:   { kind: "count", scope: "account" },
-    obeliskEdictLevel: { kind: "count", scope: "account" },
-    cinderEdictLevel:  { kind: "count", scope: "account" },
-    cutEdictLevel:     { kind: "count", scope: "account" },
-    tendingEdictLevel: { kind: "count", scope: "account" },
-    gleamEdictLevel:   { kind: "count", scope: "account" },
-    riseEdictLevel:    { kind: "count", scope: "account" },
-    cupEdictLevel:     { kind: "count", scope: "account" },
-    draughtEdictLevel: { kind: "count", scope: "account" },
-    wakeEdictLevel:    { kind: "count", scope: "account" },
-    processionEdictLevel: { kind: "count", scope: "account" },
-    tollEdictLevel:    { kind: "count", scope: "account" },
-    veilEdictLevel:    { kind: "count", scope: "account" },
-    knellEdictLevel:   { kind: "count", scope: "account" },
-    nightEdictLevel:   { kind: "count", scope: "account" },
-    // ── Hymn timer / misc account ──
-    hymnLeft:          { kind: "count", scope: "run" },
-    crownWeight:       { kind: "count", scope: "account" },
-    longMemoryLevel:   { kind: "count", scope: "account" },
-    quietCourtLevel:   { kind: "count", scope: "account" },
-    namesBound:        { kind: "count", scope: "account", max: 12 },
-    namesComplete:     { kind: "flag",  scope: "account" },
-    remembrance:       { kind: "count", scope: "account" },
-    deeperNightLevel:  { kind: "count", scope: "account" },
-    ashenTideLevel:    { kind: "count", scope: "account", max: ASHEN_TIDE_MAX },
-    ossuaryLevel:      { kind: "count", scope: "account", max: OSSUARY_MAX },
-    longerProcessionLevel: { kind: "count", scope: "account", max: LONGER_PROCESSION_MAX },
-    deeperTollLevel:   { kind: "count", scope: "account", max: DEEPER_TOLL_MAX },
-    longerWakeLevel:   { kind: "count", scope: "account", max: LONGER_WAKE_MAX },
-    longerTitheLevel:  { kind: "count", scope: "account", max: LONGER_TITHE_MAX },
-    longerVeilLevel:   { kind: "count", scope: "account", max: LONGER_VEIL_MAX },
-    longerHymnLevel:   { kind: "count", scope: "account", max: LONGER_HYMN_MAX },
-    longerKnellLevel:  { kind: "count", scope: "account", max: LONGER_KNELL_MAX },
-    // ── Vow / backup (run) ──
-    vow:            { kind: "str",  scope: "run", save: normalizeVow, load: normalizeVow },
-    vowHungerPaid:  { kind: "flag", scope: "run" },
-    vowsKnown:      { kind: "obj",  scope: "account", dflt: emptyVowsKnown, save: normalizeVowsKnown, load: seedVowsKnown },
-    bak1At:         { kind: "count", scope: "run" },
-    bak2At:         { kind: "count", scope: "run" },
-    runStartedAt:   { kind: "time",  scope: "run" },
-    // ── All-time / tribute counter (account) ──
-    allTimeSouls:   { kind: "num",   scope: "account" },
-    tributesLaid:   { kind: "count", scope: "account" }
-  };
-
-  var FIELDS_KEYS = Object.keys(FIELDS);
+  var FIELDS = S.FIELDS;
+  var FIELDS_KEYS = S.FIELDS_KEYS;
 
   // ── bonus* → gift* migration map (AZR-179) ──
   var BONUS_TO_GIFT = C.BONUS_TO_GIFT;
@@ -1310,36 +999,10 @@
 
   var PEAK_STATS = C.PEAK_STATS;
 
-  function fieldDefault(f) {
-    if (f.dflt !== undefined) return typeof f.dflt === "function" ? f.dflt() : f.dflt;
-    switch (f.kind) {
-      case "num":  return N.fromNumber(0);
-      case "count":return 0;
-      case "flag": return false;
-      case "str":  return "";
-      case "list": return [];
-      case "time": return Date.now();
-      case "obj":  return {};
-    }
-    return undefined;
-  }
-
-  function freshState() {
-    var s = {};
-    for (var i = 0; i < FIELDS_KEYS.length; i++) {
-      s[FIELDS_KEYS[i]] = fieldDefault(FIELDS[FIELDS_KEYS[i]]);
-    }
-    return s;
-  }
+  var freshState = S.freshState;
 
   function resetToScope(target) {
-    var fresh = freshState();
-    for (var i = 0; i < FIELDS_KEYS.length; i++) {
-      var k = FIELDS_KEYS[i];
-      if (FIELDS[k].scope === target) {
-        state[k] = fresh[k];
-      }
-    }
+    S.resetToScope(state, target);
   }
 
   var state = freshState();
@@ -3532,69 +3195,15 @@
 
   var SAVE_FIELDS = FIELDS_KEYS;
 
-  function dumpNum(v) {
-    return N.dump(v);
-  }
-
   function serializeState() {
-    var out = {};
-    for (var i = 0; i < FIELDS_KEYS.length; i++) {
-      var k = FIELDS_KEYS[i];
-      var f = FIELDS[k];
-      var v = state[k];
-      switch (f.kind) {
-        case "num":  out[k] = dumpNum(v); break;
-        case "count":
-          var n = Math.max(0, Math.floor(Number(v) || 0));
-          if (f.max != null) n = Math.min(f.max, n);
-          out[k] = n;
-          break;
-        case "flag": out[k] = !!v; break;
-        case "str":  out[k] = f.save ? f.save(v) : v; break;
-        case "list": out[k] = v || []; break;
-        case "time": out[k] = Number(v) || Date.now(); break;
-        case "obj":  out[k] = f.save ? f.save(v) : v; break;
-      }
-    }
-    out.lastTick = Date.now();
-    out.simulatedUntil = Number(state.simulatedUntil) || Number(state.lastTick) || Date.now();
-    if ((Number(state.chalices) || 0) >= 1) out.unlockedChalices = true;
-    if ((Number(state.bindingTollLevel) || 0) >= 1) out.unlockedBindingToll = true;
-    if ((Number(state.choirLevel) || 0) >= 1) out.unlockedChoir = true;
-    if ((Number(state.namesBound) || 0) >= 12) out.namesComplete = true;
-    return out;
+    return S.serializeState(state);
   }
 
-  function loadCount(v, max) {
-    var n = Math.floor(Number(v) || 0);
-    if (!isFinite(n) || n < 0) n = 0;
-    if (max != null) n = Math.min(max, n);
-    return n;
-  }
-
-  function loadNum(v) {
-    var x = N.load(v);
-    return N.isFinite(x) && N.cmp(x, 0) >= 0 ? x : N.fromNumber(0);
-  }
-
-  function numFieldBroken(v) {
-    if (typeof v === "number") return !isFinite(v) || v < 0;
-    if (v && typeof v === "object") {
-      if (typeof v.m !== "number" || !isFinite(v.m)) return true;
-      if (typeof v.e === "number" && !isFinite(v.e)) return true;
-      if (v.m < 0) return true;
-      return false;
-    }
-    return true;
-  }
+  var loadCount = S.loadCount;
+  var loadNum = S.loadNum;
 
   function coreCurrenciesBroken() {
-    return (
-      numFieldBroken(state.souls) ||
-      numFieldBroken(state.shades) ||
-      numFieldBroken(state.ash) ||
-      numFieldBroken(state.lifetimeSouls)
-    );
+    return S.coreCurrenciesBroken(state);
   }
 
   function tripwireSanity() {
@@ -3616,148 +3225,11 @@
     beginLoadFailure(raw);
   }
 
-  function isFiniteStock(v) {
-    if (typeof v === "number") return isFinite(v);
-    if (v && typeof v === "object" && !Array.isArray(v)) {
-      if (typeof v.m !== "number" || typeof v.e !== "number") return false;
-      if (!isFinite(v.m) || !isFinite(v.e)) return false;
-      return N.isFinite(N.load(v));
-    }
-    return false;
-  }
-
-  function isSaveShape(data) {
-    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
-    if (!Object.prototype.hasOwnProperty.call(data, "souls")) return false;
-    if (!Object.prototype.hasOwnProperty.call(data, "lifetimeSouls")) return false;
-    if (!isFiniteStock(data.souls)) return false;
-    if (!isFiniteStock(data.lifetimeSouls)) return false;
-    if (data.favorEarned != null && data.favorEarned !== undefined) {
-      var fe = Number(data.favorEarned);
-      if (!isFinite(fe) || fe < 0) return false;
-    }
-    return true;
-  }
+  var isFiniteStock = S.isFiniteStock;
+  var isSaveShape = S.isSaveShape;
 
   function applySaveData(data) {
-    for (var i = 0; i < FIELDS_KEYS.length; i++) {
-      var k = FIELDS_KEYS[i];
-      var f = FIELDS[k];
-      var raw = data[k];
-      switch (f.kind) {
-        case "num":  state[k] = loadNum(raw); break;
-        case "count":state[k] = loadCount(raw, f.max); break;
-        case "flag": state[k] = !!raw; break;
-        case "str":  state[k] = f.load ? f.load(raw) : (raw || ""); break;
-        case "list": state[k] = f.load ? f.load(raw) : (raw || []); break;
-        case "time": state[k] = loadCount(raw) || Date.now(); break;
-        case "obj":  state[k] = f.load ? f.load(raw) : (raw || {}); break;
-      }
-    }
-    state.simulatedUntil = loadCount(data.simulatedUntil) || loadCount(data.lastTick) || Date.now();
-    state.peakShades = N.max(loadNum(data.peakShades), loadNum(data.shades));
-    state.peakLanterns = N.max(loadNum(data.peakLanterns), loadNum(data.lanterns));
-    state.peakFetters = N.max(loadNum(data.peakFetters), loadNum(data.fetters));
-    state.peakCensers = N.max(loadNum(data.peakCensers), loadNum(data.censers));
-    state.peakPyres = N.max(loadNum(data.peakPyres), loadNum(data.pyres));
-    state.peakUrns = N.max(loadNum(data.peakUrns), loadNum(data.urns));
-    state.peakHearths = N.max(loadNum(data.peakHearths), loadNum(data.hearths));
-    state.peakBeacons = N.max(loadNum(data.peakBeacons), loadNum(data.beacons));
-    state.peakSpires = N.max(loadNum(data.peakSpires), loadNum(data.spires));
-    state.peakObelisks = N.max(loadNum(data.peakObelisks), loadNum(data.obelisks));
-    state.vowHungerPaid = !!data.vowHungerPaid && state.vow === "hunger";
-    if (data.favorEarned == null) state.favorEarned = loadCount(data.favor);
-    if (data.allTimeSouls == null) state.allTimeSouls = loadNum(data.lifetimeSouls);
-    if (N.cmp(state.allTimeSouls, 0) < 0) state.allTimeSouls = N.fromNumber(0);
-    var tendingLoaded = data.tendingEdictLevel;
-    if (tendingLoaded == null && data.kindlingEdictLevel != null) tendingLoaded = data.kindlingEdictLevel;
-    state.tendingEdictLevel = loadCount(tendingLoaded);
-    if ((loadCount(data.chalices) || 0) >= 1 || (loadCount(data.thrones) || 0) >= UNLOCK_CHALICES) state.unlockedChalices = true;
-    if (N.cmp(state.urns, 1) >= 0 || N.cmp(state.pyres, UNLOCK_URNS) >= 0) state.unlockedUrns = true;
-    if (N.cmp(state.hearths, 1) >= 0 || N.cmp(state.urns, UNLOCK_HEARTHS) >= 0) state.unlockedHearths = true;
-    if (N.cmp(state.beacons, 1) >= 0 || N.cmp(state.hearths, UNLOCK_BEACONS) >= 0) state.unlockedBeacons = true;
-    if (N.cmp(state.spires, 1) >= 0 || N.cmp(state.beacons, UNLOCK_SPIRES) >= 0) state.unlockedSpires = true;
-    if (N.cmp(state.obelisks, 1) >= 0 || N.cmp(state.spires, UNLOCK_OBELISKS) >= 0) state.unlockedObelisks = true;
-    if ((loadCount(data.nightLeft) || 0) > 0) state.unlockedNightTithe = true;
-    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (loadCount(data.veilLeft) || 0) > 0) state.unlockedVeil = true;
-    if (!!data.unlockedPyres || (loadCount(data.wakeLeft) || 0) > 0) state.unlockedWake = true;
-    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (loadCount(data.tollLeft) || 0) > 0) state.unlockedToll = true;
-    if (state.wakeLeft > 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.unlockedPyres) state.unlockedWake = true;
-    if (state.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(state.veilLeft) || 0) > 0) state.unlockedVeil = true;
-    if (state.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(state.tollLeft) || 0) > 0) state.unlockedToll = true;
-    if (state.unlockedPyres || N.cmp(state.pyres, 1) >= 0 || N.cmp(state.ash, UNLOCK_WAKE_ASH) >= 0 || state.wakeLeft > 0) state.unlockedWake = true;
-    if (state.bindingTollLevel >= 1) state.unlockedBindingToll = true;
-    if (state.choirLevel >= 1) state.unlockedChoir = true;
-    if (state.namesBound >= 12) state.namesComplete = true;
-    if ((loadCount(data.titheLeft) || 0) > 0) state.tithePaid = true;
-    if (data.giftFirstTribute == null && data.bonusFirstTribute == null) state.giftFirstTribute = (loadCount(data.tributesLaid) || 0) >= 1;
-    if (data.giftFirstTribute == null && data.bonusFirstTribute != null) state.giftFirstTribute = !!data.bonusFirstTribute;
-    if (data.giftCrown == null) state.giftCrown = state.crownWeight >= 1;
-    if (data.giftFirstName == null) state.giftFirstName = Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 1;
-    if (data.giftFiveTributes == null) state.giftFiveTributes = (loadCount(data.tributesLaid) || 0) >= 5;
-    if (data.giftEightTributes == null) state.giftEightTributes = (loadCount(data.tributesLaid) || 0) >= 8;
-    if (data.giftTwelveTributes == null) state.giftTwelveTributes = (loadCount(data.tributesLaid) || 0) >= 12;
-    if (data.giftSixteenTributes == null) state.giftSixteenTributes = (loadCount(data.tributesLaid) || 0) >= 16;
-    if (data.giftTwentyTributes == null) state.giftTwentyTributes = (loadCount(data.tributesLaid) || 0) >= 20;
-    if (data.giftTwentyFourTributes == null) state.giftTwentyFourTributes = hasChronicle("giftTwentyFourTributes") || (loadCount(data.tributesLaid) || 0) >= 24;
-    if (data.giftTwentyEightTributes == null) state.giftTwentyEightTributes = hasChronicle("giftTwentyEightTributes") || (loadCount(data.tributesLaid) || 0) >= 28;
-    if (data.giftThirtyTwoTributes == null) state.giftThirtyTwoTributes = hasChronicle("giftThirtyTwoTributes") || (loadCount(data.tributesLaid) || 0) >= 32;
-    if (data.giftThirtySixTributes == null) state.giftThirtySixTributes = hasChronicle("giftThirtySixTributes") || (loadCount(data.tributesLaid) || 0) >= 36;
-    if (data.giftFortyTributes == null) state.giftFortyTributes = hasChronicle("giftFortyTributes") || (loadCount(data.tributesLaid) || 0) >= 40;
-    if (data.giftNamesComplete == null) state.giftNamesComplete = !!data.namesComplete || Math.max(0, Math.floor(loadCount(data.namesBound) || 0)) >= 12;
-    if (data.giftFirstVeil == null) state.giftFirstVeil = hasChronicle("veil") || (loadCount(data.veilLeft) || 0) > 0;
-    if (data.giftFirstWake == null) state.giftFirstWake = hasChronicle("wake") || hasChronicle("giftFirstWake") || (loadCount(data.wakeLeft) || 0) > 0;
-    if (data.giftPeakLanterns == null) state.giftPeakLanterns = false;
-    if (data.giftPeakFetters == null) state.giftPeakFetters = false;
-    if (data.giftPeakCensers == null) state.giftPeakCensers = false;
-    if (data.giftFirstPyre == null) state.giftFirstPyre = hasChronicle("pyre") || hasChronicle("giftFirstPyre") || (embersStartsPyres(data.embersEdictLevel) > 0 && N.cmp(state.pyres, 1) >= 0);
-    if (data.giftFirstUrn == null) state.giftFirstUrn = hasChronicle("urn") || hasChronicle("giftFirstUrn") || (urnEdictStartsUrns(data.urnEdictLevel) > 0 && N.cmp(state.urns, 1) >= 0);
-    if (data.giftFirstHearth == null) state.giftFirstHearth = hasChronicle("hearth") || hasChronicle("giftFirstHearth") || (hearthEdictStartsHearths(data.hearthEdictLevel) > 0 && N.cmp(state.hearths, 1) >= 0);
-    if (data.giftFirstBeacon == null) state.giftFirstBeacon = hasChronicle("beacon") || hasChronicle("giftFirstBeacon") || (beaconEdictStartsBeacons(data.beaconEdictLevel) > 0 && N.cmp(state.beacons, 1) >= 0);
-    if (data.giftFirstSpire == null) state.giftFirstSpire = hasChronicle("spire") || hasChronicle("giftFirstSpire") || (spireEdictStartsSpires(data.spireEdictLevel) > 0 && N.cmp(state.spires, 1) >= 0);
-    if (data.giftFirstObelisk == null) state.giftFirstObelisk = hasChronicle("obelisk") || hasChronicle("giftFirstObelisk") || (obeliskEdictStartsObelisks(data.obeliskEdictLevel) > 0 && N.cmp(state.obelisks, 1) >= 0);
-    if (data.giftPeakPyres == null) state.giftPeakPyres = false;
-    if (data.giftPeakUrns == null) state.giftPeakUrns = false;
-    if (data.giftPeakHearths == null) state.giftPeakHearths = false;
-    if (data.giftPeakBeacons == null) state.giftPeakBeacons = false;
-    if (data.giftPeakSpires == null) state.giftPeakSpires = false;
-    if (data.giftPeakObelisks == null) state.giftPeakObelisks = false;
-    if (data.giftFirstCinders == null) state.giftFirstCinders = hasChronicle("giftFirstCinders") || hasChronicle("cinders") || (loadCount(data.cinderLevel) || 0) > 0;
-    if (data.giftFirstUrnRite == null) state.giftFirstUrnRite = hasChronicle("giftFirstUrnRite") || hasChronicle("urnRite") || (loadCount(data.urnRiteLevel) || 0) > 0;
-    if (data.giftFirstHearthRite == null) state.giftFirstHearthRite = hasChronicle("giftFirstHearthRite") || hasChronicle("hearthRite") || (loadCount(data.hearthRiteLevel) || 0) > 0;
-    if (data.giftFirstBeaconRite == null) state.giftFirstBeaconRite = hasChronicle("giftFirstBeaconRite") || hasChronicle("beaconRite") || (loadCount(data.beaconRiteLevel) || 0) > 0;
-    if (data.giftFirstSpireRite == null) state.giftFirstSpireRite = hasChronicle("giftFirstSpireRite") || hasChronicle("spireRite") || (loadCount(data.spireRiteLevel) || 0) > 0;
-    if (data.giftFirstChalice == null) state.giftFirstChalice = hasChronicle("giftFirstChalice") || hasChronicle("chalice") || (cupStartsChalices(data.cupEdictLevel) > 0 && (Number(state.chalices) || 0) >= 1);
-    if (data.giftFullCup == null) state.giftFullCup = hasChronicle("giftFullCup");
-    if (data.giftThreeChalices == null) state.giftThreeChalices = hasChronicle("giftThreeChalices");
-    if (data.giftFirstOssuary == null) state.giftFirstOssuary = hasChronicle("giftFirstOssuary") || hasChronicle("ossuary") || (loadCount(data.ossuaryLevel) || 0) >= 1;
-    if (data.giftFullOssuary == null) state.giftFullOssuary = hasChronicle("giftFullOssuary");
-    if (data.giftHundredDraws == null) state.giftHundredDraws = hasChronicle("giftHundredDraws");
-    if (data.giftTwoHundredDraws == null) state.giftTwoHundredDraws = hasChronicle("giftTwoHundredDraws");
-    if (data.giftThreeHundredDraws == null) state.giftThreeHundredDraws = hasChronicle("giftThreeHundredDraws");
-    if (data.giftFirstEmberVow == null) state.giftFirstEmberVow = hasChronicle("vowEmber") || hasChronicle("giftFirstEmberVow");
-    if (data.giftTwoVows == null) state.giftTwoVows = hasChronicle("giftTwoVows");
-    if (data.giftThreeVows == null) state.giftThreeVows = hasChronicle("giftThreeVows");
-    if (data.giftAllVows == null) state.giftAllVows = hasChronicle("giftAllVows");
-    if (data.giftFirstProcession == null) state.giftFirstProcession = hasChronicle("procession") || hasChronicle("giftFirstProcession") || (loadCount(data.processionLeft) || 0) > 0;
-    if (data.giftFirstLongerProcession == null) state.giftFirstLongerProcession = hasChronicle("giftFirstLongerProcession") || hasChronicle("longerProcession") || (loadCount(data.longerProcessionLevel) || 0) >= 1;
-    if (data.giftFirstDeeperToll == null) state.giftFirstDeeperToll = hasChronicle("giftFirstDeeperToll") || hasChronicle("deeperToll") || (loadCount(data.deeperTollLevel) || 0) >= 1;
-    if (data.giftFirstLongerWake == null) state.giftFirstLongerWake = hasChronicle("giftFirstLongerWake") || hasChronicle("longerWake") || (loadCount(data.longerWakeLevel) || 0) >= 1;
-    if (data.giftFirstLongerTithe == null) state.giftFirstLongerTithe = hasChronicle("giftFirstLongerTithe") || hasChronicle("longerTithe") || (loadCount(data.longerTitheLevel) || 0) >= 1;
-    if (data.giftFirstLongerVeil == null) state.giftFirstLongerVeil = hasChronicle("giftFirstLongerVeil") || hasChronicle("longerVeil") || (loadCount(data.longerVeilLevel) || 0) >= 1;
-    if (data.giftFirstLongerHymn == null) state.giftFirstLongerHymn = hasChronicle("giftFirstLongerHymn") || hasChronicle("longerHymn") || (loadCount(data.longerHymnLevel) || 0) >= 1;
-    if (data.giftFirstLongerKnell == null) state.giftFirstLongerKnell = hasChronicle("giftFirstLongerKnell") || hasChronicle("longerKnell") || (loadCount(data.longerKnellLevel) || 0) >= 1;
-    if (data.giftFirstToll == null) state.giftFirstToll = hasChronicle("toll") || hasChronicle("giftFirstToll") || (loadCount(data.tollLeft) || 0) > 0;
-    if (data.giftFirstKnell == null) state.giftFirstKnell = hasChronicle("knell") || hasChronicle("giftFirstKnell") || (loadCount(data.knellLeft) || 0) > 0;
-    // bonus* → gift* migration (AZR-179)
-    for (var oldKey in BONUS_TO_GIFT) {
-      if (Object.prototype.hasOwnProperty.call(BONUS_TO_GIFT, oldKey)) {
-        var newKey = BONUS_TO_GIFT[oldKey];
-        if (data[oldKey] && !state[newKey]) {
-          state[newKey] = true;
-        }
-      }
-    }
+    S.applySaveData(state, data);
     _giftUngrantedCount = -1;
     _giftLastSeen = null;
   }
