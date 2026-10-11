@@ -121,6 +121,7 @@ loadScript("js/state.js");
 loadScript("js/actions.js");
 loadScript("js/ui.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const E = sandbox.SoulgatherEconomy;
 
