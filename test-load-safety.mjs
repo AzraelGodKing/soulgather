@@ -414,9 +414,11 @@ assertEqual("AZR-168 loadCount(3, 2) caps", Eco.loadCount(3, 2), 2);
 
 // Source: no Number(data. leftover in applySaveData
 {
-  const applyStart = gameSrc.indexOf("function applySaveData");
-  const applyEnd = gameSrc.indexOf("function adoptSave");
-  const applyFn = gameSrc.slice(applyStart, applyEnd);
+  const stateSrc = fs.readFileSync(path.join(root, "js/state.js"), "utf8");
+  const applyStart = stateSrc.indexOf("function applySaveData");
+  const applyEnd = stateSrc.indexOf("global.SoulgatherState", applyStart);
+  const applyFn = applyStart >= 0 && applyEnd > applyStart ? stateSrc.slice(applyStart, applyEnd) : "";
+  assertTrue("AZR-168 source: applySaveData body found in state.js", applyFn.length > 2000);
   assertTrue(
     "AZR-168 source: no Number(data. in applySaveData",
     !/Number\(data\./.test(applyFn)
