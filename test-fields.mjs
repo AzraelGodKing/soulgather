@@ -110,6 +110,7 @@ function loadScript(rel) {
 loadScript("js/num.js");
 loadScript("js/format.js");
 loadScript("js/config.js");
+loadScript("js/edicts.js");
 loadScript("js/economy.js");
 loadScript("js/state.js");
 loadScript("js/actions.js");
