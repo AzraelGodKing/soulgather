@@ -97,6 +97,8 @@
     var toastActive = false;
     var toastHold = false;
     var toastEscapeArmed = false;
+    var toastHintSeen = false;
+    var toastReturnFocus = null;
     var giftToastBatch = null;
     var _favorReadyAnnounced = false;
     var els = {};
@@ -490,6 +492,7 @@
       var next = capEnqueueToast(toastQueue, message, TOAST_QUEUE_MAX);
       toastQueue.length = 0;
       for (var i = 0; i < next.length; i++) toastQueue.push(next[i]);
+      if (toastActive) syncToastChrome();
     }
 
     function formatGiftBatchSummary(count, totals) {
@@ -576,12 +579,14 @@
     }
 
     function presentToast(message) {
-      if (!els.toast) return;
+      if (!els.toast || !els.toastMsg) return;
       toastActive = true;
       window.clearTimeout(toastTimer);
       els.toast.classList.remove("is-visible");
       void els.toast.offsetWidth;
-      els.toast.textContent = message;
+      els.toastMsg.textContent = message;
+      syncToastChrome();
+      toastHintSeen = true;
       els.toast.classList.remove("is-hidden");
       void els.toast.offsetWidth;
       els.toast.classList.add("is-visible");
@@ -599,6 +604,8 @@
         toastQueue.length = 0;
         toastActive = false;
         toastEscapeArmed = false;
+        syncToastChrome();
+        releaseToastFocus();
         els.toast.classList.add("is-hidden");
         return;
       }
@@ -609,6 +616,8 @@
         return;
       }
       toastEscapeArmed = false;
+      syncToastChrome();
+      releaseToastFocus();
       window.setTimeout(function () {
         if (!els.toast.classList.contains("is-visible") && !toastActive) {
           els.toast.classList.add("is-hidden");
@@ -633,6 +642,32 @@
       }
       toastEscapeArmed = true;
       hideToast(false);
+      if (toastEscapeArmed) announce("Press Escape again to clear all notifications.");
+    }
+
+    function toastHintText() {
+      if (toastEscapeArmed) return "Esc again clears all";
+      if (toastQueue.length) return "Esc for next · twice clears all";
+      if (!toastHintSeen) return "Click or Esc to dismiss";
+      return "";
+    }
+
+    function syncToastChrome() {
+      if (!els.toast) return;
+      els.toast.classList.toggle("is-armed", toastEscapeArmed);
+      if (!els.toastHint) return;
+      var hint = toastHintText();
+      els.toastHint.textContent = hint;
+      els.toastHint.classList.toggle("is-hidden", !hint);
+    }
+
+    /** Keyboard focus on the dismiss button must not fall to <body> when the toast goes away. */
+    function releaseToastFocus() {
+      if (!els.toast || !els.toast.contains(document.activeElement)) return;
+      var back = toastReturnFocus;
+      toastReturnFocus = null;
+      if (!back || !back.focus || back.disabled || !document.body.contains(back)) back = els.gatherBtn;
+      if (back) back.focus();
     }
 
     function bindLabel(oneText, verb, k, unitOne, unitMany) {
@@ -1241,6 +1276,15 @@
       hideToast: hideToast,
       dismissToastNext: dismissToastNext,
       dismissToastEscape: dismissToastEscape,
+      toastHintText: toastHintText,
+      setToastReturnFocus: function (el) { toastReturnFocus = el; },
+      getToastState: function () {
+        return { active: toastActive, queue: toastQueue.slice(), armed: toastEscapeArmed, hintSeen: toastHintSeen };
+      },
+      resetToast: function () {
+        toastQueue.length = 0; toastActive = false; toastHold = false;
+        toastEscapeArmed = false; toastHintSeen = false; toastReturnFocus = null;
+      },
       render: render,
       renderNames: renderNames,
       hotSoulsUpdate: hotSoulsUpdate,

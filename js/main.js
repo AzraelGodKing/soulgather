@@ -757,9 +757,18 @@
     els.vowEmberRow = document.getElementById("vow-ember-row");
     els.vowEmberBuy = document.getElementById("vow-ember-buy");
     els.toast = document.getElementById("toast");
+    els.toastMsg = document.getElementById("toast-msg");
+    els.toastHint = document.getElementById("toast-hint");
+    els.wrap = document.querySelector(".wrap");
+    els.skipLink = document.querySelector(".skip-link");
     if (els.toast) {
+      // #toast-dismiss has no own listener: its click bubbles here, so one click = one advance.
       els.toast.addEventListener("click", function () {
         dismissToastNext();
+      });
+      els.toast.addEventListener("focusin", function (ev) {
+        var from = ev.relatedTarget;
+        if (from && !els.toast.contains(from)) U.setToastReturnFocus(from);
       });
     }
     els.resetBtn = document.getElementById("reset-btn");
@@ -991,6 +1000,10 @@
 
     document.addEventListener("keydown", function (ev) {
       if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (G.loadFailNoticeOpen()) {
+        G.handleLoadFailKeydown(ev);
+        return;
+      }
       var target = ev.target;
       var active = document.activeElement || target;
       if (isTypingTarget(target) || isTypingTarget(active)) return;

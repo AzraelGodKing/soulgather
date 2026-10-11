@@ -269,6 +269,200 @@ if (grantGiftSrc) {
 ok(uiJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
 ok(/announce\(\s*msgs\.length\s*\+/.test(uiJsSrc), "multi-gift batch announces count summary");
 
+// ─── Shared node mock for focus / inert tests (AZR-197, AZR-198) ───────────
+function mkNode(name, opts = {}) {
+  const n = {
+    name, disabled: !!opts.disabled, children: opts.children || [], attrs: {},
+    classes: new Set(opts.classes || []), textContent: ""
+  };
+  n.classList = {
+    add: (c) => n.classes.add(c),
+    remove: (c) => n.classes.delete(c),
+    contains: (c) => n.classes.has(c),
+    toggle(c, force) {
+      const on = force === undefined ? !n.classes.has(c) : !!force;
+      if (on) n.classes.add(c); else n.classes.delete(c);
+      return on;
+    }
+  };
+  n.setAttribute = (k, v) => { n.attrs[k] = String(v); };
+  n.removeAttribute = (k) => { delete n.attrs[k]; };
+  n.getAttribute = (k) => (k in n.attrs ? n.attrs[k] : null);
+  n.focus = () => { documentMock.activeElement = n; };
+  n.contains = (x) => x === n || n.children.some((c) => c.contains(x));
+  n.querySelectorAll = () => n.children;
+  n.addEventListener = () => {};
+  return n;
+}
+documentMock.body.contains = () => true;
+function keyEv(key, shiftKey = false) {
+  return { key, shiftKey, prevented: false, preventDefault() { this.prevented = true; } };
+}
+
+// ─── Test 14: AZR-196 contrast tokens + non-color Hollow cue ────────────────
+console.log("\n─── Test 14: AZR-196 contrast ───");
+function lum(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [n >> 16, (n >> 8) & 255, n & 255]
+    .map((c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; })
+    .reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
+}
+function contrast(a, b) {
+  const x = lum(a), y = lum(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+function cssVar(name) {
+  const m = css.match(new RegExp("--" + name + ":\\s*(#[0-9a-fA-F]{6})"));
+  return m ? m[1] : null;
+}
+function cssRule(sel) {
+  const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = css.match(new RegExp("(?:^|\\n)" + esc + "\\s*\\{([^}]*)\\}"));
+  return m ? m[1] : null;
+}
+const voidC = cssVar("void");
+const panelC = cssVar("panel");
+for (const tok of ["crimson-ink", "ash", "gold-dim", "bone-dim"]) {
+  const c = cssVar(tok);
+  ok(c && contrast(c, voidC) >= 4.5, `--${tok} ${c} ≥4.5:1 on void (${c && contrast(c, voidC).toFixed(2)})`);
+  ok(c && contrast(c, panelC) >= 4.5, `--${tok} ${c} ≥4.5:1 on panel (${c && contrast(c, panelC).toFixed(2)})`);
+}
+ok(contrast(cssVar("ash"), "#1a1416") >= 4.5, "disabled buy text (--ash) ≥4.5:1 on #1a1416");
+const hollowRule = cssRule(".souls-hollow");
+ok(hollowRule && hollowRule.includes("var(--crimson-ink)"), "Hollow text uses --crimson-ink");
+ok(hollowRule && !/opacity:/.test(hollowRule), "Hollow text has no extra opacity");
+ok(hollowRule && /border:/.test(hollowRule), "Hollow has a bordered badge (non-color cue)");
+ok(/\.souls-hollow::before\s*\{[^}]*content:\s*"\\26A0/.test(css), "Hollow has a warning glyph (non-color cue)");
+const disabledRule = cssRule(".card-buy:disabled");
+ok(disabledRule && !/opacity:/.test(disabledRule), ".card-buy:disabled has no opacity fade");
+ok(disabledRule && /border-style:\s*dashed/.test(disabledRule), ".card-buy:disabled uses a dashed border cue");
+ok(!css.includes("#6a5e52"), "old low-contrast disabled text #6a5e52 removed");
+ok(/\.card#spirit-card\.can-buy::before,[\s\S]*?repeating-linear-gradient/.test(css),
+   "crimson-family can-buy accent bar is dashed (hue-independent)");
+
+// ─── Test 15: AZR-199 buy-mode names, contrast, focus ring ──────────────────
+console.log("\n─── Test 15: AZR-199 buy-mode ───");
+for (const [mode, label, key] of [["1", "Buy 1 (key 1)", "1"], ["10", "Buy 10 (key 2)", "2"], ["max", "Buy Max (key 3)", "3"]]) {
+  const m = html.match(new RegExp('<button[^>]*data-mode="' + mode + '"[^>]*>'));
+  ok(m && m[0].includes('aria-label="' + label + '"'), `buy-mode ${mode} accessible name "${label}"`);
+  ok(m && m[0].includes('aria-keyshortcuts="' + key + '"'), `buy-mode ${mode} aria-keyshortcuts=${key}`);
+  ok(m && m[0].includes("aria-pressed="), `buy-mode ${mode} keeps aria-pressed`);
+}
+const buyModeBtn = cssRule(".buy-mode-btn");
+ok(buyModeBtn && !/opacity:/.test(buyModeBtn), "buy-mode off state has no opacity fade");
+ok(buyModeBtn && buyModeBtn.includes("var(--ash)"), "buy-mode off state uses --ash");
+ok(contrast(cssVar("ash"), "#120c14") >= 4.5, "buy-mode off text ≥4.5:1 on #120c14");
+const buyModeGroup = cssRule(".buy-mode");
+ok(buyModeGroup && !/overflow:\s*hidden/.test(buyModeGroup), ".buy-mode no longer clips focus rings");
+const buyModeFocus = cssRule(".buy-mode-btn:focus-visible");
+ok(buyModeFocus && /outline-offset:\s*-/.test(buyModeFocus), "buy-mode focus ring is inset");
+const buyModeOn = cssRule(".buy-mode-btn.is-on");
+ok(buyModeOn && /font-weight:\s*700/.test(buyModeOn), "selected buy-mode has a weight cue beyond hue");
+ok(/id="buy-mode-hint-dismiss"[^>]*aria-label="Dismiss buy amount hint"/.test(html), "hint dismiss has a specific accessible name");
+
+// ─── Test 16: AZR-197 toast dismiss affordance ──────────────────────────────
+console.log("\n─── Test 16: AZR-197 toast dismiss ───");
+const toastDiv = html.match(/<div[^>]*id="toast"[^>]*>/);
+ok(toastDiv && !toastDiv[0].includes("role="), "#toast container is not itself the live region");
+ok(/id="toast-msg"[^>]*role="status"/.test(html), "#toast-msg is the role=status region");
+ok(/<button[^>]*id="toast-dismiss"[^>]*aria-label="Dismiss notification"/.test(html), "toast has a focusable dismiss button with a name");
+ok(/id="toast-hint"[^>]*aria-hidden="true"/.test(html), "visual Esc hint is aria-hidden (SR gets announce)");
+
+const tMsg = mkNode("toast-msg");
+const tHint = mkNode("toast-hint", { classes: ["is-hidden"] });
+const tDismiss = mkNode("toast-dismiss");
+const tToast = mkNode("toast", { classes: ["is-hidden"], children: [tMsg, tDismiss, tHint] });
+const tGather = mkNode("gather-btn");
+E._setEls({ toast: tToast, toastMsg: tMsg, toastHint: tHint, gatherBtn: tGather });
+E._resetToast();
+E._resetAnnouncer();
+dateNowVal = 3000000;
+
+E.showToast("first toast");
+ok(tMsg.textContent === "first toast", "message written to #toast-msg, not the container");
+ok(tToast.children.includes(tDismiss), "dismiss button survives a toast write");
+ok(tHint.textContent === "Click or Esc to dismiss" && !tHint.classes.has("is-hidden"), "first toast of session shows dismiss hint");
+
+E.showToast("second");
+E.showToast("third");
+ok(tHint.textContent.startsWith("Esc for next"), "queued toasts switch hint to Esc-for-next");
+
+E.dismissToastEscape();
+let ts = E._getToastState();
+ok(tMsg.textContent === "second" && ts.armed, "first Esc advances and arms clear-all");
+ok(tToast.classes.has("is-armed"), "armed state is visible on toast chrome");
+ok(tHint.textContent === "Esc again clears all", "armed hint text");
+ok(announcer.textContent === "Press Escape again to clear all notifications." ||
+   E._getAnnounceQueue().includes("Press Escape again to clear all notifications."),
+   "armed state is announced via the throttled announcer");
+
+E.dismissToastEscape();
+ts = E._getToastState();
+ok(!ts.active && ts.queue.length === 0 && !ts.armed, "second Esc clears the queue");
+ok(!tToast.classes.has("is-armed") && tToast.classes.has("is-hidden"), "cleared toast hides and disarms");
+
+E.showToast("later");
+ok(tHint.classes.has("is-hidden"), "hint stays quiet after the first toast when nothing is queued");
+documentMock.activeElement = tDismiss;
+E.dismissToastNext();
+ok(documentMock.activeElement === tGather, "focus on dismiss returns to the page (not <body>) when the toast closes");
+
+// ─── Test 17: AZR-198 load-fail alertdialog focus management ────────────────
+console.log("\n─── Test 17: AZR-198 load-fail dialog ───");
+ok(/id="load-fail-notice"[^>]*tabindex="-1"/.test(html), "alertdialog container is programmatically focusable");
+
+const lfRaw = mkNode("load-fail-raw");
+const lfExport = mkNode("load-fail-export");
+const lfRestore = mkNode("load-fail-restore", { disabled: true });
+const lfFresh = mkNode("load-fail-fresh");
+const lfDialog = mkNode("load-fail-notice", { classes: ["is-hidden"], children: [lfRaw, lfExport, lfRestore, lfFresh] });
+const pageWrap = mkNode("wrap");
+const skip = mkNode("skip-link");
+const prevFocus = mkNode("prev-button");
+E._setEls({
+  loadFailNotice: lfDialog, loadFailRaw: lfRaw, loadFailRestore: lfRestore,
+  wrap: pageWrap, skipLink: skip, gatherBtn: tGather
+});
+documentMock.activeElement = prevFocus;
+E.showLoadFailNotice();
+ok(E.loadFailNoticeOpen(), "notice opens");
+ok(documentMock.activeElement === lfDialog, "opening moves focus to the alertdialog");
+ok(documentMock.activeElement !== lfFresh, "Start Fresh is not the initial focus target");
+ok(pageWrap.attrs.inert === "" && pageWrap.attrs["aria-hidden"] === "true", "page behind dialog is inert + aria-hidden");
+ok(skip.attrs.inert === "", "skip link is inert while dialog open");
+
+E.showLoadFailNotice();
+ok(documentMock.activeElement === lfDialog, "re-show while open does not steal the saved return focus");
+
+let ev = keyEv("Tab");
+E.handleLoadFailKeydown(ev);
+ok(ev.prevented && documentMock.activeElement === lfRaw, "Tab from dialog enters first control");
+E.handleLoadFailKeydown(keyEv("Tab"));
+ok(documentMock.activeElement === lfExport, "Tab → Export");
+E.handleLoadFailKeydown(keyEv("Tab"));
+ok(documentMock.activeElement === lfFresh, "Tab skips disabled Restore → Start Fresh");
+E.handleLoadFailKeydown(keyEv("Tab"));
+ok(documentMock.activeElement === lfRaw, "Tab wraps from last to first");
+E.handleLoadFailKeydown(keyEv("Tab", true));
+ok(documentMock.activeElement === lfFresh, "Shift+Tab wraps from first to last");
+
+const loadFailedBefore = E.getLoadFailed();
+ev = keyEv("Escape");
+E.handleLoadFailKeydown(ev);
+ok(ev.prevented && documentMock.activeElement === lfFresh, "Esc keeps focus where it is inside the dialog");
+ok(E.loadFailNoticeOpen() && E.getLoadFailed() === loadFailedBefore, "Esc does not close the dialog or Start Fresh");
+documentMock.activeElement = prevFocus;
+E.handleLoadFailKeydown(keyEv("Escape"));
+ok(documentMock.activeElement === lfDialog, "Esc with focus outside pulls focus back into the dialog");
+
+documentMock.activeElement = lfExport;
+E.hideLoadFailNotice();
+ok(!E.loadFailNoticeOpen(), "notice closes");
+ok(!("inert" in pageWrap.attrs) && !("aria-hidden" in pageWrap.attrs), "page inert/aria-hidden removed on close");
+ok(documentMock.activeElement === prevFocus, "focus restored to the pre-dialog element");
+E.hideLoadFailNotice();
+ok(documentMock.activeElement === prevFocus, "hide while already closed leaves focus alone");
+
 // ─── Summary ────────────────────────────────────────────────────────────────
 console.log("\n" + (failed ? "FAILED " + failed + " / " + (passed + failed) : "all " + passed + " a11y assertions passed"));
 process.exit(failed ? 1 : 0);

@@ -76,13 +76,13 @@
 
     <div class="buy-mode-row">
       <div class="buy-mode" id="buy-mode" role="group" aria-label="Buy amount">
-        <button type="button" class="buy-mode-btn is-on" data-mode="1" aria-pressed="true">1</button>
-        <button type="button" class="buy-mode-btn" data-mode="10" aria-pressed="false">10</button>
-        <button type="button" class="buy-mode-btn" data-mode="max" aria-pressed="false">Max</button>
+        <button type="button" class="buy-mode-btn is-on" data-mode="1" aria-pressed="true" aria-label="Buy 1 (key 1)" aria-keyshortcuts="1">1</button>
+        <button type="button" class="buy-mode-btn" data-mode="10" aria-pressed="false" aria-label="Buy 10 (key 2)" aria-keyshortcuts="2">10</button>
+        <button type="button" class="buy-mode-btn" data-mode="max" aria-pressed="false" aria-label="Buy Max (key 3)" aria-keyshortcuts="3">Max</button>
       </div>
       <p class="buy-mode-hint is-hidden" id="buy-mode-hint" role="status">
         <span>1 / 2 / 3 switch amount</span>
-        <button type="button" class="buy-mode-hint-dismiss" id="buy-mode-hint-dismiss" aria-label="Dismiss">×</button>
+        <button type="button" class="buy-mode-hint-dismiss" id="buy-mode-hint-dismiss" aria-label="Dismiss buy amount hint">×</button>
       </p>
     </div>
 
@@ -1336,9 +1336,13 @@
     </footer>
   </div>
 
-  <div class="toast is-hidden" id="toast" role="status"></div>
+  <div class="toast is-hidden" id="toast">
+    <span class="toast-msg" id="toast-msg" role="status"></span>
+    <button type="button" class="toast-dismiss" id="toast-dismiss" aria-label="Dismiss notification">×</button>
+    <span class="toast-hint is-hidden" id="toast-hint" aria-hidden="true"></span>
+  </div>
 
-  <div class="load-fail-notice is-hidden" id="load-fail-notice" role="alertdialog" aria-modal="true" aria-labelledby="load-fail-title" aria-describedby="load-fail-body" aria-hidden="true">
+  <div class="load-fail-notice is-hidden" id="load-fail-notice" role="alertdialog" aria-modal="true" aria-labelledby="load-fail-title" aria-describedby="load-fail-body" aria-hidden="true" tabindex="-1">
     <div class="load-fail-panel">
       <h2 class="load-fail-title" id="load-fail-title">The well's memory could not be read.</h2>
       <p class="load-fail-body" id="load-fail-body">Your save has not been overwritten. Export the raw memory below, restore a backup, or choose Start Fresh.</p>
