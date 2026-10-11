@@ -112,6 +112,7 @@ loadScript("js/format.js");
 loadScript("js/config.js");
 loadScript("js/economy.js");
 loadScript("js/state.js");
+loadScript("js/actions.js");
 loadScript("js/game.js");
 
 const N = sandbox.SoulgatherNum;
@@ -503,8 +504,8 @@ console.log("\n─── Test 5: v6.9 fixture compatibility ───");
 // ─── Test 6: no keptX in layTribute source ──────────────────────────────────────
 console.log("\n─── Test 6: no keptX in layTribute source ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const tributeMatch = src.match(/function layTribute\(\)[\s\S]*?^  \}/m);
+  const src = fs.readFileSync(path.join(root, "js", "actions.js"), "utf8");
+  const tributeMatch = src.match(/^([ \t]*)function layTribute\(\)[\s\S]*?^\1\}/m);
   if (tributeMatch) {
     const tributeSrc = tributeMatch[0];
     const keptMatches = tributeSrc.match(/\bvar\s+kept[A-Z]/g);
