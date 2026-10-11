@@ -122,6 +122,7 @@ loadScript("js/state.js");
 loadScript("js/prestige.js");
 loadScript("js/actions.js");
 loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
 loadScript("js/main.js");
 
@@ -258,7 +259,8 @@ ok(E.GAME_VERSION === "6.10.0", "GAME_VERSION is 6.10.0");
 
 // ─── Test 13: gift announcements batched, not per-gift ──────────────────────
 console.log("\n─── Test 13: gift announce batching ───");
-const grantGiftSrc = gameJsSrc.match(/function grantGift\(g\)\s*\{[^}]*\}/);
+const progressionJsSrc = fs.readFileSync(path.join(root, "js", "progression.js"), "utf8");
+const grantGiftSrc = progressionJsSrc.match(/function grantGift\(g\)\s*\{[^}]*\}/);
 ok(grantGiftSrc, "grantGift function found in source");
 if (grantGiftSrc) {
   ok(!grantGiftSrc[0].includes("announce("), "grantGift does NOT call announce() directly (batched via flushGiftToasts)");
