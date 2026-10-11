@@ -70,8 +70,8 @@ assertTrue(
   /function rotateBackups\s*\(/.test(gameSrc)
 );
 assertTrue(
-  "AZR-165 load-fail notice id in game.js",
-  /load-fail-notice/.test(gameSrc)
+  "AZR-165 load-fail notice id bound in main.js",
+  /load-fail-notice/.test(fs.readFileSync(path.join(root, "js/main.js"), "utf8"))
 );
 assertTrue(
   "AZR-165 no mid-load save before known-good comment/path",
@@ -277,6 +277,7 @@ loadScript("js/state.js");
 loadScript("js/actions.js");
 loadScript("js/ui.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const Eco = sandbox.SoulgatherEconomy;
 assertTrue("AZR-165 SoulgatherEconomy exported", !!Eco);

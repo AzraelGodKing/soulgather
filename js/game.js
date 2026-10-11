@@ -20,43 +20,14 @@
   var WELL_COST_BASE = C.WELL_COST_BASE;
   var WELL_COST_MULT = C.WELL_COST_MULT;
   var WELL_EARLY_MULT = C.WELL_EARLY_MULT;
-  var LANTERN_COST_BASE = C.LANTERN_COST_BASE;
-  var LANTERN_COST_MULT = C.LANTERN_COST_MULT;
-  var MARK_COST_BASE = C.MARK_COST_BASE;
-  var MARK_COST_MULT = C.MARK_COST_MULT;
-  var SHADE_SOULS_PER_SEC = C.SHADE_SOULS_PER_SEC;
-  var SPIRIT_SHADES_PER_SEC = C.SPIRIT_SHADES_PER_SEC;
-  var VESSEL_SPIRITS_PER_SEC = C.VESSEL_SPIRITS_PER_SEC;
-  var CENSER_ASH_PER_SEC = C.CENSER_ASH_PER_SEC;
-  var PYRE_ASH_PER_SEC = C.PYRE_ASH_PER_SEC;
-  var PYRE_COST_BASE = C.PYRE_COST_BASE;
-  var PYRE_COST_MULT = C.PYRE_COST_MULT;
   var UNLOCK_PYRES = C.UNLOCK_PYRES;
-  var URN_ASH_PER_SEC = C.URN_ASH_PER_SEC;
-  var URN_COST_BASE = C.URN_COST_BASE;
-  var URN_COST_MULT = C.URN_COST_MULT;
   var UNLOCK_URNS = C.UNLOCK_URNS;
-  var HEARTH_ASH_PER_SEC = C.HEARTH_ASH_PER_SEC;
-  var HEARTH_COST_BASE = C.HEARTH_COST_BASE;
-  var HEARTH_COST_MULT = C.HEARTH_COST_MULT;
   var UNLOCK_HEARTHS = C.UNLOCK_HEARTHS;
-  var BEACON_ASH_PER_SEC = C.BEACON_ASH_PER_SEC;
-  var BEACON_COST_BASE = C.BEACON_COST_BASE;
-  var BEACON_COST_MULT = C.BEACON_COST_MULT;
   var UNLOCK_BEACONS = C.UNLOCK_BEACONS;
-  var SPIRE_ASH_PER_SEC = C.SPIRE_ASH_PER_SEC;
-  var SPIRE_COST_BASE = C.SPIRE_COST_BASE;
-  var SPIRE_COST_MULT = C.SPIRE_COST_MULT;
   var UNLOCK_SPIRES = C.UNLOCK_SPIRES;
-  var OBELISK_ASH_PER_SEC = C.OBELISK_ASH_PER_SEC;
-  var OBELISK_COST_BASE = C.OBELISK_COST_BASE;
-  var OBELISK_COST_MULT = C.OBELISK_COST_MULT;
   var UNLOCK_OBELISKS = C.UNLOCK_OBELISKS;
   var UNLOCK_CHALICES = C.UNLOCK_CHALICES;
   var CHALICE_MAX = C.CHALICE_MAX;
-  var CHALICE_COST_BASE = C.CHALICE_COST_BASE;
-  var CHALICE_COST_MULT = C.CHALICE_COST_MULT;
-  var ASH_FROM_SHADE_FRAC = C.ASH_FROM_SHADE_FRAC;
   var UNLOCK_SHADES = C.UNLOCK_SHADES;
   var UNLOCK_LIFETIME = C.UNLOCK_LIFETIME;
   var UNLOCK_SPIRITS_FOR_VESSELS = C.UNLOCK_SPIRITS_FOR_VESSELS;
@@ -68,11 +39,9 @@
   var UNLOCK_MARKS_LIFETIME = C.UNLOCK_MARKS_LIFETIME;
   var UNLOCK_CENSERS_VESSELS = C.UNLOCK_CENSERS_VESSELS;
   var UNLOCK_CENSERS_LIFETIME_SPIRITS = C.UNLOCK_CENSERS_LIFETIME_SPIRITS;
-  var WELL_DRAWS_COST = C.WELL_DRAWS_COST;
   var BULK_CAP = C.BULK_CAP;
   var RENDER_HZ = C.RENDER_HZ;
   var RENDER_MS = C.RENDER_MS;
-  var AUTOSAVE_MS = C.AUTOSAVE_MS;
   var MAX_DT = C.MAX_DT;
   var AUTOBIND_INTERVAL = C.AUTOBIND_INTERVAL;
   var LIVE_FRAME_MAX = C.LIVE_FRAME_MAX;
@@ -90,13 +59,7 @@
   var TOAST_MS = C.TOAST_MS;
   var TOAST_FAST_MS = C.TOAST_FAST_MS;
   var TOAST_QUEUE_MAX = C.TOAST_QUEUE_MAX;
-  var AWAY_MIN_DT = C.AWAY_MIN_DT;
   var AWAY_SUMMARY_DT = C.AWAY_SUMMARY_DT;
-  var TITHE_MIN = C.TITHE_MIN;
-  var TITHE_FRAC = C.TITHE_FRAC;
-  var TITHE_SECS = C.TITHE_SECS;
-  var FETTER_COST_BASE = C.FETTER_COST_BASE;
-  var FETTER_COST_MULT = C.FETTER_COST_MULT;
   var UNLOCK_FETTERS = C.UNLOCK_FETTERS;
   var UNLOCK_AUTOBIND_SHADES = C.UNLOCK_AUTOBIND_SHADES;
   var UNLOCK_AUTOBIND_SPIRITS = C.UNLOCK_AUTOBIND_SPIRITS;
@@ -131,8 +94,6 @@
   var RITE_MULT_BASE = C.RITE_MULT_BASE;
   var SIPHON_COST_BASE = C.SIPHON_COST_BASE;
   var LEVY_COST_BASE = C.LEVY_COST_BASE;
-  var BINDING_TOLL_COST_BASE = C.BINDING_TOLL_COST_BASE;
-  var BINDING_TOLL_COST_MULT = C.BINDING_TOLL_COST_MULT;
   var BINDING_TOLL_MAX = C.BINDING_TOLL_MAX;
   var BINDING_TOLL_RATE = C.BINDING_TOLL_RATE;
   var BINDING_TOLL_COST_BONUS = C.BINDING_TOLL_COST_BONUS;
@@ -141,19 +102,10 @@
   var UNLOCK_TOLL_CLICKS = C.UNLOCK_TOLL_CLICKS;
   var TOLL_COST = C.TOLL_COST;
   var TOLL_SECS = C.TOLL_SECS;
-  var VEIL_MIN = C.VEIL_MIN;
-  var VEIL_FRAC = C.VEIL_FRAC;
-  var VEIL_SECS = C.VEIL_SECS;
   var WAKE_COST = C.WAKE_COST;
   var WAKE_SECS = C.WAKE_SECS;
   var UNLOCK_WAKE_ASH = C.UNLOCK_WAKE_ASH;
-  var NIGHT_TITHE_MIN = C.NIGHT_TITHE_MIN;
-  var NIGHT_TITHE_FRAC = C.NIGHT_TITHE_FRAC;
-  var NIGHT_TITHE_SECS = C.NIGHT_TITHE_SECS;
-  var REMEMBRANCE_FAVOR_COST = C.REMEMBRANCE_FAVOR_COST;
   var FAVOR_SOULS_BASE = C.FAVOR_SOULS_BASE;
-  var ASHEN_TIDE_MAX = C.ASHEN_TIDE_MAX;
-  var OSSUARY_COST = C.OSSUARY_COST;
   var OSSUARY_MAX = C.OSSUARY_MAX;
   var PROCESSION_COST = C.PROCESSION_COST;
   var PROCESSION_SECS = C.PROCESSION_SECS;
@@ -166,17 +118,11 @@
   var LONGER_VEIL_MAX = C.LONGER_VEIL_MAX;
   var LONGER_HYMN_MAX = C.LONGER_HYMN_MAX;
   var LONGER_KNELL_MAX = C.LONGER_KNELL_MAX;
-  var CHOIR_MAX = C.CHOIR_MAX;
-  var CHOIR_LANTERN_COST = C.CHOIR_LANTERN_COST;
   var UNLOCK_CHOIR_LANTERNS = C.UNLOCK_CHOIR_LANTERNS;
   var UNLOCK_CHOIR_ASH = C.UNLOCK_CHOIR_ASH;
-  var HYMN_SECS = C.HYMN_SECS;
-  var HYMN_MULT = C.HYMN_MULT;
-  var NAME_THRESHOLDS = C.NAME_THRESHOLDS;
   var BOUND_NAMES = C.BOUND_NAMES;
 
   var num = E.num;
-  var nVal = E.nVal;
 
   var _dirty = true;
   var _lastRenderTime = 0;
@@ -187,8 +133,6 @@
   function markSaveDirty() { saveDirty = true; }
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
   function markRenderDirty() { markDirty(); }
-
-  var addOwned = E.addOwned;
 
   /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
   var ANNOUNCE_THROTTLE_MS = C.ANNOUNCE_THROTTLE_MS;
@@ -278,7 +222,6 @@
 
   var wellBulkCostLoop = E.wellBulkCostLoop;
   var wellMaxAffordableLoop = E.wellMaxAffordableLoop;
-  var _geoSum = E._geoSum;
   var wellBulkCost = E.wellBulkCost;
   var wellMaxAffordable = E.wellMaxAffordable;
 
@@ -308,8 +251,6 @@
 
   var nextFavorThreshold = E.nextFavorThreshold;
 
-  var favorOrdinal = C.favorOrdinal;
-
   var prestigeMult = C.prestigeMult;
 
   var harvestMult = C.harvestMult;
@@ -321,8 +262,6 @@
   var chaliceMult = C.chaliceMult;
 
   var ossuaryMult = C.ossuaryMult;
-
-  var crownProdFactor = E.crownProdFactor;
 
   var prodMult = E.prodMult;
 
@@ -552,25 +491,13 @@
     }
   }
 
-  var ASPECT_IDS = C.ASPECT_IDS;
-  var ASPECT_NAMES = C.ASPECT_NAMES;
-
   var normalizeAspect = C.normalizeAspect;
-
-  var VOW_IDS = C.VOW_IDS;
-  var VOW_NAMES = C.VOW_NAMES;
-
-  var VOW_HUD_STRINGS = C.VOW_HUD_STRINGS;
 
   var normalizeVow = C.normalizeVow;
 
   var vowExtraFavor = C.vowExtraFavor;
 
-  var emptyVowsKnown = C.emptyVowsKnown;
-
   var vowsKnownCount = C.vowsKnownCount;
-
-  var normalizeVowsKnown = C.normalizeVowsKnown;
 
   var U = globalThis.SoulgatherUI.create({
     getState: function () { return state; },
@@ -606,7 +533,6 @@
     wellPurchasePlan: wellPurchasePlan
   });
   var els = U.els;
-  var toastQueue = U.toastQueue;
   var setText = U.setText;
   var announce = U.announce;
   var fmt = U.fmt;
@@ -636,10 +562,7 @@
   var showToast = U.showToast;
   var toastBulk = U.toastBulk;
   var hideToast = U.hideToast;
-  var dismissToastNext = U.dismissToastNext;
-  var dismissToastEscape = U.dismissToastEscape;
   var render = U.render;
-  var hotSoulsUpdate = U.hotSoulsUpdate;
 
   var A = globalThis.SoulgatherActions.create({
     getState: function () { return state; },
@@ -693,83 +616,10 @@
   var buySpire = A.buySpire;
   var buyObelisk = A.buyObelisk;
   var buyChalice = A.buyChalice;
-  var buyMark = A.buyMark;
-  var buyEdict = A.buyEdict;
-  var buyMemory = A.buyMemory;
-  var buyEcho = A.buyEcho;
-  var buySeat = A.buySeat;
-  var buyKindle = A.buyKindle;
-  var buyAshen = A.buyAshen;
-  var buyDepth = A.buyDepth;
-  var buyChoirEdict = A.buyChoirEdict;
-  var buyHymnEdict = A.buyHymnEdict;
-  var buySmokeEdict = A.buySmokeEdict;
-  var buyEmbersEdict = A.buyEmbersEdict;
-  var buyUrnEdict = A.buyUrnEdict;
-  var buyHearthEdict = A.buyHearthEdict;
-  var buyBeaconEdict = A.buyBeaconEdict;
-  var buySpireEdict = A.buySpireEdict;
-  var buyObeliskEdict = A.buyObeliskEdict;
-  var buyCinderEdict = A.buyCinderEdict;
-  var buyCutEdict = A.buyCutEdict;
-  var buyTendingEdict = A.buyTendingEdict;
-  var buyGleamEdict = A.buyGleamEdict;
-  var buyRiseEdict = A.buyRiseEdict;
-  var buyCupEdict = A.buyCupEdict;
-  var buyDraughtEdict = A.buyDraughtEdict;
-  var buyWakeEdict = A.buyWakeEdict;
-  var buyProcessionEdict = A.buyProcessionEdict;
-  var buyTollEdict = A.buyTollEdict;
-  var buyVeilEdict = A.buyVeilEdict;
-  var buyKnellEdict = A.buyKnellEdict;
-  var buyNightEdict = A.buyNightEdict;
   var buySiphon = A.buySiphon;
   var buyLevy = A.buyLevy;
   var buyBindingToll = A.buyBindingToll;
-  var buyCinders = A.buyCinders;
-  var buyUrnRite = A.buyUrnRite;
-  var buyHearthRite = A.buyHearthRite;
-  var buyBeaconRite = A.buyBeaconRite;
-  var buySpireRite = A.buySpireRite;
   var buyWellDraws = A.buyWellDraws;
-  var payTithe = A.payTithe;
-  var payNightTithe = A.payNightTithe;
-  var keepWake = A.keepWake;
-  var toggleAutobind = A.toggleAutobind;
-  var toggleAutobindSpirits = A.toggleAutobindSpirits;
-  var toggleAutobindVessels = A.toggleAutobindVessels;
-  var toggleAutobindLanterns = A.toggleAutobindLanterns;
-  var toggleAutobindFetters = A.toggleAutobindFetters;
-  var toggleAutobindCensers = A.toggleAutobindCensers;
-  var toggleAutobindThrones = A.toggleAutobindThrones;
-  var toggleAutobindPyres = A.toggleAutobindPyres;
-  var toggleAutobindUrns = A.toggleAutobindUrns;
-  var toggleAutobindHearths = A.toggleAutobindHearths;
-  var toggleAutobindBeacons = A.toggleAutobindBeacons;
-  var toggleAutobindSpires = A.toggleAutobindSpires;
-  var toggleAutobindObelisks = A.toggleAutobindObelisks;
-  var toggleAutobindChalices = A.toggleAutobindChalices;
-  var soundToll = A.soundToll;
-  var thinVeil = A.thinVeil;
-  var buyCrownWeight = A.buyCrownWeight;
-  var buyLongMemory = A.buyLongMemory;
-  var buyQuietCourt = A.buyQuietCourt;
-  var layRemembrance = A.layRemembrance;
-  var buyDeeperNight = A.buyDeeperNight;
-  var buyLongerProcession = A.buyLongerProcession;
-  var buyDeeperToll = A.buyDeeperToll;
-  var buyLongerWake = A.buyLongerWake;
-  var buyLongerTithe = A.buyLongerTithe;
-  var buyLongerVeil = A.buyLongerVeil;
-  var buyLongerHymn = A.buyLongerHymn;
-  var buyLongerKnell = A.buyLongerKnell;
-  var buyAshenTide = A.buyAshenTide;
-  var buyOssuary = A.buyOssuary;
-  var beginProcession = A.beginProcession;
-  var soundKnell = A.soundKnell;
-  var raiseChoir = A.raiseChoir;
-  var swearAspect = A.swearAspect;
-  var swearVow = A.swearVow;
   var applyEdictStartingStock = A.applyEdictStartingStock;
   var applyAutobindStarts = A.applyAutobindStarts;
   var layTribute = A.layTribute;
@@ -780,11 +630,8 @@
 
   var normalizeBuyMode = C.normalizeBuyMode;
 
-  var CHRONICLE_ORDER = C.CHRONICLE_ORDER;
-
   var CHRONICLE_LINES = C.CHRONICLE_LINES;
 
-  var formatGoalNum = E.formatGoalNum;
   var nextGoal = E.nextGoal;
 
   function hasChronicle(id) {
@@ -2520,911 +2367,75 @@
 
   var toastOverflowCount = C.toastOverflowCount;
 
-  function tick(now) {
+  function frameDt(now) {
     if (!lastFrame) lastFrame = now;
     var dt = (now - lastFrame) / 1000;
     lastFrame = now;
-    applyDt(dt, true);
-    hotSoulsUpdate();
-    if (_dirty && now - _lastRenderTime >= RENDER_MS) {
-      _dirty = false;
-      _lastRenderTime = now;
-      render();
-    }
-    window.requestAnimationFrame(tick);
+    return dt;
   }
 
-  function hotkeyDefaultGuard(ctx) {
-    return !ctx.otherButton;
+  function takeRenderDue(now) {
+    if (!_dirty || now - _lastRenderTime < RENDER_MS) return false;
+    _dirty = false;
+    _lastRenderTime = now;
+    return true;
   }
 
-  /** Table-driven hotkeys (AZR-172). Shared default guard is !otherButton. */
-  var HOTKEYS = [
-    {
-      keys: ["1"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        ctx.ev.preventDefault();
-        setBuyMode("1");
-      }
-    },
-    {
-      keys: ["2"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        ctx.ev.preventDefault();
-        setBuyMode("10");
-      }
-    },
-    {
-      keys: ["3"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        ctx.ev.preventDefault();
-        setBuyMode("max");
-      }
-    },
-    {
-      keys: ["t"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (state.unlockedWell && !titheActive() && N.cmp(state.souls, currentTitheCost()) >= 0) {
-          ctx.ev.preventDefault();
-          payTithe();
-        }
-      }
-    },
-    {
-      keys: ["n"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (normalizeVow(state.vow) === "ember") return;
-        if (state.unlockedNightTithe && !nightActive() && N.cmp(state.ash, NIGHT_TITHE_MIN) >= 0) {
-          ctx.ev.preventDefault();
-          payNightTithe();
-        }
-      }
-    },
-    {
-      keys: ["w"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (normalizeVow(state.vow) === "ember") return;
-        if (state.unlockedWake && !wakeActive() && N.cmp(state.ash, N.fromNumber(WAKE_COST)) >= 0) {
-          ctx.ev.preventDefault();
-          keepWake();
-        }
-      }
-    },
-    {
-      keys: ["v"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (state.unlockedVeil && !veilActive() && N.cmp(state.ash, VEIL_MIN) >= 0) {
-          ctx.ev.preventDefault();
-          thinVeil();
-        }
-      }
-    },
-    {
-      keys: ["g"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (state.unlockedToll && !tollActive() && N.cmp(state.souls, N.fromNumber(TOLL_COST)) >= 0) {
-          ctx.ev.preventDefault();
-          soundToll();
-        }
-      }
-    },
-    {
-      keys: ["c"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        var cHotCost = cinderCost(state.cinderLevel);
-        if (state.unlockedPyres && N.cmp(state.ash, cHotCost) >= 0) {
-          ctx.ev.preventDefault();
-          buyCinders();
-        }
-      }
-    },
-    {
-      keys: ["u"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        var uHotCost = urnRiteCost(state.urnRiteLevel);
-        if (state.unlockedUrns && N.cmp(state.ash, uHotCost) >= 0) {
-          ctx.ev.preventDefault();
-          buyUrnRite();
-        }
-      }
-    },
-    {
-      keys: ["h"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        var hHotCost = hearthRiteCost(state.hearthRiteLevel);
-        if (state.unlockedHearths && N.cmp(state.ash, hHotCost) >= 0) {
-          ctx.ev.preventDefault();
-          buyHearthRite();
-        }
-      }
-    },
-    {
-      keys: ["l"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        var bHotCost = beaconRiteCost(state.beaconRiteLevel);
-        if (state.unlockedBeacons && N.cmp(state.ash, bHotCost) >= 0) {
-          ctx.ev.preventDefault();
-          buyBeaconRite();
-        }
-      }
-    },
-    {
-      keys: ["s"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        var sHotCost = spireRiteCost(state.spireRiteLevel);
-        if (state.unlockedSpires && N.cmp(state.ash, sHotCost) >= 0) {
-          ctx.ev.preventDefault();
-          buySpireRite();
-        }
-      }
-    },
-    {
-      keys: ["b"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (
-          remembranceUnlocked() &&
-          (Number(state.ossuaryLevel) || 0) < OSSUARY_MAX &&
-          (Number(state.remembrance) || 0) >= OSSUARY_COST
-        ) {
-          ctx.ev.preventDefault();
-          buyOssuary();
-        }
-      }
-    },
-    {
-      keys: ["p"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (
-          remembranceUnlocked() &&
-          !processionActive() &&
-          (Number(state.remembrance) || 0) >= PROCESSION_COST
-        ) {
-          ctx.ev.preventDefault();
-          beginProcession();
-        }
-      }
-    },
-    {
-      keys: ["k"],
-      guard: hotkeyDefaultGuard,
-      action: function (ctx) {
-        if (
-          remembranceUnlocked() &&
-          !knellActive() &&
-          (Number(state.remembrance) || 0) >= KNELL_COST
-        ) {
-          ctx.ev.preventDefault();
-          soundKnell();
-        }
-      }
-    }
-  ];
-
-  /** Pure: return matching HOTKEYS entry when key+guard pass; else null (AZR-172). */
-  function resolveHotkey(key, ctx) {
-    var k = String(key == null ? "" : key).toLowerCase();
-    var i;
-    for (i = 0; i < HOTKEYS.length; i++) {
-      var hk = HOTKEYS[i];
-      if (hk.keys.indexOf(k) < 0) continue;
-      var guard = hk.guard || hotkeyDefaultGuard;
-      if (!guard(ctx || {})) return null;
-      return hk;
-    }
-    return null;
+  function resetFrameClock() {
+    lastFrame = 0;
   }
 
-  function bind() {
-    els.soulsCount = document.getElementById("souls-count");
-    els.soulsRate = document.getElementById("souls-rate");
-    els.hollowStatus = document.getElementById("hollow-status");
-    els.vowStatus = document.getElementById("vow-status");
-    els.soulsAsh = document.getElementById("souls-ash");
-    els.soulsFavor = document.getElementById("souls-favor");
-    els.soulsHymn = document.getElementById("souls-hymn");
-    els.soulsWake = document.getElementById("souls-wake");
-    els.soulsKnell = document.getElementById("souls-knell");
-    els.gatherBtn = document.getElementById("gather-btn");
-    els.gatherVerb = els.gatherBtn ? els.gatherBtn.querySelector(".verb") : null;
-    els.gatherNoun = els.gatherBtn ? els.gatherBtn.querySelector(".noun") : null;
-    els.buyMode = document.getElementById("buy-mode");
-    els.buyModeHint = document.getElementById("buy-mode-hint");
-    els.buyModeHintDismiss = document.getElementById("buy-mode-hint-dismiss");
-    els.wellCard = document.getElementById("well-card");
-    els.wellOwned = document.getElementById("well-owned");
-    els.wellPower = document.getElementById("well-power");
-    els.wellCost = document.getElementById("well-cost");
-    els.wellBuy = document.getElementById("well-buy");
-    els.shadeCard = document.getElementById("shade-card");
-    els.shadeOwned = document.getElementById("shade-owned");
-    els.shadeProd = document.getElementById("shade-prod");
-    els.shadeCost = document.getElementById("shade-cost");
-    els.shadeBuy = document.getElementById("shade-buy");
-    els.lanternCard = document.getElementById("lantern-card");
-    els.lanternOwned = document.getElementById("lantern-owned");
-    els.lanternProd = document.getElementById("lantern-prod");
-    els.lanternCost = document.getElementById("lantern-cost");
-    els.lanternBuy = document.getElementById("lantern-buy");
-    els.fetterCard = document.getElementById("fetter-card");
-    els.fetterOwned = document.getElementById("fetter-owned");
-    els.fetterProd = document.getElementById("fetter-prod");
-    els.fetterCost = document.getElementById("fetter-cost");
-    els.fetterBuy = document.getElementById("fetter-buy");
-    els.spiritCard = document.getElementById("spirit-card");
-    els.spiritOwned = document.getElementById("spirit-owned");
-    els.spiritProd = document.getElementById("spirit-prod");
-    els.spiritCost = document.getElementById("spirit-cost");
-    els.spiritBuy = document.getElementById("spirit-buy");
-    els.vesselCard = document.getElementById("vessel-card");
-    els.vesselOwned = document.getElementById("vessel-owned");
-    els.vesselProd = document.getElementById("vessel-prod");
-    els.vesselCost = document.getElementById("vessel-cost");
-    els.vesselBuy = document.getElementById("vessel-buy");
-    els.censerCard = document.getElementById("censer-card");
-    els.censerOwned = document.getElementById("censer-owned");
-    els.censerProd = document.getElementById("censer-prod");
-    els.censerCost = document.getElementById("censer-cost");
-    els.censerBuy = document.getElementById("censer-buy");
-    els.pyreCard = document.getElementById("pyre-card");
-    els.pyreOwned = document.getElementById("pyre-owned");
-    els.pyreProd = document.getElementById("pyre-prod");
-    els.pyreCost = document.getElementById("pyre-cost");
-    els.pyreBuy = document.getElementById("pyre-buy");
-    els.urnCard = document.getElementById("urn-card");
-    els.urnOwned = document.getElementById("urn-owned");
-    els.urnProd = document.getElementById("urn-prod");
-    els.urnCost = document.getElementById("urn-cost");
-    els.urnBuy = document.getElementById("urn-buy");
-    els.hearthCard = document.getElementById("hearth-card");
-    els.hearthOwned = document.getElementById("hearth-owned");
-    els.hearthProd = document.getElementById("hearth-prod");
-    els.hearthCost = document.getElementById("hearth-cost");
-    els.hearthBuy = document.getElementById("hearth-buy");
-    els.beaconCard = document.getElementById("beacon-card");
-    els.beaconOwned = document.getElementById("beacon-owned");
-    els.beaconProd = document.getElementById("beacon-prod");
-    els.beaconCost = document.getElementById("beacon-cost");
-    els.beaconBuy = document.getElementById("beacon-buy");
-    els.spireCard = document.getElementById("spire-card");
-    els.spireOwned = document.getElementById("spire-owned");
-    els.spireProd = document.getElementById("spire-prod");
-    els.spireCost = document.getElementById("spire-cost");
-    els.spireBuy = document.getElementById("spire-buy");
-    els.obeliskCard = document.getElementById("obelisk-card");
-    els.obeliskOwned = document.getElementById("obelisk-owned");
-    els.obeliskProd = document.getElementById("obelisk-prod");
-    els.obeliskCost = document.getElementById("obelisk-cost");
-    els.obeliskBuy = document.getElementById("obelisk-buy");
-    els.throneCard = document.getElementById("throne-card");
-    els.throneOwned = document.getElementById("throne-owned");
-    els.throneProd = document.getElementById("throne-prod");
-    els.throneCost = document.getElementById("throne-cost");
-    els.throneBuy = document.getElementById("throne-buy");
-    els.chaliceCard = document.getElementById("chalice-card");
-    els.chaliceOwned = document.getElementById("chalice-owned");
-    els.chaliceProd = document.getElementById("chalice-prod");
-    els.chaliceCost = document.getElementById("chalice-cost");
-    els.chaliceBuy = document.getElementById("chalice-buy");
-    els.tributePanel = document.getElementById("tribute-panel");
-    els.tributeFavor = document.getElementById("tribute-favor");
-    els.tributeGain = document.getElementById("tribute-gain");
-    els.tributeMult = document.getElementById("tribute-mult");
-    els.tributeBtn = document.getElementById("tribute-btn");
-    els.tributeFootBtn = document.getElementById("tribute-foot-btn");
-    els.reliquaryPanel = document.getElementById("reliquary-panel");
-    els.reliquaryFavor = document.getElementById("reliquary-favor");
-    els.reliquaryEarned = document.getElementById("reliquary-earned");
-    els.edictEffect = document.getElementById("edict-effect");
-    els.edictCost = document.getElementById("edict-cost");
-    els.edictBuy = document.getElementById("edict-buy");
-    els.memoryEffect = document.getElementById("memory-effect");
-    els.memoryCost = document.getElementById("memory-cost");
-    els.memoryBuy = document.getElementById("memory-buy");
-    els.echoEffect = document.getElementById("echo-effect");
-    els.echoCost = document.getElementById("echo-cost");
-    els.echoBuy = document.getElementById("echo-buy");
-    els.seatEffect = document.getElementById("seat-effect");
-    els.seatCost = document.getElementById("seat-cost");
-    els.seatBuy = document.getElementById("seat-buy");
-    els.kindleEffect = document.getElementById("kindle-effect");
-    els.kindleCost = document.getElementById("kindle-cost");
-    els.kindleBuy = document.getElementById("kindle-buy");
-    els.ashenEffect = document.getElementById("ashen-effect");
-    els.ashenCost = document.getElementById("ashen-cost");
-    els.ashenBuy = document.getElementById("ashen-buy");
-    els.depthEffect = document.getElementById("depth-effect");
-    els.depthCost = document.getElementById("depth-cost");
-    els.depthBuy = document.getElementById("depth-buy");
-    els.choirEdictEffect = document.getElementById("choir-edict-effect");
-    els.choirEdictCost = document.getElementById("choir-edict-cost");
-    els.choirEdictBuy = document.getElementById("choir-edict-buy");
-    els.hymnEdictEffect = document.getElementById("hymn-edict-effect");
-    els.hymnEdictCost = document.getElementById("hymn-edict-cost");
-    els.hymnEdictBuy = document.getElementById("hymn-edict-buy");
-    els.smokeEffect = document.getElementById("smoke-effect");
-    els.smokeCost = document.getElementById("smoke-cost");
-    els.smokeBuy = document.getElementById("smoke-buy");
-    els.embersEffect = document.getElementById("embers-effect");
-    els.embersCost = document.getElementById("embers-cost");
-    els.embersBuy = document.getElementById("embers-buy");
-    els.urnEdictEffect = document.getElementById("urn-edict-effect");
-    els.urnEdictCost = document.getElementById("urn-edict-cost");
-    els.urnEdictBuy = document.getElementById("urn-edict-buy");
-    els.hearthEdictEffect = document.getElementById("hearth-edict-effect");
-    els.hearthEdictCost = document.getElementById("hearth-edict-cost");
-    els.hearthEdictBuy = document.getElementById("hearth-edict-buy");
-    els.beaconEdictEffect = document.getElementById("beacon-edict-effect");
-    els.beaconEdictCost = document.getElementById("beacon-edict-cost");
-    els.beaconEdictBuy = document.getElementById("beacon-edict-buy");
-    els.spireEdictEffect = document.getElementById("spire-edict-effect");
-    els.spireEdictCost = document.getElementById("spire-edict-cost");
-    els.spireEdictBuy = document.getElementById("spire-edict-buy");
-    els.obeliskEdictEffect = document.getElementById("obelisk-edict-effect");
-    els.obeliskEdictCost = document.getElementById("obelisk-edict-cost");
-    els.obeliskEdictBuy = document.getElementById("obelisk-edict-buy");
-    els.cinderEdictEffect = document.getElementById("cinder-edict-effect");
-    els.cinderEdictCost = document.getElementById("cinder-edict-cost");
-    els.cinderEdictBuy = document.getElementById("cinder-edict-buy");
-    els.cutEdictEffect = document.getElementById("cut-edict-effect");
-    els.cutEdictCost = document.getElementById("cut-edict-cost");
-    els.cutEdictBuy = document.getElementById("cut-edict-buy");
-    els.tendingEdictEffect = document.getElementById("tending-edict-effect");
-    els.tendingEdictCost = document.getElementById("tending-edict-cost");
-    els.tendingEdictBuy = document.getElementById("tending-edict-buy");
-    els.gleamEdictEffect = document.getElementById("gleam-edict-effect");
-    els.gleamEdictCost = document.getElementById("gleam-edict-cost");
-    els.gleamEdictBuy = document.getElementById("gleam-edict-buy");
-    els.riseEdictEffect = document.getElementById("rise-edict-effect");
-    els.riseEdictCost = document.getElementById("rise-edict-cost");
-    els.riseEdictBuy = document.getElementById("rise-edict-buy");
-    els.cupEffect = document.getElementById("cup-effect");
-    els.cupCost = document.getElementById("cup-cost");
-    els.cupBuy = document.getElementById("cup-buy");
-    els.draughtEdictEffect = document.getElementById("draught-edict-effect");
-    els.draughtEdictCost = document.getElementById("draught-edict-cost");
-    els.draughtEdictBuy = document.getElementById("draught-edict-buy");
-    els.wakeEdictEffect = document.getElementById("wake-edict-effect");
-    els.wakeEdictCost = document.getElementById("wake-edict-cost");
-    els.wakeEdictBuy = document.getElementById("wake-edict-buy");
-    els.processionEdictEffect = document.getElementById("procession-edict-effect");
-    els.processionEdictCost = document.getElementById("procession-edict-cost");
-    els.processionEdictBuy = document.getElementById("procession-edict-buy");
-    els.tollEdictEffect = document.getElementById("toll-edict-effect");
-    els.tollEdictCost = document.getElementById("toll-edict-cost");
-    els.tollEdictBuy = document.getElementById("toll-edict-buy");
-    els.veilEdictEffect = document.getElementById("veil-edict-effect");
-    els.veilEdictCost = document.getElementById("veil-edict-cost");
-    els.veilEdictBuy = document.getElementById("veil-edict-buy");
-    els.knellEdictEffect = document.getElementById("knell-edict-effect");
-    els.knellEdictCost = document.getElementById("knell-edict-cost");
-    els.knellEdictBuy = document.getElementById("knell-edict-buy");
-    els.nightEdictEffect = document.getElementById("night-edict-effect");
-    els.nightEdictCost = document.getElementById("night-edict-cost");
-    els.nightEdictBuy = document.getElementById("night-edict-buy");
-    els.ritesPanel = document.getElementById("rites-panel");
-    els.siphonEffect = document.getElementById("siphon-effect");
-    els.siphonCost = document.getElementById("siphon-cost");
-    els.siphonBuy = document.getElementById("siphon-buy");
-    els.levyRow = document.getElementById("levy-row");
-    els.levyEffect = document.getElementById("levy-effect");
-    els.levyCost = document.getElementById("levy-cost");
-    els.levyBuy = document.getElementById("levy-buy");
-    els.bindingTollRow = document.getElementById("binding-toll-row");
-    els.bindingTollEffect = document.getElementById("binding-toll-effect");
-    els.bindingTollCost = document.getElementById("binding-toll-cost");
-    els.bindingTollBuy = document.getElementById("binding-toll-buy");
-    els.cinderRow = document.getElementById("cinder-row");
-    els.cinderEffect = document.getElementById("cinder-effect");
-    els.cinderCost = document.getElementById("cinder-cost");
-    els.cinderBuy = document.getElementById("cinder-buy");
-    els.urnRiteRow = document.getElementById("urn-rite-row");
-    els.urnRiteEffect = document.getElementById("urn-rite-effect");
-    els.urnRiteCost = document.getElementById("urn-rite-cost");
-    els.urnRiteBuy = document.getElementById("urn-rite-buy");
-    els.hearthRiteRow = document.getElementById("hearth-rite-row");
-    els.hearthRiteEffect = document.getElementById("hearth-rite-effect");
-    els.hearthRiteCost = document.getElementById("hearth-rite-cost");
-    els.hearthRiteBuy = document.getElementById("hearth-rite-buy");
-    els.beaconRiteRow = document.getElementById("beacon-rite-row");
-    els.beaconRiteEffect = document.getElementById("beacon-rite-effect");
-    els.beaconRiteCost = document.getElementById("beacon-rite-cost");
-    els.beaconRiteBuy = document.getElementById("beacon-rite-buy");
-    els.spireRiteRow = document.getElementById("spire-rite-row");
-    els.spireRiteEffect = document.getElementById("spire-rite-effect");
-    els.spireRiteCost = document.getElementById("spire-rite-cost");
-    els.spireRiteBuy = document.getElementById("spire-rite-buy");
-    els.wellDrawsRow = document.getElementById("well-draws-row");
-    els.wellDrawsEffect = document.getElementById("well-draws-effect");
-    els.wellDrawsCost = document.getElementById("well-draws-cost");
-    els.wellDrawsBuy = document.getElementById("well-draws-buy");
-    els.titheRow = document.getElementById("tithe-row");
-    els.titheEffect = document.getElementById("tithe-effect");
-    els.titheCost = document.getElementById("tithe-cost");
-    els.titheBuy = document.getElementById("tithe-buy");
-    els.nightTitheRow = document.getElementById("night-tithe-row");
-    els.nightTitheEffect = document.getElementById("night-tithe-effect");
-    els.nightTitheCost = document.getElementById("night-tithe-cost");
-    els.nightTitheBuy = document.getElementById("night-tithe-buy");
-    els.wakeRow = document.getElementById("wake-row");
-    els.wakeEffect = document.getElementById("wake-effect");
-    els.wakeCost = document.getElementById("wake-cost");
-    els.wakeBuy = document.getElementById("wake-buy");
-    els.choirRow = document.getElementById("choir-row");
-    els.choirEffect = document.getElementById("choir-effect");
-    els.choirCost = document.getElementById("choir-cost");
-    els.choirBuy = document.getElementById("choir-buy");
-    els.autobindRow = document.getElementById("autobind-row");
-    els.autobindEffect = document.getElementById("autobind-effect");
-    els.autobindBuy = document.getElementById("autobind-buy");
-    els.autobindSpiritsRow = document.getElementById("autobind-spirits-row");
-    els.autobindSpiritsEffect = document.getElementById("autobind-spirits-effect");
-    els.autobindSpiritsBuy = document.getElementById("autobind-spirits-buy");
-    els.autobindVesselsRow = document.getElementById("autobind-vessels-row");
-    els.autobindVesselsEffect = document.getElementById("autobind-vessels-effect");
-    els.autobindVesselsBuy = document.getElementById("autobind-vessels-buy");
-    els.autobindLanternsRow = document.getElementById("autobind-lanterns-row");
-    els.autobindLanternsEffect = document.getElementById("autobind-lanterns-effect");
-    els.autobindLanternsBuy = document.getElementById("autobind-lanterns-buy");
-    els.autobindFettersRow = document.getElementById("autobind-fetters-row");
-    els.autobindFettersEffect = document.getElementById("autobind-fetters-effect");
-    els.autobindFettersBuy = document.getElementById("autobind-fetters-buy");
-    els.autobindCensersRow = document.getElementById("autobind-censers-row");
-    els.autobindCensersEffect = document.getElementById("autobind-censers-effect");
-    els.autobindCensersBuy = document.getElementById("autobind-censers-buy");
-    els.autobindThronesRow = document.getElementById("autobind-thrones-row");
-    els.autobindThronesEffect = document.getElementById("autobind-thrones-effect");
-    els.autobindThronesBuy = document.getElementById("autobind-thrones-buy");
-    els.autobindPyresRow = document.getElementById("autobind-pyres-row");
-    els.autobindPyresEffect = document.getElementById("autobind-pyres-effect");
-    els.autobindPyresBuy = document.getElementById("autobind-pyres-buy");
-    els.autobindUrnsRow = document.getElementById("autobind-urns-row");
-    els.autobindUrnsEffect = document.getElementById("autobind-urns-effect");
-    els.autobindUrnsBuy = document.getElementById("autobind-urns-buy");
-    els.autobindHearthsRow = document.getElementById("autobind-hearths-row");
-    els.autobindHearthsEffect = document.getElementById("autobind-hearths-effect");
-    els.autobindHearthsBuy = document.getElementById("autobind-hearths-buy");
-    els.autobindBeaconsRow = document.getElementById("autobind-beacons-row");
-    els.autobindBeaconsEffect = document.getElementById("autobind-beacons-effect");
-    els.autobindBeaconsBuy = document.getElementById("autobind-beacons-buy");
-    els.autobindSpiresRow = document.getElementById("autobind-spires-row");
-    els.autobindSpiresEffect = document.getElementById("autobind-spires-effect");
-    els.autobindSpiresBuy = document.getElementById("autobind-spires-buy");
-    els.autobindObelisksRow = document.getElementById("autobind-obelisks-row");
-    els.autobindObelisksEffect = document.getElementById("autobind-obelisks-effect");
-    els.autobindObelisksBuy = document.getElementById("autobind-obelisks-buy");
-    els.autobindChalicesRow = document.getElementById("autobind-chalices-row");
-    els.autobindChalicesEffect = document.getElementById("autobind-chalices-effect");
-    els.autobindChalicesBuy = document.getElementById("autobind-chalices-buy");
-    els.veilRow = document.getElementById("veil-row");
-    els.veilEffect = document.getElementById("veil-effect");
-    els.veilCost = document.getElementById("veil-cost");
-    els.veilBuy = document.getElementById("veil-buy");
-    els.tollRow = document.getElementById("toll-row");
-    els.tollEffect = document.getElementById("toll-effect");
-    els.tollCost = document.getElementById("toll-cost");
-    els.tollBuy = document.getElementById("toll-buy");
-    els.crownPanel = document.getElementById("crown-panel");
-    els.crownFavor = document.getElementById("crown-favor");
-    els.crownWeightEffect = document.getElementById("crown-weight-effect");
-    els.crownWeightCost = document.getElementById("crown-weight-cost");
-    els.crownWeightBuy = document.getElementById("crown-weight-buy");
-    els.crownMemoryEffect = document.getElementById("crown-memory-effect");
-    els.crownMemoryCost = document.getElementById("crown-memory-cost");
-    els.crownMemoryBuy = document.getElementById("crown-memory-buy");
-    els.crownCourtEffect = document.getElementById("crown-court-effect");
-    els.crownCourtCost = document.getElementById("crown-court-cost");
-    els.crownCourtBuy = document.getElementById("crown-court-buy");
-    els.crownRemembrance = document.getElementById("crown-remembrance");
-    els.crownRemembranceCount = document.getElementById("crown-remembrance-count");
-    els.remembranceLayRow = document.getElementById("remembrance-lay-row");
-    els.remembranceLayEffect = document.getElementById("remembrance-lay-effect");
-    els.remembranceLayCost = document.getElementById("remembrance-lay-cost");
-    els.remembranceLayBuy = document.getElementById("remembrance-lay-buy");
-    els.deeperNightRow = document.getElementById("deeper-night-row");
-    els.deeperNightEffect = document.getElementById("deeper-night-effect");
-    els.deeperNightCost = document.getElementById("deeper-night-cost");
-    els.deeperNightBuy = document.getElementById("deeper-night-buy");
-    els.ashenTideRow = document.getElementById("ashen-tide-row");
-    els.ashenTideEffect = document.getElementById("ashen-tide-effect");
-    els.ashenTideCost = document.getElementById("ashen-tide-cost");
-    els.ashenTideBuy = document.getElementById("ashen-tide-buy");
-    els.ossuaryRow = document.getElementById("ossuary-row");
-    els.ossuaryEffect = document.getElementById("ossuary-effect");
-    els.ossuaryCost = document.getElementById("ossuary-cost");
-    els.ossuaryBuy = document.getElementById("ossuary-buy");
-    els.processionRow = document.getElementById("procession-row");
-    els.processionEffect = document.getElementById("procession-effect");
-    els.processionCost = document.getElementById("procession-cost");
-    els.processionBuy = document.getElementById("procession-buy");
-    els.knellRow = document.getElementById("knell-row");
-    els.knellEffect = document.getElementById("knell-effect");
-    els.knellCost = document.getElementById("knell-cost");
-    els.knellBuy = document.getElementById("knell-buy");
-    els.longerProcessionRow = document.getElementById("longer-procession-row");
-    els.longerProcessionEffect = document.getElementById("longer-procession-effect");
-    els.longerProcessionCost = document.getElementById("longer-procession-cost");
-    els.longerProcessionBuy = document.getElementById("longer-procession-buy");
-    els.deeperTollRow = document.getElementById("deeper-toll-row");
-    els.deeperTollEffect = document.getElementById("deeper-toll-effect");
-    els.deeperTollCost = document.getElementById("deeper-toll-cost");
-    els.deeperTollBuy = document.getElementById("deeper-toll-buy");
-    els.longerWakeRow = document.getElementById("longer-wake-row");
-    els.longerWakeEffect = document.getElementById("longer-wake-effect");
-    els.longerWakeCost = document.getElementById("longer-wake-cost");
-    els.longerWakeBuy = document.getElementById("longer-wake-buy");
-    els.longerTitheRow = document.getElementById("longer-tithe-row");
-    els.longerTitheEffect = document.getElementById("longer-tithe-effect");
-    els.longerTitheCost = document.getElementById("longer-tithe-cost");
-    els.longerTitheBuy = document.getElementById("longer-tithe-buy");
-    els.longerVeilRow = document.getElementById("longer-veil-row");
-    els.longerVeilEffect = document.getElementById("longer-veil-effect");
-    els.longerVeilCost = document.getElementById("longer-veil-cost");
-    els.longerVeilBuy = document.getElementById("longer-veil-buy");
-    els.longerHymnRow = document.getElementById("longer-hymn-row");
-    els.longerHymnEffect = document.getElementById("longer-hymn-effect");
-    els.longerHymnCost = document.getElementById("longer-hymn-cost");
-    els.longerHymnBuy = document.getElementById("longer-hymn-buy");
-    els.longerKnellRow = document.getElementById("longer-knell-row");
-    els.longerKnellEffect = document.getElementById("longer-knell-effect");
-    els.longerKnellCost = document.getElementById("longer-knell-cost");
-    els.longerKnellBuy = document.getElementById("longer-knell-buy");
-    els.namesPanel = document.getElementById("names-bound");
-    els.namesList = document.getElementById("names-bound-list");
-    els.marksPanel = document.getElementById("marks-panel");
-    els.markEmberEffect = document.getElementById("mark-ember-effect");
-    els.markEmberCost = document.getElementById("mark-ember-cost");
-    els.markEmberBuy = document.getElementById("mark-ember-buy");
-    els.markChainRow = document.getElementById("mark-chain-row");
-    els.markChainEffect = document.getElementById("mark-chain-effect");
-    els.markChainCost = document.getElementById("mark-chain-cost");
-    els.markChainBuy = document.getElementById("mark-chain-buy");
-    els.markHollowRow = document.getElementById("mark-hollow-row");
-    els.markHollowEffect = document.getElementById("mark-hollow-effect");
-    els.markHollowCost = document.getElementById("mark-hollow-cost");
-    els.markHollowBuy = document.getElementById("mark-hollow-buy");
-    els.aspectsPanel = document.getElementById("aspects-panel");
-    els.aspectsSworn = document.getElementById("aspects-sworn");
-    els.aspectHarvestRow = document.getElementById("aspect-harvest-row");
-    els.aspectHarvestBuy = document.getElementById("aspect-harvest-buy");
-    els.aspectBindingRow = document.getElementById("aspect-binding-row");
-    els.aspectBindingBuy = document.getElementById("aspect-binding-buy");
-    els.aspectDominionRow = document.getElementById("aspect-dominion-row");
-    els.aspectDominionBuy = document.getElementById("aspect-dominion-buy");
-    els.vowsPanel = document.getElementById("vows-panel");
-    els.vowsSworn = document.getElementById("vows-sworn");
-    els.vowStillnessRow = document.getElementById("vow-stillness-row");
-    els.vowStillnessBuy = document.getElementById("vow-stillness-buy");
-    els.vowPovertyRow = document.getElementById("vow-poverty-row");
-    els.vowPovertyBuy = document.getElementById("vow-poverty-buy");
-    els.vowHungerRow = document.getElementById("vow-hunger-row");
-    els.vowHungerBuy = document.getElementById("vow-hunger-buy");
-    els.vowEmberRow = document.getElementById("vow-ember-row");
-    els.vowEmberBuy = document.getElementById("vow-ember-buy");
-    els.toast = document.getElementById("toast");
-    if (els.toast) {
-      els.toast.addEventListener("click", function () {
-        dismissToastNext();
-      });
-    }
-    els.resetBtn = document.getElementById("reset-btn");
-    els.nextGoal = document.getElementById("next-goal");
-    els.chronicleList = document.getElementById("chronicle-list");
-    els.statEmptying = document.getElementById("stat-emptying");
-    els.statAllTime = document.getElementById("stat-alltime");
-    els.statTributes = document.getElementById("stat-tributes");
-    els.statNames = document.getElementById("stat-names");
-    els.statVows = document.getElementById("stat-vows");
-
-    els.gatherBtn.addEventListener("click", harvest);
-    els.wellBuy.addEventListener("click", buyWell);
-    els.shadeBuy.addEventListener("click", buyShade);
-    if (els.lanternBuy) els.lanternBuy.addEventListener("click", buyLantern);
-    if (els.fetterBuy) els.fetterBuy.addEventListener("click", buyFetter);
-    els.spiritBuy.addEventListener("click", buySpirit);
-    els.vesselBuy.addEventListener("click", buyVessel);
-    if (els.censerBuy) els.censerBuy.addEventListener("click", buyCenser);
-    if (els.pyreBuy) els.pyreBuy.addEventListener("click", buyPyre);
-    if (els.urnBuy) els.urnBuy.addEventListener("click", buyUrn);
-    if (els.hearthBuy) els.hearthBuy.addEventListener("click", buyHearth);
-    if (els.beaconBuy) els.beaconBuy.addEventListener("click", buyBeacon);
-    if (els.spireBuy) els.spireBuy.addEventListener("click", buySpire);
-    if (els.obeliskBuy) els.obeliskBuy.addEventListener("click", buyObelisk);
-    els.throneBuy.addEventListener("click", buyThrone);
-    if (els.chaliceBuy) els.chaliceBuy.addEventListener("click", buyChalice);
-    els.tributeBtn.addEventListener("click", layTribute);
-    els.tributeFootBtn.addEventListener("click", layTribute);
-    els.edictBuy.addEventListener("click", buyEdict);
-    els.memoryBuy.addEventListener("click", buyMemory);
-    if (els.echoBuy) els.echoBuy.addEventListener("click", buyEcho);
-    if (els.seatBuy) els.seatBuy.addEventListener("click", buySeat);
-    if (els.kindleBuy) els.kindleBuy.addEventListener("click", buyKindle);
-    if (els.ashenBuy) els.ashenBuy.addEventListener("click", buyAshen);
-    if (els.depthBuy) els.depthBuy.addEventListener("click", buyDepth);
-    if (els.choirEdictBuy) els.choirEdictBuy.addEventListener("click", buyChoirEdict);
-    if (els.hymnEdictBuy) els.hymnEdictBuy.addEventListener("click", buyHymnEdict);
-    if (els.smokeBuy) els.smokeBuy.addEventListener("click", buySmokeEdict);
-    if (els.embersBuy) els.embersBuy.addEventListener("click", buyEmbersEdict);
-    if (els.urnEdictBuy) els.urnEdictBuy.addEventListener("click", buyUrnEdict);
-    if (els.hearthEdictBuy) els.hearthEdictBuy.addEventListener("click", buyHearthEdict);
-    if (els.beaconEdictBuy) els.beaconEdictBuy.addEventListener("click", buyBeaconEdict);
-    if (els.spireEdictBuy) els.spireEdictBuy.addEventListener("click", buySpireEdict);
-    if (els.obeliskEdictBuy) els.obeliskEdictBuy.addEventListener("click", buyObeliskEdict);
-    if (els.cinderEdictBuy) els.cinderEdictBuy.addEventListener("click", buyCinderEdict);
-    if (els.cutEdictBuy) els.cutEdictBuy.addEventListener("click", buyCutEdict);
-    if (els.tendingEdictBuy) els.tendingEdictBuy.addEventListener("click", buyTendingEdict);
-    if (els.gleamEdictBuy) els.gleamEdictBuy.addEventListener("click", buyGleamEdict);
-    if (els.riseEdictBuy) els.riseEdictBuy.addEventListener("click", buyRiseEdict);
-    if (els.cupBuy) els.cupBuy.addEventListener("click", buyCupEdict);
-    if (els.draughtEdictBuy) els.draughtEdictBuy.addEventListener("click", buyDraughtEdict);
-    if (els.wakeEdictBuy) els.wakeEdictBuy.addEventListener("click", buyWakeEdict);
-    if (els.processionEdictBuy) els.processionEdictBuy.addEventListener("click", buyProcessionEdict);
-    if (els.tollEdictBuy) els.tollEdictBuy.addEventListener("click", buyTollEdict);
-    if (els.veilEdictBuy) els.veilEdictBuy.addEventListener("click", buyVeilEdict);
-    if (els.knellEdictBuy) els.knellEdictBuy.addEventListener("click", buyKnellEdict);
-    if (els.nightEdictBuy) els.nightEdictBuy.addEventListener("click", buyNightEdict);
-    if (els.siphonBuy) els.siphonBuy.addEventListener("click", buySiphon);
-    if (els.levyBuy) els.levyBuy.addEventListener("click", buyLevy);
-    if (els.bindingTollBuy) els.bindingTollBuy.addEventListener("click", buyBindingToll);
-    if (els.cinderBuy) els.cinderBuy.addEventListener("click", buyCinders);
-    if (els.urnRiteBuy) els.urnRiteBuy.addEventListener("click", buyUrnRite);
-    if (els.hearthRiteBuy) els.hearthRiteBuy.addEventListener("click", buyHearthRite);
-    if (els.beaconRiteBuy) els.beaconRiteBuy.addEventListener("click", buyBeaconRite);
-    if (els.spireRiteBuy) els.spireRiteBuy.addEventListener("click", buySpireRite);
-    if (els.wellDrawsBuy) els.wellDrawsBuy.addEventListener("click", buyWellDraws);
-    if (els.titheBuy) els.titheBuy.addEventListener("click", payTithe);
-    if (els.nightTitheBuy) els.nightTitheBuy.addEventListener("click", payNightTithe);
-    if (els.wakeBuy) els.wakeBuy.addEventListener("click", keepWake);
-    if (els.choirBuy) els.choirBuy.addEventListener("click", raiseChoir);
-    if (els.autobindBuy) els.autobindBuy.addEventListener("click", toggleAutobind);
-    if (els.autobindSpiritsBuy) els.autobindSpiritsBuy.addEventListener("click", toggleAutobindSpirits);
-    if (els.autobindVesselsBuy) els.autobindVesselsBuy.addEventListener("click", toggleAutobindVessels);
-    if (els.autobindLanternsBuy) els.autobindLanternsBuy.addEventListener("click", toggleAutobindLanterns);
-    if (els.autobindFettersBuy) els.autobindFettersBuy.addEventListener("click", toggleAutobindFetters);
-    if (els.autobindCensersBuy) els.autobindCensersBuy.addEventListener("click", toggleAutobindCensers);
-    if (els.autobindThronesBuy) els.autobindThronesBuy.addEventListener("click", toggleAutobindThrones);
-    if (els.autobindPyresBuy) els.autobindPyresBuy.addEventListener("click", toggleAutobindPyres);
-    if (els.autobindUrnsBuy) els.autobindUrnsBuy.addEventListener("click", toggleAutobindUrns);
-    if (els.autobindHearthsBuy) els.autobindHearthsBuy.addEventListener("click", toggleAutobindHearths);
-    if (els.autobindBeaconsBuy) els.autobindBeaconsBuy.addEventListener("click", toggleAutobindBeacons);
-    if (els.autobindSpiresBuy) els.autobindSpiresBuy.addEventListener("click", toggleAutobindSpires);
-    if (els.autobindObelisksBuy) els.autobindObelisksBuy.addEventListener("click", toggleAutobindObelisks);
-    if (els.autobindChalicesBuy) els.autobindChalicesBuy.addEventListener("click", toggleAutobindChalices);
-    if (els.veilBuy) els.veilBuy.addEventListener("click", thinVeil);
-    if (els.tollBuy) els.tollBuy.addEventListener("click", soundToll);
-    if (els.crownWeightBuy) els.crownWeightBuy.addEventListener("click", buyCrownWeight);
-    if (els.crownMemoryBuy) els.crownMemoryBuy.addEventListener("click", buyLongMemory);
-    if (els.crownCourtBuy) els.crownCourtBuy.addEventListener("click", buyQuietCourt);
-    if (els.remembranceLayBuy) els.remembranceLayBuy.addEventListener("click", layRemembrance);
-    if (els.deeperNightBuy) els.deeperNightBuy.addEventListener("click", buyDeeperNight);
-    if (els.ashenTideBuy) els.ashenTideBuy.addEventListener("click", buyAshenTide);
-    if (els.ossuaryBuy) els.ossuaryBuy.addEventListener("click", buyOssuary);
-    if (els.processionBuy) els.processionBuy.addEventListener("click", beginProcession);
-    if (els.knellBuy) els.knellBuy.addEventListener("click", soundKnell);
-    if (els.longerProcessionBuy) els.longerProcessionBuy.addEventListener("click", buyLongerProcession);
-    if (els.deeperTollBuy) els.deeperTollBuy.addEventListener("click", buyDeeperToll);
-    if (els.longerWakeBuy) els.longerWakeBuy.addEventListener("click", buyLongerWake);
-    if (els.longerTitheBuy) els.longerTitheBuy.addEventListener("click", buyLongerTithe);
-    if (els.longerVeilBuy) els.longerVeilBuy.addEventListener("click", buyLongerVeil);
-    if (els.longerHymnBuy) els.longerHymnBuy.addEventListener("click", buyLongerHymn);
-    if (els.longerKnellBuy) els.longerKnellBuy.addEventListener("click", buyLongerKnell);
-    if (els.markEmberBuy) {
-      els.markEmberBuy.addEventListener("click", function () {
-        buyMark("ember");
-      });
-    }
-    if (els.markChainBuy) {
-      els.markChainBuy.addEventListener("click", function () {
-        buyMark("chain");
-      });
-    }
-    if (els.markHollowBuy) {
-      els.markHollowBuy.addEventListener("click", function () {
-        buyMark("hollow");
-      });
-    }
-    if (els.aspectHarvestBuy) {
-      els.aspectHarvestBuy.addEventListener("click", function () {
-        swearAspect("harvest");
-      });
-    }
-    if (els.aspectBindingBuy) {
-      els.aspectBindingBuy.addEventListener("click", function () {
-        swearAspect("binding");
-      });
-    }
-    if (els.aspectDominionBuy) {
-      els.aspectDominionBuy.addEventListener("click", function () {
-        swearAspect("dominion");
-      });
-    }
-    if (els.vowStillnessBuy) {
-      els.vowStillnessBuy.addEventListener("click", function () {
-        swearVow("stillness");
-      });
-    }
-    if (els.vowPovertyBuy) {
-      els.vowPovertyBuy.addEventListener("click", function () {
-        swearVow("poverty");
-      });
-    }
-    if (els.vowHungerBuy) {
-      els.vowHungerBuy.addEventListener("click", function () {
-        swearVow("hunger");
-      });
-    }
-    if (els.vowEmberBuy) {
-      els.vowEmberBuy.addEventListener("click", function () {
-        swearVow("ember");
-      });
-    }
-    els.resetBtn.addEventListener("click", resetGame);
-    els.memoryPanel = document.getElementById("memory-panel");
-    els.memoryText = document.getElementById("memory-text");
-    els.memoryExport = document.getElementById("memory-export");
-    els.memoryImport = document.getElementById("memory-import");
-    if (els.memoryExport) els.memoryExport.addEventListener("click", exportMemory);
-    if (els.memoryImport) els.memoryImport.addEventListener("click", importMemory);
-
-    loadReduceMotion();
-    els.reduceMotionToggle = document.getElementById("reduced-motion-toggle");
-    if (els.reduceMotionToggle) {
-      els.reduceMotionToggle.checked = _reduceMotion;
-      els.reduceMotionToggle.addEventListener("change", function () {
-        setReduceMotion(els.reduceMotionToggle.checked);
-      });
-    }
-
-    els.loadFailNotice = document.getElementById("load-fail-notice");
-    els.loadFailRaw = document.getElementById("load-fail-raw");
-    els.loadFailExport = document.getElementById("load-fail-export");
-    els.loadFailRestore = document.getElementById("load-fail-restore");
-    els.loadFailFresh = document.getElementById("load-fail-fresh");
-    if (els.loadFailExport) els.loadFailExport.addEventListener("click", exportRawFailedMemory);
-    if (els.loadFailRestore) els.loadFailRestore.addEventListener("click", restoreLoadBackup);
-    if (els.loadFailFresh) els.loadFailFresh.addEventListener("click", startFreshAfterLoadFail);
-
-    if (els.buyMode) {
-      els.buyMode.addEventListener("click", function (ev) {
-        var t = ev.target;
-        if (!t || !t.getAttribute) return;
-        var mode = t.getAttribute("data-mode");
-        if (mode) setBuyMode(mode);
-      });
-    }
-    if (els.buyModeHintDismiss) {
-      els.buyModeHintDismiss.addEventListener("click", function (ev) {
-        ev.preventDefault();
-        dismissBuyModeHint();
-      });
-    }
-
-    document.addEventListener("visibilitychange", function () {
-      if (document.hidden) {
-        // AZR-163 settle first, then AZR-164 heartbeat from now (no double-credit).
-        settleToNow();
-        markSaveDirty();
-        flushSave();
-        startHiddenHeartbeat();
-      } else {
-        clearHiddenHeartbeat();
-        var until = Number(state.simulatedUntil) || Date.now();
-        var gap = (Date.now() - until) / 1000;
-        var soulsBefore = N.clone(state.souls);
-        var ashBefore = N.clone(state.ash);
-        var shadesBefore = N.clone(state.shades);
-        settleToNow();
-        lastFrame = 0;
-        var soulsGained = N.sub(state.souls, soulsBefore);
-        var ashGained = N.sub(state.ash, ashBefore);
-        var shadesGained = N.sub(state.shades, shadesBefore);
-        var awayMsg = maybeAwayToast(gap, soulsGained, ashGained, shadesGained);
-        if (awayMsg) showToast(awayMsg);
-      }
-    });
-
-    window.addEventListener("pagehide", function () {
-      clearHiddenHeartbeat();
-      settleToNow();
-      markSaveDirty();
-      flushSave();
-    });
-
-    window.addEventListener("unload", function () {
-      clearHiddenHeartbeat();
-    });
-
-    document.addEventListener("keydown", function (ev) {
-      if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
-      var target = ev.target;
-      var active = document.activeElement || target;
-      if (isTypingTarget(target) || isTypingTarget(active)) return;
-
-      var keyEarly = String(ev.key || "").toLowerCase();
-      if (keyEarly === "escape") {
-        if (U.isToastActive() || toastQueue.length) {
-          ev.preventDefault();
-          dismissToastEscape();
-        }
-        return;
-      }
-
-      var actionEl = active || target;
-      var tag = actionEl && actionEl.tagName ? actionEl.tagName.toLowerCase() : "";
-      var buttonEl = null;
-      if (tag === "button") {
-        buttonEl = actionEl;
-      } else if (actionEl && actionEl.closest) {
-        buttonEl = actionEl.closest("button");
-      }
-      var isGather =
-        actionEl === els.gatherBtn ||
-        target === els.gatherBtn ||
-        buttonEl === els.gatherBtn;
-      var otherButton = !!(buttonEl && !isGather);
-      var key = String(ev.key || "").toLowerCase();
-      var ctx = {
-        ev: ev,
-        otherButton: otherButton,
-        isGather: isGather,
-        buttonEl: buttonEl,
-        tag: tag
-      };
-
-      var hi;
-      for (hi = 0; hi < HOTKEYS.length; hi++) {
-        var entry = HOTKEYS[hi];
-        if (entry.keys.indexOf(key) < 0) continue;
-        var guard = entry.guard || hotkeyDefaultGuard;
-        if (!guard(ctx)) return;
-        entry.action(ctx);
-        return;
-      }
-
-      if (key === " " || key === "enter") {
-        if (tag === "summary" || tag === "a" || tag === "details") return;
-        if (buttonEl && !isGather) return;
-        if (isGather && key === "enter") return;
-        if (key === " ") ev.preventDefault();
-        if ((els.gatherBtn && els.gatherBtn.disabled) || normalizeVow(state.vow) === "stillness") return;
-        harvest();
-      }
-    });
-  }
-
-  function boot() {
-    bind();
-    U.holdToasts();
-    load();
-    if (!state.runStartedAt) state.runStartedAt = Date.now();
-    checkUnlock();
-    revealUnlockedCards(false);
-    render();
-    U.releaseToasts(pendingAwayToast);
+  function takePendingAwayToast() {
+    var away = pendingAwayToast;
     pendingAwayToast = null;
-    window.setInterval(flushSave, AUTOSAVE_MS);
-    window.requestAnimationFrame(tick);
+    return away;
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
+  function reduceMotionSetting() {
+    return _reduceMotion;
   }
+
+  globalThis.SoulgatherGame = {
+    getState: function () { return state; },
+    economy: E,
+    actions: A,
+    ui: U,
+    frameDt: frameDt,
+    takeRenderDue: takeRenderDue,
+    resetFrameClock: resetFrameClock,
+    takePendingAwayToast: takePendingAwayToast,
+    reduceMotionSetting: reduceMotionSetting,
+    applyDt: applyDt,
+    checkUnlock: checkUnlock,
+    clearHiddenHeartbeat: clearHiddenHeartbeat,
+    currentTitheCost: currentTitheCost,
+    dismissBuyModeHint: dismissBuyModeHint,
+    exportMemory: exportMemory,
+    exportRawFailedMemory: exportRawFailedMemory,
+    flushSave: flushSave,
+    harvest: harvest,
+    importMemory: importMemory,
+    isTypingTarget: isTypingTarget,
+    knellActive: knellActive,
+    load: load,
+    loadReduceMotion: loadReduceMotion,
+    markSaveDirty: markSaveDirty,
+    maybeAwayToast: maybeAwayToast,
+    nightActive: nightActive,
+    processionActive: processionActive,
+    remembranceUnlocked: remembranceUnlocked,
+    resetGame: resetGame,
+    restoreLoadBackup: restoreLoadBackup,
+    setBuyMode: setBuyMode,
+    setReduceMotion: setReduceMotion,
+    settleToNow: settleToNow,
+    startFreshAfterLoadFail: startFreshAfterLoadFail,
+    startHiddenHeartbeat: startHiddenHeartbeat,
+    titheActive: titheActive,
+    tollActive: tollActive,
+    veilActive: veilActive,
+    wakeActive: wakeActive
+  };
 
   var _eco = globalThis.SoulgatherEconomy;
   _eco.GAME_VERSION = GAME_VERSION;
@@ -3495,9 +2506,6 @@
   _eco.applyEdictStartingStock = applyEdictStartingStock;
   _eco.applyAutobindStarts = applyAutobindStarts;
   _eco.TRIBUTE_AUTOBIND_STARTS = TRIBUTE_AUTOBIND_STARTS;
-  _eco.hotkeyDefaultGuard = hotkeyDefaultGuard;
-  _eco.HOTKEYS = HOTKEYS;
-  _eco.resolveHotkey = resolveHotkey;
   _eco.TOAST_MS = TOAST_MS;
   _eco.TOAST_FAST_MS = TOAST_FAST_MS;
   _eco.TOAST_QUEUE_MAX = TOAST_QUEUE_MAX;
