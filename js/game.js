@@ -1035,6 +1035,7 @@
     loadFailed = true;
     loadFailedRaw = raw == null ? "" : String(raw);
     state = freshState();
+    Pg.resetGiftCache();
     showLoadFailNotice();
   }
 
@@ -1094,6 +1095,7 @@
     loadFailed = false;
     loadFailedRaw = null;
     state = freshState();
+    Pg.resetGiftCache();
     hideLoadFailNotice();
     hideToast(true);
     hideUnlockCards();
@@ -1241,6 +1243,7 @@
       /* ignore */
     }
     state = freshState();
+    Pg.resetGiftCache();
     hideToast(true);
     hideUnlockCards();
     render();

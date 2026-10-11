@@ -753,6 +753,37 @@ console.log("\n─── Test 18: tributesLaid dirty → only tribute gifts chec
   assertTrue("tributesLaid dirty: checks > 0", meetsCount > 0);
 }
 
+// ─── Test 19: Reset rebuilds the ungranted count ───────────────────────────────
+console.log("\n─── Test 19: Reset rebuilds the ungranted count ───");
+{
+  resetState({ souls: N.fromNumber(10), lifetimeSouls: N.fromNumber(10), allTimeSouls: N.fromNumber(10) });
+  const before = G.getState();
+  for (const g of G.GIFTS) before[g.flag] = g.flag !== "giftLifetimeSouls";
+  G.rebuildUngrantedCount();
+  assertEqual("one gift left before reset", G.getGiftUngrantedCount(), 1);
+
+  sandbox.confirm = function () { return true; };
+  sandbox.SoulgatherGame.resetGame();
+  sandbox.confirm = function () { return false; };
+
+  // A stale count of 1 reaches exactly 0 after one grant; with every name bound that is the early-out.
+  const st = G.getState();
+  st.namesBound = 12;
+  st.namesComplete = true;
+  st.giftFirstName = true;
+  st.giftNamesComplete = true;
+  st.lifetimeSouls = N.fromNumber(150);
+  st.allTimeSouls = N.fromNumber(150);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftLifetimeSouls granted", st.giftLifetimeSouls === true);
+  st.lifetimeSouls = N.fromNumber(2000);
+  st.allTimeSouls = N.fromNumber(2000);
+  G.tryMilestoneGifts();
+  assertTrue("after reset: giftThousandSouls not skipped", st.giftThousandSouls === true);
+  const left = G.GIFTS.filter((g) => !st[g.flag]).length;
+  assertEqual("after reset: ungranted count matches flags", G.getGiftUngrantedCount(), left);
+}
+
 // ─── Done ───────────────────────────────────────────────────────────────────────
 if (failed > 0) {
   console.error("\n" + failed + " assertion(s) failed");
