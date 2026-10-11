@@ -703,7 +703,96 @@
     return m ? parseInt(m[1], 10) : 0;
   }
 
+  // ── GIFTS table (AZR-179) ──────────────────────────────────────────────────
+  // { flag, stat, at, give, id, toast }
+  // Optional: alt (OR stat), cnt (true = Number cast), chr (fallback chronicle
+  // ids for "first building" grants), extra (side-effect fn name).
+  var GIFTS = [
+    { flag: "giftLifetimeSouls",  stat: "lifetimeSouls", alt: "allTimeSouls", at: 100,   give: { souls: 50 },  id: "giftSouls",       toast: "The well returns fifty souls." },
+    { flag: "giftPeakShades",     stat: "peakShades",    at: 10,   give: { shades: 1 },  id: "giftShades",      toast: "A shade is given, unbidden.", extra: "lifetimeShades" },
+    { flag: "giftFirstVessel",    stat: "vessels",       at: 1,    give: { ash: 3 },     id: "giftVessel",      toast: "Ash from the first vessel." },
+    { flag: "giftThousandSouls",  stat: "lifetimeSouls", alt: "allTimeSouls", at: 1000,  give: { souls: 200 }, id: "giftThousand",    toast: "The well returns two hundred souls." },
+    { flag: "giftFirstLantern",   stat: "lanterns",      at: 1,    give: { souls: 10 },  id: "giftLantern",     toast: "Ten souls for the first lantern." },
+    { flag: "giftPeakLanterns",   stat: "peakLanterns",  at: 10,   give: { souls: 20 },  id: "giftPeakLanterns",toast: "Twenty souls for ten lanterns." },
+    { flag: "giftFirstCenser",    stat: "censers",       at: 1,    give: { ash: 5 },     id: "giftCenser",      toast: "Ash from the first censer." },
+    { flag: "giftPeakCensers",    stat: "peakCensers",   at: 5,    give: { ash: 8 },     id: "giftPeakCensers", toast: "Eight ash for five censers." },
+    { flag: "giftFirstPyre",      stat: "peakPyres",     at: 1,    give: { ash: 5 },     id: "giftFirstPyre",   toast: "Five ash for the first pyre.",     chr: ["pyre","giftFirstPyre"] },
+    { flag: "giftPeakPyres",      stat: "peakPyres",     at: 5,    give: { ash: 10 },    id: "giftPeakPyres",   toast: "Ten ash for five pyres." },
+    { flag: "giftFirstUrn",       stat: "peakUrns",      at: 1,    give: { ash: 6 },     id: "giftFirstUrn",    toast: "Six ash for the first urn.",       chr: ["urn","giftFirstUrn"] },
+    { flag: "giftPeakUrns",       stat: "peakUrns",      at: 5,    give: { ash: 8 },     id: "giftPeakUrns",    toast: "Eight ash for five urns." },
+    { flag: "giftFirstHearth",    stat: "peakHearths",   at: 1,    give: { ash: 8 },     id: "giftFirstHearth", toast: "Eight ash for the first hearth.",   chr: ["hearth","giftFirstHearth"] },
+    { flag: "giftFirstBeacon",    stat: "peakBeacons",   at: 1,    give: { ash: 8 },     id: "giftFirstBeacon", toast: "Eight ash for the first beacon.",   chr: ["beacon","giftFirstBeacon"] },
+    { flag: "giftFirstSpire",     stat: "peakSpires",    at: 1,    give: { ash: 8 },     id: "giftFirstSpire",  toast: "Eight ash for the first spire.",   chr: ["spire","giftFirstSpire"] },
+    { flag: "giftFirstObelisk",   stat: "peakObelisks",  at: 1,    give: { ash: 8 },     id: "giftFirstObelisk",toast: "Eight ash for the first obelisk.", chr: ["obelisk","giftFirstObelisk"] },
+    { flag: "giftPeakSpires",     stat: "peakSpires",    at: 5,    give: { ash: 7 },     id: "giftPeakSpires",  toast: "Seven ash for five spires." },
+    { flag: "giftPeakObelisks",   stat: "peakObelisks",  at: 5,    give: { ash: 7 },     id: "giftPeakObelisks",toast: "Seven ash for five obelisks." },
+    { flag: "giftPeakBeacons",    stat: "peakBeacons",   at: 5,    give: { ash: 7 },     id: "giftPeakBeacons", toast: "Seven ash for five beacons." },
+    { flag: "giftPeakHearths",    stat: "peakHearths",   at: 5,    give: { ash: 10 },    id: "giftPeakHearths", toast: "Ten ash for five hearths." },
+    { flag: "giftFirstCinders",   stat: "cinderLevel",   at: 1, cnt: true, give: { ash: 8 },  id: "giftFirstCinders",  toast: "Eight ash for the first cinders." },
+    { flag: "giftFirstUrnRite",   stat: "urnRiteLevel",  at: 1, cnt: true, give: { ash: 6 },  id: "giftFirstUrnRite",  toast: "Six ash for the first cut urn." },
+    { flag: "giftFirstHearthRite",stat: "hearthRiteLevel",at: 1,cnt: true, give: { ash: 8 },  id: "giftFirstHearthRite",toast: "Eight ash for the first cut hearth." },
+    { flag: "giftFirstBeaconRite",stat: "beaconRiteLevel",at: 1,cnt: true, give: { ash: 10 }, id: "giftFirstBeaconRite",toast: "Ten ash for the first cut beacon." },
+    { flag: "giftFirstSpireRite", stat: "spireRiteLevel", at: 1,cnt: true, give: { ash: 10 }, id: "giftFirstSpireRite", toast: "Ten ash for the first cut spire." },
+    { flag: "giftFirstChalice",   stat: "chalices",      at: 1, cnt: true, give: { souls: 15 },id: "giftFirstChalice", toast: "Fifteen souls for the first chalice." },
+    { flag: "giftThreeChalices",  stat: "chalices",      at: 3, cnt: true, give: { ash: 10 },  id: "giftThreeChalices",toast: "Ten ash for three chalices." },
+    { flag: "giftFullCup",        stat: "chalices",      at: CHALICE_MAX, cnt: true, give: { souls: 25 }, id: "giftFullCup", toast: "Twenty-five souls for a full cup." },
+    { flag: "giftFirstOssuary",   stat: "ossuaryLevel",  at: 1, cnt: true, give: { souls: 10 },id: "giftFirstOssuary", toast: "Ten souls for the first bone." },
+    { flag: "giftFirstLongerProcession", stat: "longerProcessionLevel", at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerProcession", toast: "Five souls for the longer walk." },
+    { flag: "giftFirstDeeperToll",stat: "deeperTollLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstDeeperToll",toast: "Five souls for the longer toll." },
+    { flag: "giftFirstLongerWake",stat: "longerWakeLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerWake",toast: "Five souls for the longer wake." },
+    { flag: "giftFirstLongerTithe",stat:"longerTitheLevel",at:1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerTithe",toast: "Five souls for the longer tithe." },
+    { flag: "giftFirstLongerVeil",stat: "longerVeilLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerVeil",toast: "Five souls for the longer veil." },
+    { flag: "giftFirstLongerHymn",stat: "longerHymnLevel",at: 1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerHymn",toast: "Five souls for the longer hymn." },
+    { flag: "giftFirstLongerKnell",stat:"longerKnellLevel",at:1, cnt: true, give: { souls: 5 }, id: "giftFirstLongerKnell",toast: "Five souls for the longer knell." },
+    { flag: "giftFullOssuary",    stat: "ossuaryLevel",  at: OSSUARY_MAX, cnt: true, give: { souls: 20 }, id: "giftFullOssuary", toast: "Twenty souls for eight bones." },
+    { flag: "giftHundredDraws",   stat: "clicksThisRun", at: 100, cnt: true, give: { souls: 15 }, id: "giftHundredDraws",  toast: "Fifteen souls for a hundred draws." },
+    { flag: "giftTwoHundredDraws",stat: "clicksThisRun", at: 200, cnt: true, give: { souls: 20 }, id: "giftTwoHundredDraws",toast: "Twenty souls for two hundred draws." },
+    { flag: "giftThreeHundredDraws",stat:"clicksThisRun", at: 300, cnt: true, give: { souls: 25 }, id: "giftThreeHundredDraws",toast: "Twenty-five souls for three hundred draws." },
+    { flag: "giftFirstEmberVow",  stat: "_vow_ember",    at: 1,    give: { ash: 8 },     id: "giftFirstEmberVow",toast: "Eight ash for the ember vow." },
+    { flag: "giftTwoVows",        stat: "_vowsKnown",    at: 2,    give: { souls: 10 },   id: "giftTwoVows",     toast: "Ten souls for two vows." },
+    { flag: "giftThreeVows",      stat: "_vowsKnown",    at: 3,    give: { souls: 15 },   id: "giftThreeVows",   toast: "Fifteen souls for three vows." },
+    { flag: "giftAllVows",        stat: "_vowsKnown",    at: 4,    give: { souls: 25 },   id: "giftAllVows",     toast: "Twenty-five souls for four vows." },
+    { flag: "giftFirstFetter",    stat: "fetters",       at: 1,    give: { shades: 2 },   id: "giftFetter",      toast: "Two shades for the first fetter.", extra: "lifetimeShades" },
+    { flag: "giftPeakFetters",    stat: "peakFetters",   at: 8,    give: { shades: 15 },  id: "giftPeakFetters", toast: "Fifteen shades for eight fetters.",extra: "lifetimeShades" },
+    { flag: "giftTenThousandSouls",stat: "lifetimeSouls",alt: "allTimeSouls", at: 10000, give: { souls: 500 }, id: "giftTenThousand", toast: "The well returns five hundred souls." },
+    { flag: "giftFirstThrone",    stat: "thrones",       at: 1, cnt: true, give: { vessels: 1 }, id: "giftThrone", toast: "A vessel is returned.", extra: "unlockVessels" },
+    { flag: "giftFiveTributes",   stat: "tributesLaid",  at: 5, cnt: true, give: { favor: 2 },  id: "giftFiveTributes", toast: "The GodKing returns two Favor." },
+    { flag: "giftEightTributes",  stat: "tributesLaid",  at: 8, cnt: true, give: { souls: 25 }, id: "giftEightTributes",toast: "Twenty-five souls for eight emptyings." },
+    { flag: "giftTwelveTributes", stat: "tributesLaid",  at: 12,cnt: true, give: { souls: 40 }, id: "giftTwelveTributes",toast: "Forty souls for twelve emptyings." },
+    { flag: "giftSixteenTributes",stat: "tributesLaid",  at: 16,cnt: true, give: { souls: 50 }, id: "giftSixteenTributes",toast: "Fifty souls for sixteen emptyings." },
+    { flag: "giftTwentyTributes", stat: "tributesLaid",  at: 20,cnt: true, give: { souls: 60 }, id: "giftTwentyTributes",toast: "Sixty souls for twenty emptyings." },
+    { flag: "giftTwentyFourTributes",stat:"tributesLaid",at: 24,cnt: true, give: { souls: 70 }, id: "giftTwentyFourTributes",toast: "Seventy souls for twenty-four emptyings." },
+    { flag: "giftTwentyEightTributes",stat:"tributesLaid",at:28,cnt: true, give: { souls: 80 }, id: "giftTwentyEightTributes",toast: "Eighty souls for twenty-eight emptyings." },
+    { flag: "giftThirtyTwoTributes",stat:"tributesLaid", at: 32,cnt: true, give: { souls: 90 }, id: "giftThirtyTwoTributes",toast: "Ninety souls for thirty-two emptyings." },
+    { flag: "giftThirtySixTributes",stat:"tributesLaid", at: 36,cnt: true, give: { souls: 100 },id: "giftThirtySixTributes",toast: "A hundred souls for thirty-six emptyings." },
+    { flag: "giftFortyTributes",  stat: "tributesLaid",  at: 40,cnt: true, give: { souls: 110 },id: "giftFortyTributes",toast: "A hundred and ten souls for forty emptyings." }
+  ];
+
+  var GIFTS_BY_STAT = {};
+  var GIFT_FLAGS = [];
+  var GIFT_STAT_KEYS = [];
+  (function () {
+    var seenStats = {};
+    for (var i = 0; i < GIFTS.length; i++) {
+      var g = GIFTS[i];
+      GIFT_FLAGS.push(g.flag);
+      var key = g.stat;
+      if (!GIFTS_BY_STAT[key]) GIFTS_BY_STAT[key] = [];
+      GIFTS_BY_STAT[key].push(g);
+      if (!seenStats[key]) { seenStats[key] = true; GIFT_STAT_KEYS.push(key); }
+      if (g.alt) {
+        if (!GIFTS_BY_STAT[g.alt]) GIFTS_BY_STAT[g.alt] = [];
+        GIFTS_BY_STAT[g.alt].push(g);
+        if (!seenStats[g.alt]) { seenStats[g.alt] = true; GIFT_STAT_KEYS.push(g.alt); }
+      }
+    }
+  })();
+
   global.SoulgatherConfig = {
+    GIFTS: GIFTS,
+    GIFTS_BY_STAT: GIFTS_BY_STAT,
+    GIFT_FLAGS: GIFT_FLAGS,
+    GIFT_STAT_KEYS: GIFT_STAT_KEYS,
     GAME_VERSION: GAME_VERSION,
     SAVE_KEY: SAVE_KEY,
     SAVE_BAK1_KEY: SAVE_BAK1_KEY,
