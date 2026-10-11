@@ -109,7 +109,17 @@ function loadScript(rel) {
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
+loadScript("js/edicts.js");
+loadScript("js/economy.js");
+loadScript("js/state.js");
+loadScript("js/prestige.js");
+loadScript("js/actions.js");
+loadScript("js/panels.js");
+loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;
@@ -500,8 +510,8 @@ console.log("\n─── Test 5: v6.9 fixture compatibility ───");
 // ─── Test 6: no keptX in layTribute source ──────────────────────────────────────
 console.log("\n─── Test 6: no keptX in layTribute source ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const tributeMatch = src.match(/function layTribute\(\)[\s\S]*?^  \}/m);
+  const src = fs.readFileSync(path.join(root, "js", "prestige.js"), "utf8");
+  const tributeMatch = src.match(/^([ \t]*)function layTribute\(\)[\s\S]*?^\1\}/m);
   if (tributeMatch) {
     const tributeSrc = tributeMatch[0];
     const keptMatches = tributeSrc.match(/\bvar\s+kept[A-Z]/g);

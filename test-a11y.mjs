@@ -115,7 +115,17 @@ function loadScript(rel) {
 
 loadScript("js/num.js");
 loadScript("js/format.js");
+loadScript("js/config.js");
+loadScript("js/edicts.js");
+loadScript("js/economy.js");
+loadScript("js/state.js");
+loadScript("js/prestige.js");
+loadScript("js/actions.js");
+loadScript("js/panels.js");
+loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
+loadScript("js/main.js");
 
 const E = sandbox.SoulgatherEconomy;
 
@@ -170,8 +180,9 @@ E.setReduceMotion(true);
 ok(E.reduceMotionActive(), "reduceMotionActive() is true when setting on");
 
 const gameJsSrc = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-ok(gameJsSrc.includes("function spawnRipple"), "spawnRipple function exists");
-ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(gameJsSrc),
+const uiJsSrc = fs.readFileSync(path.join(root, "js", "ui.js"), "utf8");
+ok(uiJsSrc.includes("function spawnRipple"), "spawnRipple function exists");
+ok(/function spawnRipple[^{]*\{[\s\n]*if\s*\(reduceMotionActive\(\)\)\s*return/.test(uiJsSrc),
    "spawnRipple guards on reduceMotionActive()");
 
 E.setReduceMotion(false);
@@ -235,27 +246,28 @@ if (soulsCountMatch) {
 
 // ─── Test 10b: no per-frame aria-label rewrite ──────────────────────────────
 console.log("\n─── Test 10b: no per-frame aria-label rewrite ───");
-ok(!gameJsSrc.includes('setAttribute("aria-label", "Souls:'), "no per-frame aria-label rewrite on souls-count");
+ok(!(gameJsSrc + uiJsSrc).includes('setAttribute("aria-label", "Souls:'), "no per-frame aria-label rewrite on souls-count");
 
 // ─── Test 11: .is-hidden still display:none ─────────────────────────────────
 console.log("\n─── Test 11: is-hidden intact ───");
 const hiddenMatch = css.match(/\.card\.is-hidden\s*\{[^}]*display:\s*none/);
 ok(hiddenMatch, ".card.is-hidden { display: none } intact");
 
-// ─── Test 12: version string v6.10.0 ───────────────────────────────────────
+// ─── Test 12: version string v6.10.1 ───────────────────────────────────────
 console.log("\n─── Test 12: version string ───");
-ok(html.includes("v6.10.0"), "footer version string v6.10.0");
-ok(E.GAME_VERSION === "6.10.0", "GAME_VERSION is 6.10.0");
+ok(html.includes("v6.10.1"), "footer version string v6.10.1");
+ok(E.GAME_VERSION === "6.10.1", "GAME_VERSION is 6.10.1");
 
 // ─── Test 13: gift announcements batched, not per-gift ──────────────────────
 console.log("\n─── Test 13: gift announce batching ───");
-const grantGiftSrc = gameJsSrc.match(/function grantGift\(g\)\s*\{[^}]*\}/);
+const progressionJsSrc = fs.readFileSync(path.join(root, "js", "progression.js"), "utf8");
+const grantGiftSrc = progressionJsSrc.match(/function grantGift\(g\)\s*\{[^}]*\}/);
 ok(grantGiftSrc, "grantGift function found in source");
 if (grantGiftSrc) {
   ok(!grantGiftSrc[0].includes("announce("), "grantGift does NOT call announce() directly (batched via flushGiftToasts)");
 }
-ok(gameJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
-ok(/announce\(\s*msgs\.length\s*\+/.test(gameJsSrc), "multi-gift batch announces count summary");
+ok(uiJsSrc.includes("announce(msgs[0])"), "single-gift batch announces via flushGiftToasts");
+ok(/announce\(\s*msgs\.length\s*\+/.test(uiJsSrc), "multi-gift batch announces count summary");
 
 // ─── Shared node mock for focus / inert tests (AZR-197, AZR-198) ───────────
 function mkNode(name, opts = {}) {

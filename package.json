@@ -1,9 +1,9 @@
 {
   "name": "soulgather",
   "private": true,
-  "version": "6.10.0",
+  "version": "6.10.1",
   "scripts": {
     "test": "node test-economy.mjs && node sim-firstrun.mjs && node test-gifts.mjs && node test-a11y.mjs",
-    "check": "node --check js/game.js && node --check js/num.js && node --check js/format.js"
+    "check": "node --check js/game.js && node --check js/num.js && node --check js/format.js && node --check js/config.js && node --check js/edicts.js && node --check js/economy.js && node --check js/state.js && node --check js/prestige.js && node --check js/actions.js && node --check js/panels.js && node --check js/ui.js && node --check js/progression.js && node --check js/main.js"
   }
 }
