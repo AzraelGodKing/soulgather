@@ -806,12 +806,12 @@
     return WAKE_SECS + 15 * n;
   }
 
-  function wakeEdictStartsWake(level) {
+  function autobindStartsPredicate(level) {
     return (Number(level) || 0) >= 1;
   }
 
   function wakeLeftAfterTribute(level) {
-    if (!wakeEdictStartsWake(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return wakeSecs(level);
   }
 
@@ -825,12 +825,8 @@
     return PROCESSION_SECS + 15 * n;
   }
 
-  function processionEdictStartsProcession(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function processionLeftAfterTribute(level) {
-    if (!processionEdictStartsProcession(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return processionSecs(level);
   }
 
@@ -844,12 +840,8 @@
     return TOLL_SECS + 10 * n;
   }
 
-  function tollEdictStartsToll(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function tollLeftAfterTribute(level) {
-    if (!tollEdictStartsToll(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return tollSecs(level);
   }
 
@@ -863,12 +855,8 @@
     return VEIL_SECS + 10 * n;
   }
 
-  function veilEdictStartsVeil(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function veilLeftAfterTribute(level) {
-    if (!veilEdictStartsVeil(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return veilSecs(level);
   }
 
@@ -882,12 +870,8 @@
     return KNELL_SECS + 10 * n;
   }
 
-  function knellEdictStartsKnell(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function knellLeftAfterTribute(level) {
-    if (!knellEdictStartsKnell(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return knellSecs(level);
   }
 
@@ -901,12 +885,8 @@
     return NIGHT_TITHE_SECS + 15 * n;
   }
 
-  function nightEdictStartsNight(level) {
-    return (Number(level) || 0) >= 1;
-  }
-
   function nightLeftAfterTribute(level) {
-    if (!nightEdictStartsNight(level)) return 0;
+    if (!autobindStartsPredicate(level)) return 0;
     return nightEdictSecs(level);
   }
 
@@ -959,10 +939,6 @@
   function quietCourtCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 8 * Math.pow(2, n);
-  }
-
-  function autobindStartsPredicate(level) {
-    return (Number(level) || 0) >= 1;
   }
 
   function smokeEdictCost(level) {
@@ -7871,7 +7847,7 @@
 
       var weCost = wakeEdictCost(state.wakeEdictLevel);
       var wakeEdictN = Math.max(0, Math.floor(Number(state.wakeEdictLevel) || 0));
-      var wakeDur = wakeEdictStartsWake(wakeEdictN) ? wakeSecs(wakeEdictN) : 0;
+      var wakeDur = autobindStartsPredicate(wakeEdictN) ? wakeSecs(wakeEdictN) : 0;
       if (els.wakeEdictEffect) {
         setText(els.wakeEdictEffect, "Wake " + wakeDur + "s at tribute");
       }
@@ -7882,7 +7858,7 @@
 
       var peCost = processionEdictCost(state.processionEdictLevel);
       var processionEdictN = Math.max(0, Math.floor(Number(state.processionEdictLevel) || 0));
-      var processionDur = processionEdictStartsProcession(processionEdictN) ? processionSecs(processionEdictN) : 0;
+      var processionDur = autobindStartsPredicate(processionEdictN) ? processionSecs(processionEdictN) : 0;
       if (els.processionEdictEffect) {
         setText(els.processionEdictEffect, "Procession " + processionDur + "s at tribute");
       }
@@ -7893,7 +7869,7 @@
 
       var teCost = tollEdictCost(state.tollEdictLevel);
       var tollEdictN = Math.max(0, Math.floor(Number(state.tollEdictLevel) || 0));
-      var tollDur = tollEdictStartsToll(tollEdictN) ? tollSecs(tollEdictN) : 0;
+      var tollDur = autobindStartsPredicate(tollEdictN) ? tollSecs(tollEdictN) : 0;
       if (els.tollEdictEffect) {
         setText(els.tollEdictEffect, "Toll " + tollDur + "s at tribute");
       }
@@ -7904,7 +7880,7 @@
 
       var veCost = veilEdictCost(state.veilEdictLevel);
       var veilEdictN = Math.max(0, Math.floor(Number(state.veilEdictLevel) || 0));
-      var veilDur = veilEdictStartsVeil(veilEdictN) ? veilSecs(veilEdictN) : 0;
+      var veilDur = autobindStartsPredicate(veilEdictN) ? veilSecs(veilEdictN) : 0;
       if (els.veilEdictEffect) {
         setText(els.veilEdictEffect, "Veil " + veilDur + "s at tribute");
       }
@@ -7915,7 +7891,7 @@
 
       var keCost = knellEdictCost(state.knellEdictLevel);
       var knellEdictN = Math.max(0, Math.floor(Number(state.knellEdictLevel) || 0));
-      var knellDur = knellEdictStartsKnell(knellEdictN) ? knellSecs(knellEdictN) : 0;
+      var knellDur = autobindStartsPredicate(knellEdictN) ? knellSecs(knellEdictN) : 0;
       if (els.knellEdictEffect) {
         setText(els.knellEdictEffect, "Knell " + knellDur + "s at tribute");
       }
@@ -7926,7 +7902,7 @@
 
       var neCost = nightEdictCost(state.nightEdictLevel);
       var nightEdictN = Math.max(0, Math.floor(Number(state.nightEdictLevel) || 0));
-      var nightDur = nightEdictStartsNight(nightEdictN) ? nightEdictSecs(nightEdictN) : 0;
+      var nightDur = autobindStartsPredicate(nightEdictN) ? nightEdictSecs(nightEdictN) : 0;
       if (els.nightEdictEffect) {
         setText(els.nightEdictEffect, "Night " + nightDur + "s at tribute");
       }
@@ -9332,27 +9308,21 @@
     hymnLeftAfterTribute: hymnLeftAfterTribute,
     wakeEdictCost: wakeEdictCost,
     wakeSecs: wakeSecs,
-    wakeEdictStartsWake: wakeEdictStartsWake,
     wakeLeftAfterTribute: wakeLeftAfterTribute,
     processionEdictCost: processionEdictCost,
     processionSecs: processionSecs,
-    processionEdictStartsProcession: processionEdictStartsProcession,
     processionLeftAfterTribute: processionLeftAfterTribute,
     tollEdictCost: tollEdictCost,
     tollSecs: tollSecs,
-    tollEdictStartsToll: tollEdictStartsToll,
     tollLeftAfterTribute: tollLeftAfterTribute,
     veilEdictCost: veilEdictCost,
     veilSecs: veilSecs,
-    veilEdictStartsVeil: veilEdictStartsVeil,
     veilLeftAfterTribute: veilLeftAfterTribute,
     knellEdictCost: knellEdictCost,
     knellSecs: knellSecs,
-    knellEdictStartsKnell: knellEdictStartsKnell,
     knellLeftAfterTribute: knellLeftAfterTribute,
     nightEdictCost: nightEdictCost,
     nightEdictSecs: nightEdictSecs,
-    nightEdictStartsNight: nightEdictStartsNight,
     nightLeftAfterTribute: nightLeftAfterTribute,
     formatBlessing: formatBlessing,
     nightTitheSecs: nightTitheSecs,
