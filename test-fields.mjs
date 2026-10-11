@@ -115,6 +115,7 @@ loadScript("js/economy.js");
 loadScript("js/state.js");
 loadScript("js/prestige.js");
 loadScript("js/actions.js");
+loadScript("js/panels.js");
 loadScript("js/ui.js");
 loadScript("js/progression.js");
 loadScript("js/game.js");
