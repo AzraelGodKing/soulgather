@@ -2741,6 +2741,9 @@
   var toastActive = false;
   var toastHold = false;
   var toastEscapeArmed = false;
+  var toastHintSeen = false;
+  var toastReturnFocus = null;
+  var loadFailReturnFocus = null;
   var giftToastBatch = null;
   var _favorReadyAnnounced = false;
   var pendingAwayToast = null;
@@ -5476,14 +5479,81 @@
     if (els.loadFailRestore) {
       els.loadFailRestore.disabled = !offer;
     }
+    var wasOpen = loadFailNoticeOpen();
     els.loadFailNotice.classList.remove("is-hidden");
     els.loadFailNotice.setAttribute("aria-hidden", "false");
+    if (wasOpen) return;
+    loadFailReturnFocus = document.activeElement;
+    setPageInert(true);
+    els.loadFailNotice.focus();
   }
 
   function hideLoadFailNotice() {
     if (!els.loadFailNotice) return;
+    var wasOpen = loadFailNoticeOpen();
     els.loadFailNotice.classList.add("is-hidden");
     els.loadFailNotice.setAttribute("aria-hidden", "true");
+    if (!wasOpen) return;
+    setPageInert(false);
+    var back = loadFailReturnFocus;
+    loadFailReturnFocus = null;
+    if (!back || back === document.body || !back.focus || back.disabled) back = els.gatherBtn;
+    if (back) back.focus();
+  }
+
+  function loadFailNoticeOpen() {
+    return !!(els.loadFailNotice && !els.loadFailNotice.classList.contains("is-hidden"));
+  }
+
+  /** Everything behind the alertdialog leaves the tab order and the a11y tree while it is open. */
+  function setPageInert(on) {
+    var behind = [els.wrap, els.skipLink];
+    for (var i = 0; i < behind.length; i++) {
+      var el = behind[i];
+      if (!el) continue;
+      if (on) {
+        el.setAttribute("inert", "");
+        el.setAttribute("aria-hidden", "true");
+      } else {
+        el.removeAttribute("inert");
+        el.removeAttribute("aria-hidden");
+      }
+    }
+  }
+
+  function loadFailFocusables() {
+    if (!els.loadFailNotice) return [];
+    var nodes = els.loadFailNotice.querySelectorAll("button, textarea");
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      if (!nodes[i].disabled) out.push(nodes[i]);
+    }
+    return out;
+  }
+
+  /** Tab cycles inside the dialog; Esc only pulls focus back in (never Start Fresh). */
+  function handleLoadFailKeydown(ev) {
+    var dialog = els.loadFailNotice;
+    var active = document.activeElement;
+    var inside = !!(active && dialog.contains(active));
+    if (ev.key === "Escape" || ev.key === "Esc") {
+      ev.preventDefault();
+      if (!inside) dialog.focus();
+      return;
+    }
+    if (ev.key !== "Tab") return;
+    var items = loadFailFocusables();
+    ev.preventDefault();
+    if (!items.length) {
+      dialog.focus();
+      return;
+    }
+    var idx = items.indexOf(active);
+    if (ev.shiftKey) {
+      items[idx <= 0 ? items.length - 1 : idx - 1].focus();
+    } else {
+      items[idx < 0 || idx === items.length - 1 ? 0 : idx + 1].focus();
+    }
   }
 
   function beginLoadFailure(raw) {
@@ -6424,6 +6494,7 @@
     var next = capEnqueueToast(toastQueue, message, TOAST_QUEUE_MAX);
     toastQueue.length = 0;
     for (var i = 0; i < next.length; i++) toastQueue.push(next[i]);
+    if (toastActive) syncToastChrome();
   }
 
   function formatGiftBatchSummary(count, totals) {
@@ -6508,12 +6579,14 @@
   }
 
   function presentToast(message) {
-    if (!els.toast) return;
+    if (!els.toast || !els.toastMsg) return;
     toastActive = true;
     window.clearTimeout(toastTimer);
     els.toast.classList.remove("is-visible");
     void els.toast.offsetWidth;
-    els.toast.textContent = message;
+    els.toastMsg.textContent = message;
+    syncToastChrome();
+    toastHintSeen = true;
     els.toast.classList.remove("is-hidden");
     void els.toast.offsetWidth;
     els.toast.classList.add("is-visible");
@@ -6531,6 +6604,8 @@
       toastQueue.length = 0;
       toastActive = false;
       toastEscapeArmed = false;
+      syncToastChrome();
+      releaseToastFocus();
       els.toast.classList.add("is-hidden");
       return;
     }
@@ -6541,6 +6616,8 @@
       return;
     }
     toastEscapeArmed = false;
+    syncToastChrome();
+    releaseToastFocus();
     window.setTimeout(function () {
       if (!els.toast.classList.contains("is-visible") && !toastActive) {
         els.toast.classList.add("is-hidden");
@@ -6565,6 +6642,32 @@
     }
     toastEscapeArmed = true;
     hideToast(false);
+    if (toastEscapeArmed) announce("Press Escape again to clear all notifications.");
+  }
+
+  function toastHintText() {
+    if (toastEscapeArmed) return "Esc again clears all";
+    if (toastQueue.length) return "Esc for next · twice clears all";
+    if (!toastHintSeen) return "Click or Esc to dismiss";
+    return "";
+  }
+
+  function syncToastChrome() {
+    if (!els.toast) return;
+    els.toast.classList.toggle("is-armed", toastEscapeArmed);
+    if (!els.toastHint) return;
+    var hint = toastHintText();
+    els.toastHint.textContent = hint;
+    els.toastHint.classList.toggle("is-hidden", !hint);
+  }
+
+  /** Keyboard focus on the dismiss button must not fall to <body> when the toast goes away. */
+  function releaseToastFocus() {
+    if (!els.toast || !els.toast.contains(document.activeElement)) return;
+    var back = toastReturnFocus;
+    toastReturnFocus = null;
+    if (!back || !back.focus || back.disabled || !document.body.contains(back)) back = els.gatherBtn;
+    if (back) back.focus();
   }
 
   function bindLabel(oneText, verb, k, unitOne, unitMany) {
@@ -8938,9 +9041,18 @@
     els.vowEmberRow = document.getElementById("vow-ember-row");
     els.vowEmberBuy = document.getElementById("vow-ember-buy");
     els.toast = document.getElementById("toast");
+    els.toastMsg = document.getElementById("toast-msg");
+    els.toastHint = document.getElementById("toast-hint");
+    els.wrap = document.querySelector(".wrap");
+    els.skipLink = document.querySelector(".skip-link");
     if (els.toast) {
+      // #toast-dismiss has no own listener: its click bubbles here, so one click = one advance.
       els.toast.addEventListener("click", function () {
         dismissToastNext();
+      });
+      els.toast.addEventListener("focusin", function (ev) {
+        var from = ev.relatedTarget;
+        if (from && !els.toast.contains(from)) toastReturnFocus = from;
       });
     }
     els.resetBtn = document.getElementById("reset-btn");
@@ -9172,6 +9284,10 @@
 
     document.addEventListener("keydown", function (ev) {
       if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+      if (loadFailNoticeOpen()) {
+        handleLoadFailKeydown(ev);
+        return;
+      }
       var target = ev.target;
       var active = document.activeElement || target;
       if (isTypingTarget(target) || isTypingTarget(active)) return;
@@ -9617,6 +9733,22 @@
     _getAnnounceQueue: function () { return _announceQueue; },
     _getAnnounceLastMs: function () { return _announceLastMs; },
     _resetAnnouncer: function () { _announceLastMs = 0; _announceQueue = []; if (_announceTimer) { clearTimeout(_announceTimer); _announceTimer = null; } },
-    spawnRipple: spawnRipple
+    spawnRipple: spawnRipple,
+    _setEls: function (o) { for (var k in o) els[k] = o[k]; },
+    showToast: showToast,
+    dismissToastNext: dismissToastNext,
+    dismissToastEscape: dismissToastEscape,
+    toastHintText: toastHintText,
+    _getToastState: function () {
+      return { active: toastActive, queue: toastQueue.slice(), armed: toastEscapeArmed, hintSeen: toastHintSeen };
+    },
+    _resetToast: function () {
+      toastQueue.length = 0; toastActive = false; toastHold = false;
+      toastEscapeArmed = false; toastHintSeen = false; toastReturnFocus = null;
+    },
+    showLoadFailNotice: showLoadFailNotice,
+    hideLoadFailNotice: hideLoadFailNotice,
+    loadFailNoticeOpen: loadFailNoticeOpen,
+    handleLoadFailKeydown: handleLoadFailKeydown
   };
 })();

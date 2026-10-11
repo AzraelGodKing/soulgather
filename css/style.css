@@ -7,13 +7,15 @@
   --panel-edge: #2a1c22;
   --gold: #c9a227;
   --gold-bright: #e8c547;
-  --gold-dim: #8a7018;
+  --gold-dim: #a48a2c;
   --crimson: #8b1e3f;
   --crimson-hot: #c41e3a;
+  /* Crimson for text: dark crimson / crimson-hot stay for borders and glows (≥4.5:1 on void). */
+  --crimson-ink: #e4687c;
   --crimson-glow: rgba(196, 30, 58, 0.45);
   --bone: #e8dcc8;
   --bone-dim: #b9ad98;
-  --ash: #6e6458;
+  --ash: #9c9082;
   --disabled: #3a3230;
   --well-glow: rgba(201, 162, 39, 0.18);
 }
@@ -129,13 +131,23 @@ body::before {
 }
 
 .souls-hollow {
-  margin-top: 4px;
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border: 1px solid var(--crimson-hot);
+  border-radius: 2px;
+  background: rgba(139, 30, 63, 0.18);
   font-size: 0.72rem;
+  font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--crimson);
-  opacity: 0.88;
+  color: var(--crimson-ink);
   font-variant-numeric: tabular-nums;
+}
+
+.souls-hollow::before {
+  content: "\26A0\FE0E\00A0";
+  content: "\26A0\FE0E\00A0" / "";
 }
 
 .souls-hollow.is-hidden {
@@ -148,7 +160,6 @@ body::before {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold-dim);
-  opacity: 0.88;
 }
 
 .souls-vow.is-hidden {
@@ -161,7 +172,6 @@ body::before {
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--gold-dim);
-  opacity: 0.88;
   font-variant-numeric: tabular-nums;
 }
 
@@ -188,7 +198,6 @@ body::before {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold-dim);
-  opacity: 0.82;
   font-variant-numeric: tabular-nums;
 }
 
@@ -202,7 +211,6 @@ body::before {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold-dim);
-  opacity: 0.82;
   font-variant-numeric: tabular-nums;
 }
 
@@ -216,7 +224,6 @@ body::before {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold-dim);
-  opacity: 0.82;
   font-variant-numeric: tabular-nums;
 }
 
@@ -230,7 +237,6 @@ body::before {
   letter-spacing: 0.06em;
   color: var(--gold-dim);
   font-style: italic;
-  opacity: 0.82;
   text-shadow: 0 0 12px rgba(139, 30, 63, 0.18);
 }
 
@@ -503,9 +509,9 @@ body::before {
 .card-buy:disabled {
   cursor: not-allowed;
   border-color: var(--disabled);
+  border-style: dashed;
   background: #1a1416;
-  color: #6a5e52;
-  opacity: 0.7;
+  color: var(--ash);
 }
 
 .card-buy:focus {
@@ -585,7 +591,7 @@ body::before {
 .card#spirit-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#vessel-card::before {
@@ -615,7 +621,7 @@ body::before {
 .card#vessel-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 
@@ -646,7 +652,7 @@ body::before {
 .card#throne-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 
@@ -690,7 +696,7 @@ body::before {
 .card#fetter-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#censer-card::before {
@@ -720,7 +726,7 @@ body::before {
 .card#censer-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#pyre-card::before {
@@ -750,7 +756,7 @@ body::before {
 .card#pyre-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#urn-card::before {
@@ -780,7 +786,7 @@ body::before {
 .card#urn-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#hearth-card::before {
@@ -810,7 +816,7 @@ body::before {
 .card#hearth-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#beacon-card::before {
@@ -840,7 +846,7 @@ body::before {
 .card#beacon-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#spire-card::before {
@@ -870,7 +876,7 @@ body::before {
 .card#spire-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#obelisk-card::before {
@@ -900,7 +906,7 @@ body::before {
 .card#obelisk-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
 }
 
 .card#chalice-card::before {
@@ -930,7 +936,21 @@ body::before {
 .card#chalice-card .card-buy:disabled {
   border-color: var(--disabled);
   background: #1a1416;
-  color: #6a5e52;
+  color: var(--ash);
+}
+
+/* Crimson-family affordable bar is dashed; gold families stay solid (hue-independent cue). */
+.card#spirit-card.can-buy::before,
+.card#fetter-card.can-buy::before,
+.card#censer-card.can-buy::before,
+.card#pyre-card.can-buy::before,
+.card#urn-card.can-buy::before,
+.card#hearth-card.can-buy::before,
+.card#beacon-card.can-buy::before,
+.card#spire-card.can-buy::before,
+.card#obelisk-card.can-buy::before {
+  width: 4px;
+  background: repeating-linear-gradient(180deg, var(--crimson-hot) 0 8px, transparent 8px 12px);
 }
 
 /* ----- Buy amount ----- */
@@ -951,7 +971,6 @@ body::before {
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   color: var(--bone-dim);
-  opacity: 0.72;
 }
 
 .buy-mode-hint.is-hidden {
@@ -960,20 +979,22 @@ body::before {
 
 .buy-mode-hint-dismiss {
   margin: 0;
-  padding: 0 4px;
-  border: none;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 2px;
   background: transparent;
-  color: var(--gold-dim);
+  color: var(--gold);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.65;
 }
 
 .buy-mode-hint-dismiss:hover {
-  color: var(--gold);
-  opacity: 0.9;
+  color: var(--gold-bright);
+  border-color: var(--gold-dim);
 }
 
 .buy-mode-hint-dismiss:focus {
@@ -981,15 +1002,13 @@ body::before {
 }
 
 .buy-mode-hint-dismiss:focus-visible {
-  box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold-dim);
-  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold);
 }
 
 .buy-mode {
   display: inline-flex;
   border: 1px solid var(--gold-dim);
   border-radius: 999px;
-  overflow: hidden;
   background: #120c14;
   box-shadow: 0 0 0 1px rgba(139, 30, 63, 0.18);
 }
@@ -1006,32 +1025,37 @@ body::before {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  opacity: 0.55;
-  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.buy-mode-btn:first-child {
+  border-radius: 999px 0 0 999px;
 }
 
 .buy-mode-btn:last-child {
   border-right: none;
+  border-radius: 0 999px 999px 0;
 }
 
 .buy-mode-btn:hover {
-  opacity: 0.85;
   color: var(--gold);
 }
 
 .buy-mode-btn.is-on {
   background: linear-gradient(180deg, #3a2410 0%, #24140c 100%);
   color: var(--gold-bright);
-  opacity: 1;
-  box-shadow: inset 0 -1px 0 rgba(196, 30, 58, 0.35);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--gold);
 }
 
 .buy-mode-btn:focus {
   outline: none;
 }
 
+/* Inset ring: stays inside the pill so neighbours and the rounded edge cannot clip it. */
 .buy-mode-btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold);
+  outline: 2px solid var(--gold-bright);
+  outline-offset: -4px;
 }
 
 /* ----- Tribute ----- */
@@ -1312,11 +1336,11 @@ body::before {
 }
 
 .crown-row#procession-row.is-burning .crown-upgrade-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .crown-row#knell-row.is-burning .crown-upgrade-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 /* ----- Rites (this-run; Reliquary language, dark gold) ----- */
@@ -1406,23 +1430,23 @@ body::before {
 }
 
 .rite-row#tithe-row.is-burning .rite-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .rite-row#night-tithe-row.is-burning .rite-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .rite-row#veil-row.is-burning .rite-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .rite-row#toll-row.is-burning .rite-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .rite-row#wake-row.is-burning .rite-name {
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .rite-row#autobind-row.is-on .rite-name {
@@ -1897,6 +1921,11 @@ body::before {
   bottom: 56px;
   transform: translateX(-50%) translateY(12px);
   max-width: min(520px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 14px;
   padding: 14px 22px;
   background: #160c12;
   border: 1px solid var(--gold-dim);
@@ -1906,7 +1935,7 @@ body::before {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 24px var(--crimson-glow);
   opacity: 0;
   pointer-events: none;
-  z-index: 20;
+  z-index: 50;
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
@@ -1921,6 +1950,59 @@ body::before {
   animation: toast-in 0.4s ease;
   pointer-events: auto;
   cursor: pointer;
+}
+
+.toast-msg {
+  flex: 1 1 auto;
+}
+
+.toast-dismiss {
+  flex: 0 0 auto;
+  min-width: 28px;
+  min-height: 28px;
+  margin: -4px -10px -4px 0;
+  padding: 0 6px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-dismiss:hover {
+  color: var(--gold-bright);
+  border-color: var(--gold-dim);
+}
+
+.toast-dismiss:focus {
+  outline: none;
+}
+
+.toast-dismiss:focus-visible {
+  box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold);
+}
+
+.toast-hint {
+  flex: 1 0 100%;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.toast-hint.is-hidden {
+  display: none;
+}
+
+.toast.is-armed {
+  border-color: var(--crimson-hot);
+}
+
+.toast.is-armed .toast-hint {
+  color: var(--crimson-ink);
 }
 
 
@@ -1938,6 +2020,10 @@ body::before {
 
 .load-fail-notice.is-hidden {
   display: none;
+}
+
+.load-fail-notice:focus {
+  outline: none;
 }
 
 .load-fail-panel {
@@ -2018,15 +2104,23 @@ body::before {
 }
 
 .load-fail-btn:disabled {
-  opacity: 0.45;
   cursor: not-allowed;
   color: var(--ash);
   border-color: var(--disabled);
+  border-style: dashed;
+}
+
+.load-fail-btn:focus {
+  outline: none;
+}
+
+.load-fail-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--void), 0 0 0 4px var(--gold);
 }
 
 .load-fail-btn-danger {
   border-color: var(--crimson);
-  color: var(--crimson-hot);
+  color: var(--crimson-ink);
 }
 
 .load-fail-btn-danger:hover:not(:disabled) {
@@ -2063,7 +2157,6 @@ body::before {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   font-size: 0.7rem;
-  opacity: 0.75;
   user-select: none;
 }
 
@@ -2087,7 +2180,6 @@ body::before {
 
 .chronicle summary:hover {
   color: var(--gold);
-  opacity: 0.95;
 }
 
 .chronicle-list {
@@ -2107,7 +2199,6 @@ body::before {
   list-style: none;
   margin-left: -1.15em;
   color: var(--ash);
-  opacity: 0.8;
 }
 
 .chronicle-stats {
@@ -2140,7 +2231,6 @@ body::before {
   text-transform: uppercase;
   font-size: 0.68rem;
   font-style: normal;
-  opacity: 0.8;
 }
 
 .names-bound-list {
@@ -2158,7 +2248,6 @@ body::before {
 
 .names-bound-list li.is-locked {
   color: var(--ash);
-  opacity: 0.7;
 }
 
 /* ----- Footer ----- */
@@ -2189,7 +2278,7 @@ body::before {
 .reset-btn {
   background: transparent;
   border: 1px solid #3a2a2c;
-  color: #8a7068;
+  color: #ad958c;
   font-family: inherit;
   font-size: 0.72rem;
   letter-spacing: 0.16em;
@@ -2221,7 +2310,7 @@ body::before {
 .memory-xfer summary {
   cursor: pointer;
   list-style: none;
-  color: #8a7068;
+  color: #ad958c;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-size: 0.72rem;
