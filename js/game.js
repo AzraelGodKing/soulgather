@@ -360,6 +360,7 @@
   var pendingAwayToast = null;
   var loadFailed = false;
   var loadFailedRaw = null;
+  var loadFailReturnFocus = null;
 
   var clamp = E.clamp;
 
@@ -1021,14 +1022,81 @@
     if (els.loadFailRestore) {
       els.loadFailRestore.disabled = !offer;
     }
+    var wasOpen = loadFailNoticeOpen();
     els.loadFailNotice.classList.remove("is-hidden");
     els.loadFailNotice.setAttribute("aria-hidden", "false");
+    if (wasOpen) return;
+    loadFailReturnFocus = document.activeElement;
+    setPageInert(true);
+    els.loadFailNotice.focus();
   }
 
   function hideLoadFailNotice() {
     if (!els.loadFailNotice) return;
+    var wasOpen = loadFailNoticeOpen();
     els.loadFailNotice.classList.add("is-hidden");
     els.loadFailNotice.setAttribute("aria-hidden", "true");
+    if (!wasOpen) return;
+    setPageInert(false);
+    var back = loadFailReturnFocus;
+    loadFailReturnFocus = null;
+    if (!back || back === document.body || !back.focus || back.disabled) back = els.gatherBtn;
+    if (back) back.focus();
+  }
+
+  function loadFailNoticeOpen() {
+    return !!(els.loadFailNotice && !els.loadFailNotice.classList.contains("is-hidden"));
+  }
+
+  /** Everything behind the alertdialog leaves the tab order and the a11y tree while it is open. */
+  function setPageInert(on) {
+    var behind = [els.wrap, els.skipLink];
+    for (var i = 0; i < behind.length; i++) {
+      var el = behind[i];
+      if (!el) continue;
+      if (on) {
+        el.setAttribute("inert", "");
+        el.setAttribute("aria-hidden", "true");
+      } else {
+        el.removeAttribute("inert");
+        el.removeAttribute("aria-hidden");
+      }
+    }
+  }
+
+  function loadFailFocusables() {
+    if (!els.loadFailNotice) return [];
+    var nodes = els.loadFailNotice.querySelectorAll("button, textarea");
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      if (!nodes[i].disabled) out.push(nodes[i]);
+    }
+    return out;
+  }
+
+  /** Tab cycles inside the dialog; Esc only pulls focus back in (never Start Fresh). */
+  function handleLoadFailKeydown(ev) {
+    var dialog = els.loadFailNotice;
+    var active = document.activeElement;
+    var inside = !!(active && dialog.contains(active));
+    if (ev.key === "Escape" || ev.key === "Esc") {
+      ev.preventDefault();
+      if (!inside) dialog.focus();
+      return;
+    }
+    if (ev.key !== "Tab") return;
+    var items = loadFailFocusables();
+    ev.preventDefault();
+    if (!items.length) {
+      dialog.focus();
+      return;
+    }
+    var idx = items.indexOf(active);
+    if (ev.shiftKey) {
+      items[idx <= 0 ? items.length - 1 : idx - 1].focus();
+    } else {
+      items[idx < 0 || idx === items.length - 1 ? 0 : idx + 1].focus();
+    }
   }
 
   function beginLoadFailure(raw) {
@@ -1302,9 +1370,11 @@
     flushSave: flushSave,
     harvest: harvest,
     importMemory: importMemory,
+    handleLoadFailKeydown: handleLoadFailKeydown,
     isTypingTarget: isTypingTarget,
     knellActive: knellActive,
     load: load,
+    loadFailNoticeOpen: loadFailNoticeOpen,
     loadReduceMotion: loadReduceMotion,
     markSaveDirty: markSaveDirty,
     maybeAwayToast: maybeAwayToast,
@@ -1450,4 +1520,15 @@
   _eco._getAnnounceLastMs = U.getAnnounceLastMs;
   _eco._resetAnnouncer = U.resetAnnouncer;
   _eco.spawnRipple = spawnRipple;
+  _eco._setEls = function (o) { for (var k in o) els[k] = o[k]; };
+  _eco.showToast = U.showToast;
+  _eco.dismissToastNext = U.dismissToastNext;
+  _eco.dismissToastEscape = U.dismissToastEscape;
+  _eco.toastHintText = U.toastHintText;
+  _eco._getToastState = U.getToastState;
+  _eco._resetToast = U.resetToast;
+  _eco.showLoadFailNotice = showLoadFailNotice;
+  _eco.hideLoadFailNotice = hideLoadFailNotice;
+  _eco.loadFailNoticeOpen = loadFailNoticeOpen;
+  _eco.handleLoadFailKeydown = handleLoadFailKeydown;
 })();
