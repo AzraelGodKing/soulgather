@@ -8,61 +8,39 @@ import fs from "fs";
 import path from "path";
 import vm from "vm";
 import { fileURLToPath } from "url";
+import { createStorage, makeEl as baseEl, DEFAULT_EL_IDS } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 function makeEl(id) {
-  return {
-    id, value: "", disabled: false,
-    _children: [],
-    classList: {
-      _set: new Set(id === "load-fail-notice" ? ["is-hidden"] : []),
-      add(c) { this._set.add(c); },
-      remove(c) { this._set.delete(c); },
-      contains(c) { return this._set.has(c); },
-      toggle(c, force) {
-        if (force === undefined) {
-          if (this._set.has(c)) { this._set.delete(c); return false; }
-          this._set.add(c); return true;
-        }
-        if (force) { this._set.add(c); } else { this._set.delete(c); }
-        return !!force;
-      }
-    },
-    style: {}, dataset: {}, textContent: "", innerHTML: "", open: false,
-    focus() {}, select() {},
-    setAttribute(k, v) { this["_attr_" + k] = v; },
-    getAttribute(k) { return this["_attr_" + k] || null; },
-    addEventListener() {}, removeEventListener() {},
-    querySelectorAll() { return []; },
-    querySelector(sel) {
-      if (sel === ".verb") return makeEl("verb");
-      if (sel === ".noun") return makeEl("noun");
-      return null;
-    },
-    closest() { return null; },
-    appendChild(c) { this._children.push(c); },
-    removeChild(c) {
-      const i = this._children.indexOf(c);
-      if (i >= 0) this._children.splice(i, 1);
-    },
-    get parentNode() { return null; },
-    get offsetWidth() { return 0; }
+  const el = baseEl(id);
+  el._children = [];
+  el.classList.toggle = function (c, force) {
+    if (force === undefined) {
+      if (this._set.has(c)) { this._set.delete(c); return false; }
+      this._set.add(c); return true;
+    }
+    if (force) { this._set.add(c); } else { this._set.delete(c); }
+    return !!force;
   };
+  el.setAttribute = function (k, v) { this["_attr_" + k] = v; };
+  el.getAttribute = function (k) { return this["_attr_" + k] || null; };
+  el.querySelector = function (sel) {
+    if (sel === ".verb") return makeEl("verb");
+    if (sel === ".noun") return makeEl("noun");
+    return null;
+  };
+  el.appendChild = function (c) { this._children.push(c); };
+  el.removeChild = function (c) {
+    var i = this._children.indexOf(c);
+    if (i >= 0) this._children.splice(i, 1);
+  };
+  Object.defineProperty(el, "parentNode", { get() { return null; } });
+  Object.defineProperty(el, "offsetWidth", { get() { return 0; } });
+  return el;
 }
 
 const elsById = {};
-
-function createStorage(initial) {
-  const map = new Map(Object.entries(initial || {}));
-  return {
-    getItem(k) { return map.has(k) ? map.get(k) : null; },
-    setItem(k, v) { map.set(String(k), String(v)); },
-    removeItem(k) { map.delete(k); },
-    clear() { map.clear(); },
-    _map: map
-  };
-}
 
 const storage = createStorage();
 let dateNowVal = 1000000;
