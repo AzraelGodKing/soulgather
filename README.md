@@ -4,7 +4,7 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 
 ## CI
 
-GitHub Actions runs on every push and PR: syntax check, `test-economy.mjs`, `sim-firstrun.mjs`, `test-load-safety.mjs`, and ESLint `no-redeclare`/`no-dupe-keys`. Run locally with `npm test` or `python3 run-tests.py`.
+GitHub Actions runs on every push and PR: syntax check, `test-economy.mjs`, `sim-firstrun.mjs`, `test-load-safety.mjs`, `test-fields.mjs`, `test-gifts.mjs`, `test-a11y.mjs`, and ESLint `no-redeclare`/`no-dupe-keys`. Run locally with `npm test` or `python3 run-tests.py`.
 
 **Branch protection:** After this workflow lands, Azrael should enable "Require status checks to pass before merging" on `main` with the `test` job required (Settings → Branches → Branch protection rules).
 
