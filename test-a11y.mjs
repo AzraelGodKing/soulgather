@@ -209,6 +209,21 @@ console.log("\n─── Test 9: reduced-motion CSS ───");
 const css = fs.readFileSync(path.join(root, "css", "style.css"), "utf8");
 ok(css.includes("prefers-reduced-motion: reduce"), "prefers-reduced-motion media query in CSS");
 ok(css.includes(".reduce-motion"), "in-game .reduce-motion class rules in CSS");
+ok(css.includes(".reduce-motion &"), "body.reduce-motion nests on the same rule set as the OS media query");
+ok(!css.includes(".reduce-motion .card#well-card"), "no second copy of class-prefixed card rules");
+function sharedReduceMotion(decl) {
+  const re = new RegExp(
+    "@media \\(prefers-reduced-motion: reduce\\) \\{\\s*" + decl +
+    "\\s*\\}\\s*\\.reduce-motion & \\{\\s*" + decl + "\\s*\\}"
+  );
+  return re.test(css);
+}
+ok(sharedReduceMotion("transition: none;"),
+   "transition:none applies via OS media query and .reduce-motion &");
+ok(sharedReduceMotion("animation: none;"),
+   "animation:none applies via OS media query and .reduce-motion &");
+ok(/@media \(prefers-reduced-motion: reduce\) \{\s*animation: none;\s*opacity: 0;\s*\}\s*\.reduce-motion & \{\s*animation: none;\s*opacity: 0;\s*\}/.test(css),
+   "soul-drop rules apply via both triggers");
 
 // ─── Test 9b: announcer uses real visually-hidden, not display:none ─────────
 console.log("\n─── Test 9b: announcer is visually-hidden (not display:none) ───");
