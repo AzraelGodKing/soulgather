@@ -115,6 +115,7 @@ loadScript("js/state.js");
 loadScript("js/prestige.js");
 loadScript("js/actions.js");
 loadScript("js/ui.js");
+loadScript("js/progression.js");
 loadScript("js/game.js");
 loadScript("js/main.js");
 
@@ -427,8 +428,8 @@ console.log("\n─── Test 6: bonus → gift migration ───");
 // ─── Test 7: no hand-written gift branches ──────────────────────────────────────
 console.log("\n─── Test 7: no hand-written gift branches in tryMilestoneGifts ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const funcMatch = src.match(/function tryMilestoneGifts\(\)[\s\S]*?^  \}/m);
+  const src = fs.readFileSync(path.join(root, "js", "progression.js"), "utf8");
+  const funcMatch = src.match(/^([ \t]*)function tryMilestoneGifts\(\)[\s\S]*?^\1\}/m);
   assertTrue("tryMilestoneGifts found", !!funcMatch);
   if (funcMatch) {
     const funcSrc = funcMatch[0];
