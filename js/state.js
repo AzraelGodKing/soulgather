@@ -612,7 +612,6 @@
     FIELDS: FIELDS,
     FIELDS_KEYS: FIELDS_KEYS,
     hasChronicle: hasChronicle,
-    normalizeChronicle: normalizeChronicle,
     seedVowsKnown: seedVowsKnown,
     fieldDefault: fieldDefault,
     freshState: freshState,
