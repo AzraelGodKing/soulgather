@@ -1021,8 +1021,6 @@
 
   global.SoulgatherEconomy = Object.assign({}, Ed, {
     num: num,
-    nVal: nVal,
-    addOwned: addOwned,
     clamp: clamp,
     producerCostMult: producerCostMult,
     producerCost: producerCost,
