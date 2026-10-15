@@ -387,16 +387,6 @@
     return s;
   }
 
-  function resetToScope(s, target) {
-    var fresh = freshState();
-    for (var i = 0; i < FIELDS_KEYS.length; i++) {
-      var k = FIELDS_KEYS[i];
-      if (FIELDS[k].scope === target) {
-        s[k] = fresh[k];
-      }
-    }
-  }
-
   function dumpNum(v) {
     return N.dump(v);
   }
@@ -616,7 +606,6 @@
     seedVowsKnown: seedVowsKnown,
     fieldDefault: fieldDefault,
     freshState: freshState,
-    resetToScope: resetToScope,
     dumpNum: dumpNum,
     serializeState: serializeState,
     loadCount: loadCount,
