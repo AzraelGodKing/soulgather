@@ -343,10 +343,6 @@
 
   var freshState = S.freshState;
 
-  function resetToScope(target) {
-    S.resetToScope(state, target);
-  }
-
   var state = freshState();
   var lastFrame = 0;
   var hiddenHeartbeatId = 0;
@@ -1391,27 +1387,25 @@
   // constants are copied across so the Node tests can reach everything through one object.
   [
     "GAME_VERSION", "WELL_EARLY_MULT", "WELL_COST_MULT", "WELL_COST_BASE", "FAVOR_SOULS_BASE", "prestigeMult",
-    "chaliceMult", "ossuaryMult", "COST_MULT_FLOOR", "COST_MULT_FAVOR_SCALE", "RENDER_HZ", "RENDER_MS",
-    "BULK_CAP", "TOAST_MS", "TOAST_FAST_MS", "TOAST_QUEUE_MAX", "toastOverflowLabel", "toastOverflowCount",
+    "chaliceMult", "ossuaryMult", "COST_MULT_FLOOR", "RENDER_HZ", "RENDER_MS",
+    "BULK_CAP", "TOAST_MS", "TOAST_FAST_MS", "TOAST_QUEUE_MAX",
     "UNLOCK_AUTOBIND_URNS", "UNLOCK_AUTOBIND_HEARTHS", "UNLOCK_AUTOBIND_BEACONS", "UNLOCK_AUTOBIND_SPIRES",
-    "UNLOCK_AUTOBIND_OBELISKS", "namesCompleteMult", "LONGER_PROCESSION_MAX", "DEEPER_TOLL_MAX",
-    "LONGER_WAKE_MAX", "LONGER_TITHE_MAX", "LONGER_VEIL_MAX", "LONGER_HYMN_MAX", "LONGER_KNELL_MAX", "hymnMult",
+    "UNLOCK_AUTOBIND_OBELISKS", "namesCompleteMult", "hymnMult",
     "vowExtraFavor", "vowsKnownCount", "normalizeVow", "BINDING_TOLL_MAX", "BINDING_TOLL_RATE",
     "BINDING_TOLL_COST_BONUS", "CINDER_COST_BASE", "CINDER_COST_MULT", "URN_RITE_COST_BASE",
     "URN_RITE_COST_MULT", "HEARTH_RITE_COST_BASE", "HEARTH_RITE_COST_MULT", "BEACON_RITE_COST_BASE",
     "BEACON_RITE_COST_MULT", "SPIRE_RITE_COST_BASE", "SPIRE_RITE_COST_MULT", "HEARTH_RITE_COST",
-    "BEACON_RITE_COST", "SPIRE_RITE_COST", "RITE_MULT_BASE", "SIPHON_COST_BASE", "LEVY_COST_BASE",
+    "BEACON_RITE_COST", "SPIRE_RITE_COST", "RITE_MULT_BASE",
     "CINDER_COST", "URN_RITE_COST", "harvestMult", "bindingMult", "throneWeight", "hollowMult",
     "stacksWantedFromIdle", "HOLLOW_GRACE", "HOLLOW_INTERVAL", "HOLLOW_MAX", "HOLLOW_PENALTY",
-    "HOLLOW_SOUL_CLEAR_CAP", "HOLLOW_SOUL_CLEAR_FLOOR", "HOLLOW_ASH_CLEAR_FLOOR", "HOLLOW_SHADE_CLEAR_FLOOR",
-    "HOLLOW_CLEAR_FRAC", "MAX_DT", "LIVE_FRAME_MAX", "AWAY_SUMMARY_DT", "normalizeAspect", "titheMult",
-    "nightMult", "veilMult", "tollMult", "TOLL_COST", "TOLL_SECS", "wakeMult", "WAKE_COST", "WAKE_SECS",
-    "processionMult", "PROCESSION_COST", "PROCESSION_SECS", "knellMult", "KNELL_COST", "KNELL_SECS",
-    "BONUS_TO_GIFT", "PEAK_STATS", "SAVE_KEY", "SAVE_BAK1_KEY", "SAVE_BAK2_KEY", "BAK1_MS", "BAK2_MS",
-    "COST_BASE", "COST_MULT", "ANNOUNCE_THROTTLE_MS"
+    "HOLLOW_SOUL_CLEAR_CAP", "MAX_DT", "LIVE_FRAME_MAX", "AWAY_SUMMARY_DT", "titheMult",
+    "veilMult", "tollMult", "wakeMult", "WAKE_COST", "WAKE_SECS",
+    "processionMult", "knellMult", "KNELL_COST", "KNELL_SECS",
+    "BONUS_TO_GIFT", "PEAK_STATS", "SAVE_KEY", "SAVE_BAK1_KEY", "SAVE_BAK2_KEY",
+    "COST_BASE", "COST_MULT"
   ].forEach(function (k) { _eco[k] = C[k]; });
   [
-    "isSaveShape", "isFiniteStock", "loadCount", "loadNum", "freshState", "FIELDS", "FIELDS_KEYS"
+    "isSaveShape", "loadCount", "freshState", "FIELDS", "FIELDS_KEYS"
   ].forEach(function (k) { _eco[k] = S[k]; });
   _eco.vesselCost = vesselCost;
   _eco.throneCost = throneCost;
@@ -1419,8 +1413,6 @@
   _eco.producerCost = producerCost;
   _eco.shadeCost = shadeCost;
   _eco.spiritCost = spiritCost;
-  _eco.ashPerSec = ashPerSec;
-  _eco.currentProducerCostMult = currentProducerCostMult;
   _eco.bulkCost = bulkCost;
   _eco.maxAffordable = maxAffordable;
   _eco.maxAffordableLoop = maxAffordableLoop;
@@ -1431,9 +1423,7 @@
   _eco.TRIBUTE_AUTOBIND_STARTS = TRIBUTE_AUTOBIND_STARTS;
   _eco.capEnqueueToast = capEnqueueToast;
   _eco.formatGiftBatchSummary = formatGiftBatchSummary;
-  _eco.formatBlessing = formatBlessing;
   _eco.hollowHungerActive = hollowHungerActive;
-  _eco.noteHollowManualSpend = noteHollowManualSpend;
   _eco.applySaveData = applySaveData;
   _eco.tripwireSanity = tripwireSanity;
   _eco.getState = function () { return state; };
@@ -1483,15 +1473,12 @@
   _eco.GIFTS = C.GIFTS;
   _eco.GIFTS_BY_STAT = C.GIFTS_BY_STAT;
   _eco.tryMilestoneGifts = tryMilestoneGifts;
-  _eco.checkUnlock = checkUnlock;
   _eco.rebuildUngrantedCount = rebuildUngrantedCount;
-  _eco.GIFT_STAT_KEYS = C.GIFT_STAT_KEYS;
   _eco.getGiftCmpCount = Pg.getGiftCmpCount;
   _eco.getGiftMeetsCount = Pg.getGiftMeetsCount;
   _eco.getGiftUngrantedCount = Pg.getGiftUngrantedCount;
   _eco.getBumpPeakShadesCount = Pg.getBumpPeakShadesCount;
   _eco.resetGiftLastSeen = Pg.resetGiftLastSeen;
-  _eco.resetToScope = resetToScope;
   _eco.save = save;
   _eco.flushSave = flushSave;
   _eco.markSaveDirty = markSaveDirty;
@@ -1504,16 +1491,12 @@
   _eco.announce = announce;
   _eco.reduceMotionActive = reduceMotionActive;
   _eco.setReduceMotion = setReduceMotion;
-  _eco._getReduceMotion = function () { return _reduceMotion; };
   _eco._getAnnounceQueue = U.getAnnounceQueue;
-  _eco._getAnnounceLastMs = U.getAnnounceLastMs;
   _eco._resetAnnouncer = U.resetAnnouncer;
-  _eco.spawnRipple = spawnRipple;
   _eco._setEls = function (o) { for (var k in o) els[k] = o[k]; };
   _eco.showToast = U.showToast;
   _eco.dismissToastNext = U.dismissToastNext;
   _eco.dismissToastEscape = U.dismissToastEscape;
-  _eco.toastHintText = U.toastHintText;
   _eco._getToastState = U.getToastState;
   _eco._resetToast = U.resetToast;
   _eco.showLoadFailNotice = showLoadFailNotice;
