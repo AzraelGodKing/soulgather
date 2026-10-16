@@ -179,7 +179,7 @@
     return !ctx.otherButton;
   }
 
-  /** Table-driven hotkeys (AZR-172). Shared default guard is !otherButton. */
+  /** Shared default guard is !otherButton. */
   var HOTKEYS = [
     {
       keys: ["1"],
@@ -356,7 +356,6 @@
     }
   ];
 
-  /** Pure: return matching HOTKEYS entry when key+guard pass; else null (AZR-172). */
   function resolveHotkey(key, ctx) {
     var k = String(key == null ? "" : key).toLowerCase();
     var i;
@@ -1039,12 +1038,8 @@
         tag: tag
       };
 
-      var hi;
-      for (hi = 0; hi < HOTKEYS.length; hi++) {
-        var entry = HOTKEYS[hi];
-        if (entry.keys.indexOf(key) < 0) continue;
-        var guard = entry.guard || hotkeyDefaultGuard;
-        if (!guard(ctx)) return;
+      var entry = resolveHotkey(key, ctx);
+      if (entry) {
         entry.action(ctx);
         return;
       }

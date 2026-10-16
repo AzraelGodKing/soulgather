@@ -9,7 +9,6 @@
   var BAK2_MS = 60 * 60 * 1000;
   var COST_BASE = 10;
   var COST_MULT = 1.15;
-  /** Floor for Favor-driven producer cost mult (AZR-181 option 2). */
   var COST_MULT_FLOOR = 1.06;
   /** Favor scale for approaching COST_MULT_FLOOR (higher = slower approach). */
   var COST_MULT_FAVOR_SCALE = 40;
