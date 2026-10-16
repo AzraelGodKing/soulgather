@@ -3,11 +3,41 @@
  * Extracted from the identical setup blocks in test-*.mjs / sim-firstrun.mjs /
  * generate-fixture.mjs.  Only truly common code lives here; per-file
  * differences stay in the consuming files.
+ *
+ * Load order matches index.html. When you add a js/ file, add it to
+ * SCRIPT_ORDER (and index.html). Every *.mjs harness calls loadGame(sandbox).
  */
 
 import fs from "fs";
 import path from "path";
 import vm from "vm";
+import { fileURLToPath } from "url";
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+
+export const SCRIPT_ORDER = [
+  "js/num.js",
+  "js/format.js",
+  "js/config.js",
+  "js/edicts.js",
+  "js/economy.js",
+  "js/state.js",
+  "js/prestige.js",
+  "js/actions.js",
+  "js/panels.js",
+  "js/ui.js",
+  "js/progression.js",
+  "js/game.js",
+  "js/main.js"
+];
+
+export function loadGame(sandbox) {
+  for (var i = 0; i < SCRIPT_ORDER.length; i++) {
+    var rel = SCRIPT_ORDER[i];
+    var code = fs.readFileSync(path.join(ROOT, rel), "utf8");
+    vm.runInContext(code, sandbox, { filename: rel });
+  }
+}
 
 export function createStorage(initial) {
   const map = new Map(Object.entries(initial || {}));
@@ -52,25 +82,26 @@ export const DEFAULT_EL_IDS = [
 
 export function createTestSandbox(root, opts) {
   const o = opts || {};
+  const el = o.makeEl || makeEl;
   const storage = createStorage(o.storageInit);
 
   const elsById = {};
-  (o.elIds || DEFAULT_EL_IDS).forEach(function (id) { elsById[id] = makeEl(id); });
+  (o.elIds || DEFAULT_EL_IDS).forEach(function (id) { elsById[id] = el(id); });
 
   const documentMock = {
     readyState: "loading",
     hidden: false,
-    body: makeEl("body"),
-    documentElement: makeEl("html"),
+    body: el("body"),
+    documentElement: el("html"),
     getElementById(id) {
-      if (!elsById[id]) elsById[id] = makeEl(id);
+      if (!elsById[id]) elsById[id] = el(id);
       return elsById[id];
     },
     querySelector() { return null; },
     querySelectorAll() { return []; },
     addEventListener() {},
     removeEventListener() {},
-    createElement() { return makeEl("anon"); },
+    createElement() { return el("anon"); },
     execCommand() { return false; }
   };
 
