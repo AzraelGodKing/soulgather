@@ -286,6 +286,8 @@ console.log("\n─── Test 5: harvest path clean ───");
   const st = G.getState();
   const soulsBefore = unwrap(st.souls);
   const clicksBefore = Number(st.clicksThisRun) || 0;
+  const cmpBefore = G.getGiftCmpCount();
+  const meetsBefore = G.getGiftMeetsCount();
 
   G.harvest();
 
@@ -294,7 +296,8 @@ console.log("\n─── Test 5: harvest path clean ───");
   assertTrue("harvest crossed lifetime 100", unwrap(st.lifetimeSouls) >= 100);
   assertTrue("harvest did not unlock spirits via checkUnlock", st.unlockedSpirits === false);
   assertTrue("harvest did not grant giftLifetimeSouls", st.giftLifetimeSouls === false);
-  assertEqual("harvest did not run tryMilestoneGifts (zero N.cmp)", G.getGiftCmpCount(), 0);
+  assertEqual("harvest did not run tryMilestoneGifts (N.cmp unchanged)", G.getGiftCmpCount(), cmpBefore);
+  assertEqual("harvest did not run tryMilestoneGifts (meets unchanged)", G.getGiftMeetsCount(), meetsBefore);
 
   G.tryMilestoneGifts();
   assertTrue("tryMilestoneGifts after harvest grants giftLifetimeSouls", st.giftLifetimeSouls === true);
