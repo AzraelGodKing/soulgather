@@ -1,30 +1,19 @@
 #!/usr/bin/env node
 /**
- * Generate a rich v6.9 save fixture from the CURRENT tip serializeState.
- * Run once before the FIELDS refactor; the fixture is a compatibility contract.
+ * Generate a rich save fixture from the current tip serializeState.
+ * Writes tests/fixtures/save-v6.9.json — a compatibility contract for
+ * applySaveData (including bonus* → gift* migration). Re-run when
+ * serializeState grows fields the fixture should cover.
  */
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createTestSandbox } from "./test-helpers.mjs";
+import { createTestSandbox, loadGame } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-const { sandbox, loadScript } = createTestSandbox(root);
-
-loadScript("js/num.js");
-loadScript("js/format.js");
-loadScript("js/config.js");
-loadScript("js/edicts.js");
-loadScript("js/economy.js");
-loadScript("js/state.js");
-loadScript("js/prestige.js");
-loadScript("js/actions.js");
-loadScript("js/panels.js");
-loadScript("js/ui.js");
-loadScript("js/progression.js");
-loadScript("js/game.js");
-loadScript("js/main.js");
+const { sandbox } = createTestSandbox(root);
+loadGame(sandbox);
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;

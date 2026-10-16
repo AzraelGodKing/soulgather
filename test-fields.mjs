@@ -16,25 +16,12 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createTestSandbox } from "./test-helpers.mjs";
+import { createTestSandbox, loadGame } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-const { sandbox, storage, loadScript } = createTestSandbox(root);
-
-loadScript("js/num.js");
-loadScript("js/format.js");
-loadScript("js/config.js");
-loadScript("js/edicts.js");
-loadScript("js/economy.js");
-loadScript("js/state.js");
-loadScript("js/prestige.js");
-loadScript("js/actions.js");
-loadScript("js/panels.js");
-loadScript("js/ui.js");
-loadScript("js/progression.js");
-loadScript("js/game.js");
-loadScript("js/main.js");
+const { sandbox } = createTestSandbox(root);
+loadGame(sandbox);
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;

@@ -5,9 +5,8 @@
  */
 import fs from "fs";
 import path from "path";
-import vm from "vm";
 import { fileURLToPath } from "url";
-import { createTestSandbox } from "./test-helpers.mjs";
+import { createTestSandbox, loadGame } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 let failed = 0;
@@ -93,24 +92,11 @@ assertTrue(
 );
 
 // --- Unit: load game with mocks ---
-const { sandbox, elsById, storage, loadScript } = createTestSandbox(root, {
+const { sandbox, storage } = createTestSandbox(root, {
   storageInit: { "soulgather-v0": "KEEP" }
 });
 // num.js/format.js attach to window; game.js reads globalThis — keep them identical.
-
-loadScript("js/num.js");
-loadScript("js/format.js");
-loadScript("js/config.js");
-loadScript("js/edicts.js");
-loadScript("js/economy.js");
-loadScript("js/state.js");
-loadScript("js/prestige.js");
-loadScript("js/actions.js");
-loadScript("js/panels.js");
-loadScript("js/ui.js");
-loadScript("js/progression.js");
-loadScript("js/game.js");
-loadScript("js/main.js");
+loadGame(sandbox);
 
 const Eco = sandbox.SoulgatherEconomy;
 assertTrue("AZR-165 SoulgatherEconomy exported", !!Eco);

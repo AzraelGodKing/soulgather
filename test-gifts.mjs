@@ -6,7 +6,9 @@
  * 2. Each gift grants exactly once across a Tribute (flag survives; reward not doubled).
  * 3. All-granted save: tryMilestoneGifts does zero N.cmp (early-out via ungrantedCount === 0).
  * 4. bumpPeakShades called once per successful pass (spy/counter).
- * 5. harvest path still does not call tryMilestoneGifts / checkUnlock.
+ * 5. harvest path still does not call tryMilestoneGifts / checkUnlock
+ *    (behavioural: a click that crosses the lifetime-100 gift/unlock
+ *    threshold must not grant or unlock; calling those functions after does).
  * 6. Migration: applySaveData with old bonusFirstLantern:true and no giftFirstLantern
  *    → gift flag true, no re-grant on next tryMilestoneGifts.
  * 7. No hand-written gift branches in tryMilestoneGifts source.
@@ -15,25 +17,12 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createTestSandbox } from "./test-helpers.mjs";
+import { createTestSandbox, loadGame } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
-const { sandbox, storage, loadScript } = createTestSandbox(root);
-
-loadScript("js/num.js");
-loadScript("js/format.js");
-loadScript("js/config.js");
-loadScript("js/edicts.js");
-loadScript("js/economy.js");
-loadScript("js/state.js");
-loadScript("js/prestige.js");
-loadScript("js/actions.js");
-loadScript("js/panels.js");
-loadScript("js/ui.js");
-loadScript("js/progression.js");
-loadScript("js/game.js");
-loadScript("js/main.js");
+const { sandbox } = createTestSandbox(root);
+loadGame(sandbox);
 
 const N = sandbox.SoulgatherNum;
 const G = sandbox.SoulgatherEconomy;
@@ -284,14 +273,33 @@ console.log("\n─── Test 4: bumpPeakShades no triple call ───");
 // ─── Test 5: harvest does not call tryMilestoneGifts/checkUnlock ────────────────
 console.log("\n─── Test 5: harvest path clean ───");
 {
-  const src = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
-  const harvestMatch = src.match(/function harvest\(\)[\s\S]*?^  \}/m);
-  assertTrue("harvest found", !!harvestMatch);
-  if (harvestMatch) {
-    const harvestSrc = harvestMatch[0];
-    assertTrue("harvest no tryMilestoneGifts", !harvestSrc.includes("tryMilestoneGifts"));
-    assertTrue("harvest no checkUnlock", !harvestSrc.includes("checkUnlock"));
-  }
+  resetState({
+    souls: N.fromNumber(99),
+    lifetimeSouls: N.fromNumber(99),
+    allTimeSouls: N.fromNumber(99),
+    unlockedSpirits: false,
+    giftLifetimeSouls: false
+  });
+  G.rebuildUngrantedCount();
+  G.resetGiftLastSeen();
+
+  const st = G.getState();
+  const soulsBefore = unwrap(st.souls);
+  const clicksBefore = Number(st.clicksThisRun) || 0;
+
+  G.harvest();
+
+  assertTrue("harvest granted souls", unwrap(st.souls) > soulsBefore);
+  assertEqual("harvest increments clicksThisRun", Number(st.clicksThisRun), clicksBefore + 1);
+  assertTrue("harvest crossed lifetime 100", unwrap(st.lifetimeSouls) >= 100);
+  assertTrue("harvest did not unlock spirits via checkUnlock", st.unlockedSpirits === false);
+  assertTrue("harvest did not grant giftLifetimeSouls", st.giftLifetimeSouls === false);
+  assertEqual("harvest did not run tryMilestoneGifts (zero N.cmp)", G.getGiftCmpCount(), 0);
+
+  G.tryMilestoneGifts();
+  assertTrue("tryMilestoneGifts after harvest grants giftLifetimeSouls", st.giftLifetimeSouls === true);
+  G.checkUnlock();
+  assertTrue("checkUnlock after harvest unlocks spirits", st.unlockedSpirits === true);
 }
 
 // ─── Test 6: bonus* → gift* migration ───────────────────────────────────────────
