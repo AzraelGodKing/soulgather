@@ -82,8 +82,6 @@
     return hymnSecs(edictLevel) + hymnBonusSecs(longerHymnLevel);
   }
 
-  function hymnEdictCost(level) { return geometricCost(4, level); }
-
   function wakeSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     return WAKE_SECS + 15 * n;
@@ -98,8 +96,6 @@
     return wakeSecs(level);
   }
 
-  function wakeEdictCost(level) { return geometricCost(8, level); }
-
   function processionSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     return PROCESSION_SECS + 15 * n;
@@ -109,8 +105,6 @@
     if (!autobindStartsPredicate(level)) return 0;
     return processionSecs(level);
   }
-
-  function processionEdictCost(level) { return geometricCost(9, level); }
 
   function tollSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
@@ -122,8 +116,6 @@
     return tollSecs(level);
   }
 
-  function tollEdictCost(level) { return geometricCost(6, level); }
-
   function veilSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     return VEIL_SECS + 10 * n;
@@ -133,8 +125,6 @@
     if (!autobindStartsPredicate(level)) return 0;
     return veilSecs(level);
   }
-
-  function veilEdictCost(level) { return geometricCost(7, level); }
 
   function knellSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
@@ -146,8 +136,6 @@
     return knellSecs(level);
   }
 
-  function knellEdictCost(level) { return geometricCost(8, level); }
-
   function nightEdictSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     return NIGHT_TITHE_SECS + 15 * n;
@@ -158,21 +146,67 @@
     return nightEdictSecs(level);
   }
 
-  function nightEdictCost(level) { return geometricCost(5, level); }
+  /* ── Favor / Remembrance cost tables ─────────────────────────────── */
+
+  /** Upgrades whose cost is base * 2^level, by public function name. */
+  var GEOMETRIC_COST_BASE = {
+    hymnEdictCost: 4,
+    wakeEdictCost: 8,
+    processionEdictCost: 9,
+    tollEdictCost: 6,
+    veilEdictCost: 7,
+    knellEdictCost: 8,
+    nightEdictCost: 5,
+    choirEdictCost: 5,
+    edictCost: 1,
+    memoryCost: 2,
+    seatCost: 5,
+    kindleCost: 4,
+    ashenCost: 3,
+    depthCost: 4,
+    quietCourtCost: 8,
+    smokeEdictCost: 6,
+    embersEdictCost: 7,
+    urnEdictCost: 8,
+    hearthEdictCost: 9,
+    beaconEdictCost: 10,
+    spireEdictCost: 11,
+    obeliskEdictCost: 12,
+    cinderEdictCost: 8,
+    cutEdictCost: 11,
+    tendingEdictCost: 12,
+    gleamEdictCost: 13,
+    riseEdictCost: 14,
+    cupEdictCost: 9,
+    draughtEdictCost: 10,
+    deeperNightCost: 1
+  };
+
+  /** Remembrance upgrades costing 2^level up to a level cap, then Infinity. */
+  var CAPPED_COST_MAX = {
+    longerProcessionCost: LONGER_PROCESSION_MAX,
+    deeperTollCost: DEEPER_TOLL_MAX,
+    longerWakeCost: LONGER_WAKE_MAX,
+    longerTitheCost: LONGER_TITHE_MAX,
+    longerVeilCost: LONGER_VEIL_MAX,
+    longerHymnCost: LONGER_HYMN_MAX,
+    longerKnellCost: LONGER_KNELL_MAX,
+    ashenTideCost: ASHEN_TIDE_MAX
+  };
+
+  var costFns = {};
+  Object.keys(GEOMETRIC_COST_BASE).forEach(function (name) {
+    var base = GEOMETRIC_COST_BASE[name];
+    costFns[name] = function (level) { return geometricCost(base, level); };
+  });
+  Object.keys(CAPPED_COST_MAX).forEach(function (name) {
+    var max = CAPPED_COST_MAX[name];
+    costFns[name] = function (level) {
+      return Math.max(0, Math.floor(level)) >= max ? Infinity : geometricCost(1, level);
+    };
+  });
 
   /* ── Reliquary edict costs ───────────────────────────────────────── */
-
-  function choirEdictCost(level) { return geometricCost(5, level); }
-
-  function edictCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 1 * Math.pow(2, n);
-  }
-
-  function memoryCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 2 * Math.pow(2, n);
-  }
 
   function echoCost(level) {
     var n = Math.max(0, Math.floor(level));
@@ -180,66 +214,16 @@
     return 3;
   }
 
-  function seatCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 5 * Math.pow(2, n);
-  }
-
-  function kindleCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 4 * Math.pow(2, n);
-  }
-
-  function ashenCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 3 * Math.pow(2, n);
-  }
-
-  function depthCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 4 * Math.pow(2, n);
-  }
-
-  function quietCourtCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 8 * Math.pow(2, n);
-  }
-
-  function smokeEdictCost(level) { return geometricCost(6, level); }
-  function embersEdictCost(level) { return geometricCost(7, level); }
   function embersStartsPyres(level) { return startsCount(level); }
-  function urnEdictCost(level) { return geometricCost(8, level); }
   function urnEdictStartsUrns(level) { return startsCount(level); }
-  function hearthEdictCost(level) { return geometricCost(9, level); }
   function hearthEdictStartsHearths(level) { return startsCount(level); }
-  function beaconEdictCost(level) { return geometricCost(10, level); }
   function beaconEdictStartsBeacons(level) { return startsCount(level); }
-  function spireEdictCost(level) { return geometricCost(11, level); }
   function spireEdictStartsSpires(level) { return startsCount(level); }
-  function obeliskEdictCost(level) { return geometricCost(12, level); }
   function obeliskEdictStartsObelisks(level) { return startsCount(level); }
-  function cinderEdictCost(level) { return geometricCost(8, level); }
-  function cutEdictCost(level) { return geometricCost(11, level); }
-  function tendingEdictCost(level) { return geometricCost(12, level); }
-  function gleamEdictCost(level) { return geometricCost(13, level); }
-  function riseEdictCost(level) { return geometricCost(14, level); }
-  function cupEdictCost(level) { return geometricCost(9, level); }
   function cupStartsChalices(level) { return startsCount(level, CHALICE_MAX); }
-  function draughtEdictCost(level) { return geometricCost(10, level); }
 
   function remembranceCostFavor() {
     return REMEMBRANCE_FAVOR_COST;
-  }
-
-  function deeperNightCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    return 1 * Math.pow(2, n);
-  }
-
-  function longerProcessionCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_PROCESSION_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
   }
 
   function paidProcessionSecs(level) {
@@ -248,22 +232,10 @@
     return PROCESSION_SECS + 10 * n;
   }
 
-  function deeperTollCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= DEEPER_TOLL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
   function paidTollSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     if (n > DEEPER_TOLL_MAX) n = DEEPER_TOLL_MAX;
     return TOLL_SECS + 10 * n;
-  }
-
-  function longerWakeCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_WAKE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
   }
 
   function paidWakeSecs(level) {
@@ -272,22 +244,10 @@
     return WAKE_SECS + 10 * n;
   }
 
-  function longerTitheCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_TITHE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
   function paidTitheSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     if (n > LONGER_TITHE_MAX) n = LONGER_TITHE_MAX;
     return TITHE_SECS + 10 * n;
-  }
-
-  function longerVeilCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_VEIL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
   }
 
   function paidVeilSecs(level) {
@@ -296,28 +256,10 @@
     return VEIL_SECS + 10 * n;
   }
 
-  function longerHymnCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_HYMN_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
-  function longerKnellCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= LONGER_KNELL_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
-  }
-
   function paidKnellSecs(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
     if (n > LONGER_KNELL_MAX) n = LONGER_KNELL_MAX;
     return KNELL_SECS + 10 * n;
-  }
-
-  function ashenTideCost(level) {
-    var n = Math.max(0, Math.floor(level));
-    if (n >= ASHEN_TIDE_MAX) return Infinity;
-    return 1 * Math.pow(2, n);
   }
 
   function ossuaryCost(level) {
@@ -356,83 +298,45 @@
     return n;
   }
 
-  global.SoulgatherEdicts = {
+  global.SoulgatherEdicts = Object.assign(costFns, {
     titheCost: titheCost,
     nightTitheCost: nightTitheCost,
     veilCost: veilCost,
     hymnSecs: hymnSecs,
     hymnBonusSecs: hymnBonusSecs,
     hymnLeftAfterTribute: hymnLeftAfterTribute,
-    hymnEdictCost: hymnEdictCost,
     wakeSecs: wakeSecs,
     autobindStartsPredicate: autobindStartsPredicate,
     wakeLeftAfterTribute: wakeLeftAfterTribute,
-    wakeEdictCost: wakeEdictCost,
     processionSecs: processionSecs,
     processionLeftAfterTribute: processionLeftAfterTribute,
-    processionEdictCost: processionEdictCost,
     tollSecs: tollSecs,
     tollLeftAfterTribute: tollLeftAfterTribute,
-    tollEdictCost: tollEdictCost,
     veilSecs: veilSecs,
     veilLeftAfterTribute: veilLeftAfterTribute,
-    veilEdictCost: veilEdictCost,
     knellSecs: knellSecs,
     knellLeftAfterTribute: knellLeftAfterTribute,
-    knellEdictCost: knellEdictCost,
     nightEdictSecs: nightEdictSecs,
     nightLeftAfterTribute: nightLeftAfterTribute,
-    nightEdictCost: nightEdictCost,
-    choirEdictCost: choirEdictCost,
-    edictCost: edictCost,
-    memoryCost: memoryCost,
     echoCost: echoCost,
-    seatCost: seatCost,
-    kindleCost: kindleCost,
-    ashenCost: ashenCost,
-    depthCost: depthCost,
-    quietCourtCost: quietCourtCost,
-    smokeEdictCost: smokeEdictCost,
-    embersEdictCost: embersEdictCost,
     embersStartsPyres: embersStartsPyres,
-    urnEdictCost: urnEdictCost,
     urnEdictStartsUrns: urnEdictStartsUrns,
-    hearthEdictCost: hearthEdictCost,
     hearthEdictStartsHearths: hearthEdictStartsHearths,
-    beaconEdictCost: beaconEdictCost,
     beaconEdictStartsBeacons: beaconEdictStartsBeacons,
-    spireEdictCost: spireEdictCost,
     spireEdictStartsSpires: spireEdictStartsSpires,
-    obeliskEdictCost: obeliskEdictCost,
     obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
-    cinderEdictCost: cinderEdictCost,
-    cutEdictCost: cutEdictCost,
-    tendingEdictCost: tendingEdictCost,
-    gleamEdictCost: gleamEdictCost,
-    riseEdictCost: riseEdictCost,
-    cupEdictCost: cupEdictCost,
     cupStartsChalices: cupStartsChalices,
-    draughtEdictCost: draughtEdictCost,
     remembranceCostFavor: remembranceCostFavor,
-    deeperNightCost: deeperNightCost,
-    longerProcessionCost: longerProcessionCost,
     paidProcessionSecs: paidProcessionSecs,
-    deeperTollCost: deeperTollCost,
     paidTollSecs: paidTollSecs,
-    longerWakeCost: longerWakeCost,
     paidWakeSecs: paidWakeSecs,
-    longerTitheCost: longerTitheCost,
     paidTitheSecs: paidTitheSecs,
-    longerVeilCost: longerVeilCost,
     paidVeilSecs: paidVeilSecs,
-    longerHymnCost: longerHymnCost,
-    longerKnellCost: longerKnellCost,
     paidKnellSecs: paidKnellSecs,
-    ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     nightTitheSecs: nightTitheSecs,
     ashFromShadeFrac: ashFromShadeFrac,
     choirAshRate: choirAshRate,
     namesFromPeak: namesFromPeak
-  };
+  });
 })(typeof window !== "undefined" ? window : globalThis);
