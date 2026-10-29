@@ -64,7 +64,7 @@ These keep each layer testable under Node and stop the coupling bugs that came f
 
 ### Tests
 
-The Node tests load the real files into a `vm` sandbox in the same order as `index.html`, with a stub DOM and boot deferred. They reach internals through the test exports on `SoulgatherEconomy` at the end of `game.js` and `main.js`. When you add a file, add it to `index.html`, the `check` script in `package.json`, and the `loadScript(...)` list in every `*.mjs` harness.
+The Node tests load the real files into a `vm` sandbox in the same order as `index.html` (`SCRIPT_ORDER` + `loadGame(sandbox)` in `test-helpers.mjs`), with a stub DOM and boot deferred. They reach internals through the test exports on `SoulgatherEconomy` at the end of `game.js` and `main.js`. When you add a file, add it to `index.html` and `SCRIPT_ORDER` in `test-helpers.mjs`. `npm run check` globs `js/*.js`.
 
 ## Bugfix (multi-buy producers)
 

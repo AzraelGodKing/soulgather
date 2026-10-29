@@ -6,9 +6,8 @@
 
 import fs from "fs";
 import path from "path";
-import vm from "vm";
 import { fileURLToPath } from "url";
-import { createStorage, makeEl as baseEl, DEFAULT_EL_IDS } from "./test-helpers.mjs";
+import { createTestSandbox, loadGame, makeEl as baseEl } from "./test-helpers.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
@@ -40,70 +39,18 @@ function makeEl(id) {
   return el;
 }
 
-const elsById = {};
-
-const storage = createStorage();
 let dateNowVal = 1000000;
 
-const documentMock = {
-  readyState: "loading",
-  hidden: false,
-  body: makeEl("body"),
-  documentElement: makeEl("html"),
-  getElementById(id) {
-    if (!elsById[id]) elsById[id] = makeEl(id);
-    return elsById[id];
-  },
-  addEventListener() {},
-  removeEventListener() {},
-  querySelectorAll() { return []; },
-  querySelector() { return null; },
-  createElement() { return makeEl("anon"); },
-  execCommand() { return false; }
-};
-
-const sandbox = {
-  console, Math, JSON, Number, String, Boolean, Array, Object,
-  Error, TypeError, RegExp, parseInt, parseFloat, isFinite, isNaN,
-  Infinity, NaN, undefined,
-  Date: { now() { return dateNowVal; } },
-  localStorage: storage,
-  document: documentMock,
-  navigator: {},
-  confirm() { return false; },
-  prompt() { return null; },
-  setTimeout(fn) { const id = setTimeout(fn, 0); return id; },
-  clearTimeout: globalThis.clearTimeout,
-  setInterval() { return 0; },
-  clearInterval() {},
-  requestAnimationFrame() { return 0; },
-  addEventListener() {},
-  removeEventListener() {},
-  getComputedStyle() { return {}; },
-  matchMedia() { return { matches: false, addEventListener() {} }; }
-};
-sandbox.window = sandbox;
-sandbox.globalThis = sandbox;
-vm.createContext(sandbox);
-
-function loadScript(rel) {
-  const code = fs.readFileSync(path.join(root, rel), "utf8");
-  vm.runInContext(code, sandbox, { filename: rel });
-}
-
-loadScript("js/num.js");
-loadScript("js/format.js");
-loadScript("js/config.js");
-loadScript("js/edicts.js");
-loadScript("js/economy.js");
-loadScript("js/state.js");
-loadScript("js/prestige.js");
-loadScript("js/actions.js");
-loadScript("js/panels.js");
-loadScript("js/ui.js");
-loadScript("js/progression.js");
-loadScript("js/game.js");
-loadScript("js/main.js");
+const { sandbox, elsById, documentMock } = createTestSandbox(root, {
+  makeEl: makeEl,
+  sandboxOverrides: {
+    Date: { now() { return dateNowVal; } },
+    setTimeout(fn) { const id = setTimeout(fn, 0); return id; },
+    clearTimeout: globalThis.clearTimeout,
+    matchMedia() { return { matches: false, addEventListener() {} }; }
+  }
+});
+loadGame(sandbox);
 
 const E = sandbox.SoulgatherEconomy;
 

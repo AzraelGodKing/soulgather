@@ -1411,6 +1411,7 @@
   _eco.GIFTS = C.GIFTS;
   _eco.GIFTS_BY_STAT = C.GIFTS_BY_STAT;
   _eco.tryMilestoneGifts = tryMilestoneGifts;
+  _eco.checkUnlock = checkUnlock;
   _eco.rebuildUngrantedCount = rebuildUngrantedCount;
   _eco.getGiftCmpCount = Pg.getGiftCmpCount;
   _eco.getGiftMeetsCount = Pg.getGiftMeetsCount;
