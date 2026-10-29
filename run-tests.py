@@ -15,6 +15,7 @@ suites = [
     root / "test-fields.mjs",
     root / "test-gifts.mjs",
     root / "test-a11y.mjs",
+    root / "test-browser.mjs",
 ]
 eslint = ["npx", "--yes", "eslint@8", "js/"]
 try:

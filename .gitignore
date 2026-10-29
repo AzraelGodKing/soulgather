@@ -2,3 +2,4 @@
 *.log
 .idea
 shot-*.png
+node_modules

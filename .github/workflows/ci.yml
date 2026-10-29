@@ -37,5 +37,11 @@ jobs:
       - name: Accessibility tests
         run: node test-a11y.mjs
 
+      - name: Install Playwright Chromium
+        run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+
+      - name: Browser smoke test
+        run: node test-browser.mjs
+
       - name: ESLint (.eslintrc.json)
         run: npm run lint
