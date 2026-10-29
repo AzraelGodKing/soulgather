@@ -1021,8 +1021,6 @@
 
   global.SoulgatherEconomy = Object.assign({}, Ed, {
     num: num,
-    nVal: nVal,
-    addOwned: addOwned,
     clamp: clamp,
     producerCostMult: producerCostMult,
     producerCost: producerCost,
@@ -1052,7 +1050,6 @@
     purchasePlan: purchasePlan,
     favorGain: favorGain,
     soulsForFavor: soulsForFavor,
-    nextFavorThreshold: nextFavorThreshold,
     crownProdFactor: crownProdFactor,
     prodMult: prodMult,
     crownCost: crownCost,
@@ -1081,7 +1078,6 @@
     hollowClearNeed: hollowClearNeed,
     hollowSpendClears: hollowSpendClears,
     nextGoal: nextGoal,
-    formatGoalNum: formatGoalNum,
     currentTitheCost: currentTitheCost,
     soulsPerSec: soulsPerSec,
     shadeSoulsPerSec: shadeSoulsPerSec,

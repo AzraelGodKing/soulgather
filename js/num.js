@@ -285,7 +285,6 @@
 
   global.SoulgatherNum = {
     fromNumber: fromNumber,
-    fromString: fromString,
     from: from,
     toNumber: toNumber,
     add: add,
@@ -297,7 +296,6 @@
     max: max,
     floor: floor,
     isFinite: numIsFinite,
-    isZero: isZero,
     clone: clone,
     cost: cost,
     dump: dump,

@@ -20,6 +20,7 @@
   var LONGER_VEIL_MAX = C.LONGER_VEIL_MAX;
   var LONGER_WAKE_MAX = C.LONGER_WAKE_MAX;
   var OSSUARY_MAX = C.OSSUARY_MAX;
+  var PEAK_STATS = C.PEAK_STATS;
   var UNLOCK_AUTOBIND_BEACONS = C.UNLOCK_AUTOBIND_BEACONS;
   var UNLOCK_AUTOBIND_CENSERS = C.UNLOCK_AUTOBIND_CENSERS;
   var UNLOCK_AUTOBIND_CHALICES = C.UNLOCK_AUTOBIND_CHALICES;
@@ -76,7 +77,7 @@
   var processionEdictCost = E.processionEdictCost;
   var processionLeftAfterTribute = E.processionLeftAfterTribute;
   var quietCourtCost = E.quietCourtCost;
-  var remembranceFavorCost = E.remembranceFavorCost;
+  var remembranceCostFavor = E.remembranceCostFavor;
   var riseEdictCost = E.riseEdictCost;
   var seatCost = E.seatCost;
   var smokeEdictCost = E.smokeEdictCost;
@@ -353,7 +354,7 @@
     function layRemembrance() {
       var state = host.getState();
       if (!remembranceUnlocked()) return;
-      var cost = remembranceFavorCost();
+      var cost = remembranceCostFavor();
       if (!isFinite(cost) || state.favor < cost) return;
       var hollowBefore = state.favor;
       state.favor -= cost;
@@ -364,169 +365,35 @@
       markDirty();
     }
 
-    function buyDeeperNight() {
+    function buyRemembranceUpgrade(levelKey, costFn, max, chronicleId) {
       var state = host.getState();
       if (!remembranceUnlocked()) return;
-      var cost = deeperNightCost(state.deeperNightLevel);
+      var level = Math.max(0, Math.floor(Number(state[levelKey]) || 0));
+      if (max != null && level >= max) return;
+      var cost = costFn(level);
       if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
       var hollowBefore = state.remembrance;
       state.remembrance -= cost;
       noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.deeperNightLevel += 1;
+      state[levelKey] = level + 1;
+      if (chronicleId) {
+        markChronicle(chronicleId);
+        checkUnlock();
+      }
       markSaveDirty();
       markDirty();
     }
 
-    function buyLongerProcession() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerProcessionLevel) || 0));
-      if (level >= LONGER_PROCESSION_MAX) return;
-      var cost = longerProcessionCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerProcessionLevel = level + 1;
-      markChronicle("longerProcession");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyDeeperToll() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.deeperTollLevel) || 0));
-      if (level >= DEEPER_TOLL_MAX) return;
-      var cost = deeperTollCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.deeperTollLevel = level + 1;
-      markChronicle("deeperToll");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyLongerWake() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerWakeLevel) || 0));
-      if (level >= LONGER_WAKE_MAX) return;
-      var cost = longerWakeCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerWakeLevel = level + 1;
-      markChronicle("longerWake");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyLongerTithe() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerTitheLevel) || 0));
-      if (level >= LONGER_TITHE_MAX) return;
-      var cost = longerTitheCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerTitheLevel = level + 1;
-      markChronicle("longerTithe");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyLongerVeil() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerVeilLevel) || 0));
-      if (level >= LONGER_VEIL_MAX) return;
-      var cost = longerVeilCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerVeilLevel = level + 1;
-      markChronicle("longerVeil");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyLongerHymn() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerHymnLevel) || 0));
-      if (level >= LONGER_HYMN_MAX) return;
-      var cost = longerHymnCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerHymnLevel = level + 1;
-      markChronicle("longerHymn");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyLongerKnell() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.longerKnellLevel) || 0));
-      if (level >= LONGER_KNELL_MAX) return;
-      var cost = longerKnellCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.longerKnellLevel = level + 1;
-      markChronicle("longerKnell");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyAshenTide() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.ashenTideLevel) || 0));
-      if (level >= ASHEN_TIDE_MAX) return;
-      var cost = ashenTideCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.ashenTideLevel = level + 1;
-      markSaveDirty();
-      markDirty();
-    }
-
-    function buyOssuary() {
-      var state = host.getState();
-      if (!remembranceUnlocked()) return;
-      var level = Math.max(0, Math.floor(Number(state.ossuaryLevel) || 0));
-      if (level >= OSSUARY_MAX) return;
-      var cost = ossuaryCost(level);
-      if (!isFinite(cost) || (Number(state.remembrance) || 0) < cost) return;
-      var hollowBefore = state.remembrance;
-      state.remembrance -= cost;
-      noteHollowManualSpend("remembrance", cost, hollowBefore);
-      state.ossuaryLevel = level + 1;
-      markChronicle("ossuary");
-      checkUnlock();
-      markSaveDirty();
-      markDirty();
-    }
+    function buyDeeperNight() { buyRemembranceUpgrade("deeperNightLevel", deeperNightCost); }
+    function buyLongerProcession() { buyRemembranceUpgrade("longerProcessionLevel", longerProcessionCost, LONGER_PROCESSION_MAX, "longerProcession"); }
+    function buyDeeperToll() { buyRemembranceUpgrade("deeperTollLevel", deeperTollCost, DEEPER_TOLL_MAX, "deeperToll"); }
+    function buyLongerWake() { buyRemembranceUpgrade("longerWakeLevel", longerWakeCost, LONGER_WAKE_MAX, "longerWake"); }
+    function buyLongerTithe() { buyRemembranceUpgrade("longerTitheLevel", longerTitheCost, LONGER_TITHE_MAX, "longerTithe"); }
+    function buyLongerVeil() { buyRemembranceUpgrade("longerVeilLevel", longerVeilCost, LONGER_VEIL_MAX, "longerVeil"); }
+    function buyLongerHymn() { buyRemembranceUpgrade("longerHymnLevel", longerHymnCost, LONGER_HYMN_MAX, "longerHymn"); }
+    function buyLongerKnell() { buyRemembranceUpgrade("longerKnellLevel", longerKnellCost, LONGER_KNELL_MAX, "longerKnell"); }
+    function buyAshenTide() { buyRemembranceUpgrade("ashenTideLevel", ashenTideCost, ASHEN_TIDE_MAX); }
+    function buyOssuary() { buyRemembranceUpgrade("ossuaryLevel", ossuaryCost, OSSUARY_MAX, "ossuary"); }
 
     function applyEdictStartingStock(s) {
       var state = host.getState();
@@ -648,16 +515,11 @@
       state.favor = (Number(state.favor) || 0) + gain + extraFavor;
       state.favorEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
       if (state.echoLevel > 1) state.echoLevel = 1;
-      state.peakShades = N.max(num(state.peakShades), num(state.shades));
-      state.peakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
-      state.peakFetters = N.max(num(state.peakFetters), num(state.fetters));
-      state.peakCensers = N.max(num(state.peakCensers), num(state.censers));
-      state.peakPyres = N.max(num(state.peakPyres), num(state.pyres));
-      state.peakUrns = N.max(num(state.peakUrns), num(state.urns));
-      state.peakHearths = N.max(num(state.peakHearths), num(state.hearths));
-      state.peakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
-      state.peakSpires = N.max(num(state.peakSpires), num(state.spires));
-      state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
+      for (var pk in PEAK_STATS) {
+        if (Object.prototype.hasOwnProperty.call(PEAK_STATS, pk)) {
+          state[pk] = N.max(num(state[pk]), num(state[PEAK_STATS[pk]]));
+        }
+      }
       state.tributesLaid = (Number(state.tributesLaid) || 0) + 1;
       state.chronicle = (state.chronicle || []).slice();
       state.vowsKnown = normalizeVowsKnown(state.vowsKnown);
@@ -792,10 +654,6 @@
       buyOssuary: buyOssuary,
       applyEdictStartingStock: applyEdictStartingStock,
       applyAutobindStarts: applyAutobindStarts,
-      applyTributeAccountMutations: applyTributeAccountMutations,
-      snapshotAccountFields: snapshotAccountFields,
-      restoreAccountFields: restoreAccountFields,
-      applyTributeTimerPhases: applyTributeTimerPhases,
       layTribute: layTribute
     };
   }
