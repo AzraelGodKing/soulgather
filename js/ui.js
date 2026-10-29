@@ -6,7 +6,6 @@
   var N = global.SoulgatherNum;
   var C = global.SoulgatherConfig;
   var E = global.SoulgatherEconomy;
-  var S = global.SoulgatherState;
 
   var ANNOUNCE_THROTTLE_MS = C.ANNOUNCE_THROTTLE_MS;
   var BEACON_ASH_PER_SEC = C.BEACON_ASH_PER_SEC;
