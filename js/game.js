@@ -207,26 +207,10 @@
   var formatBlessing = U.formatBlessing;
   var pulseGather = U.pulseGather;
   var spawnRipple = U.spawnRipple;
-  var revealWell = U.revealWell;
-  var revealSpirits = U.revealSpirits;
-  var revealVessels = U.revealVessels;
-  var revealThrones = U.revealThrones;
-  var revealLanterns = U.revealLanterns;
-  var revealCensers = U.revealCensers;
-  var revealPyres = U.revealPyres;
-  var revealUrns = U.revealUrns;
-  var revealHearths = U.revealHearths;
-  var revealBeacons = U.revealBeacons;
-  var revealSpires = U.revealSpires;
-  var revealObelisks = U.revealObelisks;
-  var revealChalices = U.revealChalices;
-  var revealFetters = U.revealFetters;
   var revealUnlockedCards = U.revealUnlockedCards;
   var hideUnlockCards = U.hideUnlockCards;
   var capEnqueueToast = U.capEnqueueToast;
   var formatGiftBatchSummary = U.formatGiftBatchSummary;
-  var beginGiftToastBatch = U.beginGiftToastBatch;
-  var flushGiftToasts = U.flushGiftToasts;
   var showToast = U.showToast;
   var toastBulk = U.toastBulk;
   var hideToast = U.hideToast;
@@ -296,7 +280,6 @@
     wakeActive: wakeActive,
     wellPurchasePlan: wellPurchasePlan
   });
-  var rememberVow = A.rememberVow;
   var buyWell = A.buyWell;
   var buyShade = A.buyShade;
   var buySpirit = A.buySpirit;
@@ -346,14 +329,6 @@
   var loadFailReturnFocus = null;
 
   var clamp = E.clamp;
-
-  function currentMult() {
-    return E.currentMult(
-      state.favorEarned, state.thrones, state.edictLevel,
-      state.aspect, state.crownWeight, state.namesComplete,
-      state.chalices, state.ossuaryLevel, processionActive()
-    );
-  }
 
   function titheActive() {
     return (Number(state.titheLeft) || 0) > 0;

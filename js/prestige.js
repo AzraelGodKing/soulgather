@@ -788,10 +788,6 @@
       buyOssuary: buyOssuary,
       applyEdictStartingStock: applyEdictStartingStock,
       applyAutobindStarts: applyAutobindStarts,
-      applyTributeAccountMutations: applyTributeAccountMutations,
-      snapshotAccountFields: snapshotAccountFields,
-      restoreAccountFields: restoreAccountFields,
-      applyTributeTimerPhases: applyTributeTimerPhases,
       layTribute: layTribute
     };
   }
