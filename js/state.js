@@ -30,6 +30,7 @@
   var UNLOCK_URNS = C.UNLOCK_URNS;
   var UNLOCK_VEIL_CLICKS = C.UNLOCK_VEIL_CLICKS;
   var UNLOCK_WAKE_ASH = C.UNLOCK_WAKE_ASH;
+  var PEAK_STATS = C.PEAK_STATS;
   var CHRONICLE_ORDER = C.CHRONICLE_ORDER;
   var CHRONICLE_LINES = C.CHRONICLE_LINES;
   var normalizeBuyMode = C.normalizeBuyMode;
@@ -491,16 +492,11 @@
       }
     }
     s.simulatedUntil = loadCount(data.simulatedUntil) || loadCount(data.lastTick) || Date.now();
-    s.peakShades = N.max(loadNum(data.peakShades), loadNum(data.shades));
-    s.peakLanterns = N.max(loadNum(data.peakLanterns), loadNum(data.lanterns));
-    s.peakFetters = N.max(loadNum(data.peakFetters), loadNum(data.fetters));
-    s.peakCensers = N.max(loadNum(data.peakCensers), loadNum(data.censers));
-    s.peakPyres = N.max(loadNum(data.peakPyres), loadNum(data.pyres));
-    s.peakUrns = N.max(loadNum(data.peakUrns), loadNum(data.urns));
-    s.peakHearths = N.max(loadNum(data.peakHearths), loadNum(data.hearths));
-    s.peakBeacons = N.max(loadNum(data.peakBeacons), loadNum(data.beacons));
-    s.peakSpires = N.max(loadNum(data.peakSpires), loadNum(data.spires));
-    s.peakObelisks = N.max(loadNum(data.peakObelisks), loadNum(data.obelisks));
+    for (var pk in PEAK_STATS) {
+      if (Object.prototype.hasOwnProperty.call(PEAK_STATS, pk)) {
+        s[pk] = N.max(loadNum(data[pk]), loadNum(data[PEAK_STATS[pk]]));
+      }
+    }
     s.vowHungerPaid = !!data.vowHungerPaid && s.vow === "hunger";
     if (data.favorEarned == null) s.favorEarned = loadCount(data.favor);
     if (data.allTimeSouls == null) s.allTimeSouls = loadNum(data.lifetimeSouls);
@@ -515,13 +511,9 @@
     if (N.cmp(s.spires, 1) >= 0 || N.cmp(s.beacons, UNLOCK_SPIRES) >= 0) s.unlockedSpires = true;
     if (N.cmp(s.obelisks, 1) >= 0 || N.cmp(s.spires, UNLOCK_OBELISKS) >= 0) s.unlockedObelisks = true;
     if ((loadCount(data.nightLeft) || 0) > 0) s.unlockedNightTithe = true;
-    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_VEIL_CLICKS || (loadCount(data.veilLeft) || 0) > 0) s.unlockedVeil = true;
-    if (!!data.unlockedPyres || (loadCount(data.wakeLeft) || 0) > 0) s.unlockedWake = true;
-    if ((loadCount(data.clicksThisRun) || 0) >= UNLOCK_TOLL_CLICKS || (loadCount(data.tollLeft) || 0) > 0) s.unlockedToll = true;
-    if (s.wakeLeft > 0 || N.cmp(s.ash, UNLOCK_WAKE_ASH) >= 0 || s.unlockedPyres) s.unlockedWake = true;
-    if (s.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(s.veilLeft) || 0) > 0) s.unlockedVeil = true;
-    if (s.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(s.tollLeft) || 0) > 0) s.unlockedToll = true;
-    if (s.unlockedPyres || N.cmp(s.pyres, 1) >= 0 || N.cmp(s.ash, UNLOCK_WAKE_ASH) >= 0 || s.wakeLeft > 0) s.unlockedWake = true;
+    s.unlockedVeil = s.unlockedVeil || s.clicksThisRun >= UNLOCK_VEIL_CLICKS || (Number(s.veilLeft) || 0) > 0;
+    s.unlockedWake = s.unlockedWake || !!s.unlockedPyres || s.wakeLeft > 0 || N.cmp(s.ash, UNLOCK_WAKE_ASH) >= 0 || N.cmp(s.pyres, 1) >= 0;
+    s.unlockedToll = s.unlockedToll || s.clicksThisRun >= UNLOCK_TOLL_CLICKS || (Number(s.tollLeft) || 0) > 0;
     if (s.bindingTollLevel >= 1) s.unlockedBindingToll = true;
     if (s.choirLevel >= 1) s.unlockedChoir = true;
     if (s.namesBound >= 12) s.namesComplete = true;
@@ -602,15 +594,10 @@
     FIELDS: FIELDS,
     FIELDS_KEYS: FIELDS_KEYS,
     hasChronicle: hasChronicle,
-    normalizeChronicle: normalizeChronicle,
-    seedVowsKnown: seedVowsKnown,
-    fieldDefault: fieldDefault,
     freshState: freshState,
-    dumpNum: dumpNum,
     serializeState: serializeState,
     loadCount: loadCount,
     loadNum: loadNum,
-    numFieldBroken: numFieldBroken,
     coreCurrenciesBroken: coreCurrenciesBroken,
     isFiniteStock: isFiniteStock,
     isSaveShape: isSaveShape,

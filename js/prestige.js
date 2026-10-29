@@ -20,6 +20,7 @@
   var LONGER_VEIL_MAX = C.LONGER_VEIL_MAX;
   var LONGER_WAKE_MAX = C.LONGER_WAKE_MAX;
   var OSSUARY_MAX = C.OSSUARY_MAX;
+  var PEAK_STATS = C.PEAK_STATS;
   var UNLOCK_AUTOBIND_BEACONS = C.UNLOCK_AUTOBIND_BEACONS;
   var UNLOCK_AUTOBIND_CENSERS = C.UNLOCK_AUTOBIND_CENSERS;
   var UNLOCK_AUTOBIND_CHALICES = C.UNLOCK_AUTOBIND_CHALICES;
@@ -76,7 +77,7 @@
   var processionEdictCost = E.processionEdictCost;
   var processionLeftAfterTribute = E.processionLeftAfterTribute;
   var quietCourtCost = E.quietCourtCost;
-  var remembranceFavorCost = E.remembranceFavorCost;
+  var remembranceCostFavor = E.remembranceCostFavor;
   var riseEdictCost = E.riseEdictCost;
   var seatCost = E.seatCost;
   var smokeEdictCost = E.smokeEdictCost;
@@ -353,7 +354,7 @@
     function layRemembrance() {
       var state = host.getState();
       if (!remembranceUnlocked()) return;
-      var cost = remembranceFavorCost();
+      var cost = remembranceCostFavor();
       if (!isFinite(cost) || state.favor < cost) return;
       var hollowBefore = state.favor;
       state.favor -= cost;
@@ -648,16 +649,11 @@
       state.favor = (Number(state.favor) || 0) + gain + extraFavor;
       state.favorEarned = (Number(state.favorEarned) || 0) + gain + extraFavor;
       if (state.echoLevel > 1) state.echoLevel = 1;
-      state.peakShades = N.max(num(state.peakShades), num(state.shades));
-      state.peakLanterns = N.max(num(state.peakLanterns), num(state.lanterns));
-      state.peakFetters = N.max(num(state.peakFetters), num(state.fetters));
-      state.peakCensers = N.max(num(state.peakCensers), num(state.censers));
-      state.peakPyres = N.max(num(state.peakPyres), num(state.pyres));
-      state.peakUrns = N.max(num(state.peakUrns), num(state.urns));
-      state.peakHearths = N.max(num(state.peakHearths), num(state.hearths));
-      state.peakBeacons = N.max(num(state.peakBeacons), num(state.beacons));
-      state.peakSpires = N.max(num(state.peakSpires), num(state.spires));
-      state.peakObelisks = N.max(num(state.peakObelisks), num(state.obelisks));
+      for (var pk in PEAK_STATS) {
+        if (Object.prototype.hasOwnProperty.call(PEAK_STATS, pk)) {
+          state[pk] = N.max(num(state[pk]), num(state[PEAK_STATS[pk]]));
+        }
+      }
       state.tributesLaid = (Number(state.tributesLaid) || 0) + 1;
       state.chronicle = (state.chronicle || []).slice();
       state.vowsKnown = normalizeVowsKnown(state.vowsKnown);
@@ -792,10 +788,6 @@
       buyOssuary: buyOssuary,
       applyEdictStartingStock: applyEdictStartingStock,
       applyAutobindStarts: applyAutobindStarts,
-      applyTributeAccountMutations: applyTributeAccountMutations,
-      snapshotAccountFields: snapshotAccountFields,
-      restoreAccountFields: restoreAccountFields,
-      applyTributeTimerPhases: applyTributeTimerPhases,
       layTribute: layTribute
     };
   }
