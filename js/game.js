@@ -20,7 +20,6 @@
   var autobindAcc = 0;
   var sanityAcc = 0;
   var AWAY_SUMMARY_DT = C.AWAY_SUMMARY_DT;
-  /* Aliases to BASE for export/compat (live costs use *Cost(level)). */
 
   var _dirty = true;
   var _lastRenderTime = 0;
@@ -30,7 +29,6 @@
   var saveDirty = false;
   function markSaveDirty() { saveDirty = true; }
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
-  /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
 
   /* ─── Reduced-motion (in-game setting, independent of OS) ──────────── */
   var REDUCE_MOTION_KEY = C.REDUCE_MOTION_KEY;
@@ -298,7 +296,6 @@
     wakeActive: wakeActive,
     wellPurchasePlan: wellPurchasePlan
   });
-  var TRIBUTE_AUTOBIND_STARTS = globalThis.SoulgatherActions.TRIBUTE_AUTOBIND_STARTS;
   var rememberVow = A.rememberVow;
   var buyWell = A.buyWell;
   var buyShade = A.buyShade;
@@ -323,10 +320,6 @@
   var applyAutobindStarts = A.applyAutobindStarts;
   var layTribute = A.layTribute;
 
-  function seedVowsKnown(raw) {
-    return S.seedVowsKnown(raw, state);
-  }
-
   var normalizeBuyMode = C.normalizeBuyMode;
 
   function isTypingTarget(el) {
@@ -336,10 +329,6 @@
     if (el.isContentEditable) return true;
     return false;
   }
-
-  var FIELDS_KEYS = S.FIELDS_KEYS;
-
-  // ── bonus* → gift* migration map (AZR-179) ──
 
   var freshState = S.freshState;
 
@@ -691,7 +680,6 @@
   }
 
   function tryAutobindCensers() {
-    /* No extra hold-back: autobind censers/thrones do not reserve Censers for a Pyre. */
     if (!state.autobindCensers) return;
     if (!state.unlockedCensers) return;
     var cost = censerCost(state.censers);
@@ -720,7 +708,6 @@
   }
 
   function tryAutobindUrns() {
-    /* No extra hold-back: autobind urns spend Pyres; autobind pyres buy Pyres. */
     if (!state.autobindUrns) return;
     if (!state.unlockedUrns) return;
     var cost = urnCost(state.urns);
@@ -730,7 +717,6 @@
   }
 
   function tryAutobindHearths() {
-    /* No extra hold-back vs saving Urns for a manual hearth. Autobind Hearths does not hold back Hearths for a Beacon. */
     if (!state.autobindHearths) return;
     if (!state.unlockedHearths) return;
     var cost = hearthCost(state.hearths);
@@ -740,7 +726,6 @@
   }
 
   function tryAutobindBeacons() {
-    /* No extra hold-back vs saving Hearths for a manual beacon. */
     if (!state.autobindBeacons) return;
     if (!state.unlockedBeacons) return;
     var cost = beaconCost(state.beacons);
@@ -750,7 +735,6 @@
   }
 
   function tryAutobindSpires() {
-    /* No extra hold-back vs saving Beacons for a manual spire. Autobind Spires can spend a beacon Autobind Beacons just bought. */
     if (!state.autobindSpires) return;
     if (!state.unlockedSpires) return;
     var cost = spireCost(state.spires);
@@ -760,7 +744,6 @@
   }
 
   function tryAutobindObelisks() {
-    /* No extra hold-back vs saving Spires for a manual obelisk. Autobind Obelisks can spend a spire Autobind Spires just bought. */
     if (!state.autobindObelisks) return;
     if (!state.unlockedObelisks) return;
     var cost = obeliskCost(state.obelisks);
@@ -850,9 +833,6 @@
     revealUnlockedCards(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
-    }
-    if (els.namesBoundList) {
-      els.namesBoundList.dataset.sig = "";
     }
     if (els.namesList) {
       els.namesList.dataset.sig = "";
@@ -1099,33 +1079,36 @@
     showLoadFailNotice();
   }
 
+  function fillFallback(json, focusEl) {
+    /* Open the panel first: a textarea inside a closed <details> cannot take focus. */
+    if (els.memoryPanel) els.memoryPanel.open = true;
+    if (focusEl) {
+      focusEl.value = json;
+      focusEl.focus();
+      focusEl.select();
+      try {
+        document.execCommand("copy");
+      } catch (err2) {
+        /* textarea still holds the memory */
+      }
+    }
+    if (els.memoryText && els.memoryText !== focusEl) {
+      els.memoryText.value = json;
+    }
+    showToast("The well's memory is copied.");
+  }
+
   function exportRawFailedMemory() {
     var json = loadFailedRaw == null ? "" : String(loadFailedRaw);
-    function fillFallback() {
-      if (els.loadFailRaw) {
-        els.loadFailRaw.value = json;
-        els.loadFailRaw.focus();
-        els.loadFailRaw.select();
-        try {
-          document.execCommand("copy");
-        } catch (err2) {
-          /* textarea still holds the memory */
-        }
-      }
-      if (els.memoryPanel) els.memoryPanel.open = true;
-      if (els.memoryText) {
-        els.memoryText.value = json;
-      }
-      showToast("The well's memory is copied.");
-    }
+    function onFallback() { fillFallback(json, els.loadFailRaw); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(json).then(function () {
         if (els.loadFailRaw) els.loadFailRaw.value = json;
         if (els.memoryText) els.memoryText.value = json;
         showToast("The well's memory is copied.");
-      }, fillFallback);
+      }, onFallback);
     } else {
-      fillFallback();
+      onFallback();
     }
   }
 
@@ -1221,27 +1204,14 @@
         return;
       }
     }
-    function fillFallback() {
-      if (els.memoryPanel) els.memoryPanel.open = true;
-      if (els.memoryText) {
-        els.memoryText.value = json;
-        els.memoryText.focus();
-        els.memoryText.select();
-        try {
-          document.execCommand("copy");
-        } catch (err2) {
-          /* textarea still holds the memory */
-        }
-      }
-      showToast("The well's memory is copied.");
-    }
+    function onFallback() { fillFallback(json, els.memoryText); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(json).then(function () {
         if (els.memoryText) els.memoryText.value = json;
         showToast("The well's memory is copied.");
-      }, fillFallback);
+      }, onFallback);
     } else {
-      fillFallback();
+      onFallback();
     }
   }
 
@@ -1308,11 +1278,6 @@
     hideUnlockCards();
     render();
   }
-
-  /* AZR-171: Tribute restore phases — edict starting stock, then autobind starts.
-   * Ash autobind unlocks (unlockedAutobindUrns etc.) must be evaluated after
-   * Edict starting stock is applied so thresholds see post-edict counts.
-   */
 
   function frameDt(now) {
     if (!lastFrame) lastFrame = now;
@@ -1399,9 +1364,9 @@
     "vowExtraFavor", "vowsKnownCount", "normalizeVow", "BINDING_TOLL_MAX", "BINDING_TOLL_RATE",
     "BINDING_TOLL_COST_BONUS", "CINDER_COST_BASE", "CINDER_COST_MULT", "URN_RITE_COST_BASE",
     "URN_RITE_COST_MULT", "HEARTH_RITE_COST_BASE", "HEARTH_RITE_COST_MULT", "BEACON_RITE_COST_BASE",
-    "BEACON_RITE_COST_MULT", "SPIRE_RITE_COST_BASE", "SPIRE_RITE_COST_MULT", "HEARTH_RITE_COST",
-    "BEACON_RITE_COST", "SPIRE_RITE_COST", "RITE_MULT_BASE", "SIPHON_COST_BASE", "LEVY_COST_BASE",
-    "CINDER_COST", "URN_RITE_COST", "harvestMult", "bindingMult", "throneWeight", "hollowMult",
+    "BEACON_RITE_COST_MULT", "SPIRE_RITE_COST_BASE", "SPIRE_RITE_COST_MULT",
+    "RITE_MULT_BASE", "SIPHON_COST_BASE", "LEVY_COST_BASE",
+    "harvestMult", "bindingMult", "throneWeight", "hollowMult",
     "stacksWantedFromIdle", "HOLLOW_GRACE", "HOLLOW_INTERVAL", "HOLLOW_MAX", "HOLLOW_PENALTY",
     "HOLLOW_SOUL_CLEAR_CAP", "HOLLOW_SOUL_CLEAR_FLOOR", "HOLLOW_ASH_CLEAR_FLOOR", "HOLLOW_SHADE_CLEAR_FLOOR",
     "HOLLOW_CLEAR_FRAC", "MAX_DT", "LIVE_FRAME_MAX", "AWAY_SUMMARY_DT", "normalizeAspect", "titheMult",
@@ -1428,7 +1393,7 @@
   _eco.setTextWriteCount = U.getSetTextWriteCount;
   _eco.applyEdictStartingStock = applyEdictStartingStock;
   _eco.applyAutobindStarts = applyAutobindStarts;
-  _eco.TRIBUTE_AUTOBIND_STARTS = TRIBUTE_AUTOBIND_STARTS;
+  _eco.TRIBUTE_AUTOBIND_STARTS = globalThis.SoulgatherPrestige.TRIBUTE_AUTOBIND_STARTS;
   _eco.capEnqueueToast = capEnqueueToast;
   _eco.formatGiftBatchSummary = formatGiftBatchSummary;
   _eco.formatBlessing = formatBlessing;
