@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parent
 
 checks = [["node", str(root / "check-syntax.mjs")]]
 suites = [
+    root / "test-exports.mjs",
     root / "test-economy.mjs",
     root / "sim-firstrun.mjs",
     root / "test-load-safety.mjs",

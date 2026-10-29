@@ -16,6 +16,9 @@ jobs:
       - name: Syntax check
         run: npm run check
 
+      - name: Harness export guard
+        run: node test-exports.mjs
+
       - name: Economy tests
         run: node test-economy.mjs
 
