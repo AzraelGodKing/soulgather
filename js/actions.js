@@ -8,7 +8,6 @@
   var N = global.SoulgatherNum;
   var C = global.SoulgatherConfig;
   var E = global.SoulgatherEconomy;
-  var S = global.SoulgatherState;
 
   var BEACON_COST_BASE = C.BEACON_COST_BASE;
   var BEACON_COST_MULT = C.BEACON_COST_MULT;
@@ -49,8 +48,8 @@
   var hearthRiteCost = E.hearthRiteCost;
   var levyCost = E.levyCost;
   var markCost = E.markCost;
-  var nightSecs = E.nightSecs;
   var nightTitheCost = E.nightTitheCost;
+  var nightTitheSecs = E.nightTitheSecs;
   var paidKnellSecs = E.paidKnellSecs;
   var paidProcessionSecs = E.paidProcessionSecs;
   var paidTitheSecs = E.paidTitheSecs;
@@ -555,7 +554,7 @@
       var hollowBefore = state.ash;
       state.ash = N.sub(state.ash, cost);
       noteHollowManualSpend("ash", cost, hollowBefore);
-      state.nightLeft = nightSecs(state.deeperNightLevel);
+      state.nightLeft = nightTitheSecs(state.deeperNightLevel);
       showToast("The GodKing hungers at midnight.");
       announce("Night's Tithe active.");
       markSaveDirty();
@@ -904,8 +903,6 @@
   }
 
   global.SoulgatherActions = {
-    create: create,
-    VOW_CONFIRM: VOW_CONFIRM,
-    TRIBUTE_AUTOBIND_STARTS: global.SoulgatherPrestige.TRIBUTE_AUTOBIND_STARTS
+    create: create
   };
 })(typeof window !== "undefined" ? window : globalThis);

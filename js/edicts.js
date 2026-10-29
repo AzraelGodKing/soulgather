@@ -16,6 +16,7 @@
   var NIGHT_TITHE_FRAC = C.NIGHT_TITHE_FRAC;
   var NIGHT_TITHE_SECS = C.NIGHT_TITHE_SECS;
   var VEIL_MIN = C.VEIL_MIN;
+  var VEIL_FRAC = C.VEIL_FRAC;
   var REMEMBRANCE_FAVOR_COST = C.REMEMBRANCE_FAVOR_COST;
   var ASHEN_TIDE_MAX = C.ASHEN_TIDE_MAX;
   var OSSUARY_COST = C.OSSUARY_COST;
@@ -50,7 +51,7 @@
 
   function veilCost(ash) {
     var n = N.max(N.from(ash), 0);
-    var cut = N.floor(N.div(N.mul(n, 15), 100));
+    var cut = N.floor(N.div(N.mul(n, VEIL_FRAC * 100), 100));
     return N.max(N.fromNumber(VEIL_MIN), cut);
   }
 
@@ -230,10 +231,6 @@
     return REMEMBRANCE_FAVOR_COST;
   }
 
-  function remembranceFavorCost() {
-    return remembranceCostFavor();
-  }
-
   function deeperNightCost(level) {
     var n = Math.max(0, Math.floor(level));
     return 1 * Math.pow(2, n);
@@ -334,10 +331,6 @@
     return NIGHT_TITHE_SECS + 10 * n;
   }
 
-  function nightSecs(level) {
-    return nightTitheSecs(level);
-  }
-
   /* ── Ash / choir / names ─────────────────────────────────────────── */
 
   function ashFromShadeFrac(level, choirLevel) {
@@ -362,8 +355,6 @@
     }
     return n;
   }
-
-  /* ── Rite costs / mults ──────────────────────────────────────────── */
 
   global.SoulgatherEdicts = {
     titheCost: titheCost,
@@ -423,7 +414,6 @@
     cupStartsChalices: cupStartsChalices,
     draughtEdictCost: draughtEdictCost,
     remembranceCostFavor: remembranceCostFavor,
-    remembranceFavorCost: remembranceFavorCost,
     deeperNightCost: deeperNightCost,
     longerProcessionCost: longerProcessionCost,
     paidProcessionSecs: paidProcessionSecs,
@@ -441,7 +431,6 @@
     ashenTideCost: ashenTideCost,
     ossuaryCost: ossuaryCost,
     nightTitheSecs: nightTitheSecs,
-    nightSecs: nightSecs,
     ashFromShadeFrac: ashFromShadeFrac,
     choirAshRate: choirAshRate,
     namesFromPeak: namesFromPeak

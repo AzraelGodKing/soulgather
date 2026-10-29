@@ -20,7 +20,6 @@
   var autobindAcc = 0;
   var sanityAcc = 0;
   var AWAY_SUMMARY_DT = C.AWAY_SUMMARY_DT;
-  /* Aliases to BASE for export/compat (live costs use *Cost(level)). */
 
   var _dirty = true;
   var _lastRenderTime = 0;
@@ -30,7 +29,6 @@
   var saveDirty = false;
   function markSaveDirty() { saveDirty = true; }
   function flushSave() { if (!saveDirty) return; saveDirty = false; save(); }
-  /* ─── Accessibility announcer (throttled, polite) ──────────────────── */
 
   /* ─── Reduced-motion (in-game setting, independent of OS) ──────────── */
   var REDUCE_MOTION_KEY = C.REDUCE_MOTION_KEY;
@@ -206,29 +204,12 @@
   var setText = U.setText;
   var announce = U.announce;
   var fmt = U.fmt;
-  var formatBlessing = U.formatBlessing;
   var pulseGather = U.pulseGather;
   var spawnRipple = U.spawnRipple;
-  var revealWell = U.revealWell;
-  var revealSpirits = U.revealSpirits;
-  var revealVessels = U.revealVessels;
-  var revealThrones = U.revealThrones;
-  var revealLanterns = U.revealLanterns;
-  var revealCensers = U.revealCensers;
-  var revealPyres = U.revealPyres;
-  var revealUrns = U.revealUrns;
-  var revealHearths = U.revealHearths;
-  var revealBeacons = U.revealBeacons;
-  var revealSpires = U.revealSpires;
-  var revealObelisks = U.revealObelisks;
-  var revealChalices = U.revealChalices;
-  var revealFetters = U.revealFetters;
   var revealUnlockedCards = U.revealUnlockedCards;
   var hideUnlockCards = U.hideUnlockCards;
   var capEnqueueToast = U.capEnqueueToast;
   var formatGiftBatchSummary = U.formatGiftBatchSummary;
-  var beginGiftToastBatch = U.beginGiftToastBatch;
-  var flushGiftToasts = U.flushGiftToasts;
   var showToast = U.showToast;
   var toastBulk = U.toastBulk;
   var hideToast = U.hideToast;
@@ -298,8 +279,6 @@
     wakeActive: wakeActive,
     wellPurchasePlan: wellPurchasePlan
   });
-  var TRIBUTE_AUTOBIND_STARTS = globalThis.SoulgatherActions.TRIBUTE_AUTOBIND_STARTS;
-  var rememberVow = A.rememberVow;
   var buyWell = A.buyWell;
   var buyShade = A.buyShade;
   var buySpirit = A.buySpirit;
@@ -323,10 +302,6 @@
   var applyAutobindStarts = A.applyAutobindStarts;
   var layTribute = A.layTribute;
 
-  function seedVowsKnown(raw) {
-    return S.seedVowsKnown(raw, state);
-  }
-
   var normalizeBuyMode = C.normalizeBuyMode;
 
   function isTypingTarget(el) {
@@ -337,15 +312,7 @@
     return false;
   }
 
-  var FIELDS_KEYS = S.FIELDS_KEYS;
-
-  // ── bonus* → gift* migration map (AZR-179) ──
-
   var freshState = S.freshState;
-
-  function resetToScope(target) {
-    S.resetToScope(state, target);
-  }
 
   var state = freshState();
   var lastFrame = 0;
@@ -357,14 +324,6 @@
   var loadFailReturnFocus = null;
 
   var clamp = E.clamp;
-
-  function currentMult() {
-    return E.currentMult(
-      state.favorEarned, state.thrones, state.edictLevel,
-      state.aspect, state.crownWeight, state.namesComplete,
-      state.chalices, state.ossuaryLevel, processionActive()
-    );
-  }
 
   function titheActive() {
     return (Number(state.titheLeft) || 0) > 0;
@@ -691,7 +650,6 @@
   }
 
   function tryAutobindCensers() {
-    /* No extra hold-back: autobind censers/thrones do not reserve Censers for a Pyre. */
     if (!state.autobindCensers) return;
     if (!state.unlockedCensers) return;
     var cost = censerCost(state.censers);
@@ -720,7 +678,6 @@
   }
 
   function tryAutobindUrns() {
-    /* No extra hold-back: autobind urns spend Pyres; autobind pyres buy Pyres. */
     if (!state.autobindUrns) return;
     if (!state.unlockedUrns) return;
     var cost = urnCost(state.urns);
@@ -730,7 +687,6 @@
   }
 
   function tryAutobindHearths() {
-    /* No extra hold-back vs saving Urns for a manual hearth. Autobind Hearths does not hold back Hearths for a Beacon. */
     if (!state.autobindHearths) return;
     if (!state.unlockedHearths) return;
     var cost = hearthCost(state.hearths);
@@ -740,7 +696,6 @@
   }
 
   function tryAutobindBeacons() {
-    /* No extra hold-back vs saving Hearths for a manual beacon. */
     if (!state.autobindBeacons) return;
     if (!state.unlockedBeacons) return;
     var cost = beaconCost(state.beacons);
@@ -750,7 +705,6 @@
   }
 
   function tryAutobindSpires() {
-    /* No extra hold-back vs saving Beacons for a manual spire. Autobind Spires can spend a beacon Autobind Beacons just bought. */
     if (!state.autobindSpires) return;
     if (!state.unlockedSpires) return;
     var cost = spireCost(state.spires);
@@ -760,7 +714,6 @@
   }
 
   function tryAutobindObelisks() {
-    /* No extra hold-back vs saving Spires for a manual obelisk. Autobind Obelisks can spend a spire Autobind Spires just bought. */
     if (!state.autobindObelisks) return;
     if (!state.unlockedObelisks) return;
     var cost = obeliskCost(state.obelisks);
@@ -850,9 +803,6 @@
     revealUnlockedCards(false);
     if (els.chronicleList) {
       els.chronicleList.dataset.sig = "";
-    }
-    if (els.namesBoundList) {
-      els.namesBoundList.dataset.sig = "";
     }
     if (els.namesList) {
       els.namesList.dataset.sig = "";
@@ -1099,33 +1049,36 @@
     showLoadFailNotice();
   }
 
+  function fillFallback(json, focusEl) {
+    /* Open the panel first: a textarea inside a closed <details> cannot take focus. */
+    if (els.memoryPanel) els.memoryPanel.open = true;
+    if (focusEl) {
+      focusEl.value = json;
+      focusEl.focus();
+      focusEl.select();
+      try {
+        document.execCommand("copy");
+      } catch (err2) {
+        /* textarea still holds the memory */
+      }
+    }
+    if (els.memoryText && els.memoryText !== focusEl) {
+      els.memoryText.value = json;
+    }
+    showToast("The well's memory is copied.");
+  }
+
   function exportRawFailedMemory() {
     var json = loadFailedRaw == null ? "" : String(loadFailedRaw);
-    function fillFallback() {
-      if (els.loadFailRaw) {
-        els.loadFailRaw.value = json;
-        els.loadFailRaw.focus();
-        els.loadFailRaw.select();
-        try {
-          document.execCommand("copy");
-        } catch (err2) {
-          /* textarea still holds the memory */
-        }
-      }
-      if (els.memoryPanel) els.memoryPanel.open = true;
-      if (els.memoryText) {
-        els.memoryText.value = json;
-      }
-      showToast("The well's memory is copied.");
-    }
+    function onFallback() { fillFallback(json, els.loadFailRaw); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(json).then(function () {
         if (els.loadFailRaw) els.loadFailRaw.value = json;
         if (els.memoryText) els.memoryText.value = json;
         showToast("The well's memory is copied.");
-      }, fillFallback);
+      }, onFallback);
     } else {
-      fillFallback();
+      onFallback();
     }
   }
 
@@ -1221,27 +1174,14 @@
         return;
       }
     }
-    function fillFallback() {
-      if (els.memoryPanel) els.memoryPanel.open = true;
-      if (els.memoryText) {
-        els.memoryText.value = json;
-        els.memoryText.focus();
-        els.memoryText.select();
-        try {
-          document.execCommand("copy");
-        } catch (err2) {
-          /* textarea still holds the memory */
-        }
-      }
-      showToast("The well's memory is copied.");
-    }
+    function onFallback() { fillFallback(json, els.memoryText); }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(json).then(function () {
         if (els.memoryText) els.memoryText.value = json;
         showToast("The well's memory is copied.");
-      }, fillFallback);
+      }, onFallback);
     } else {
-      fillFallback();
+      onFallback();
     }
   }
 
@@ -1308,11 +1248,6 @@
     hideUnlockCards();
     render();
   }
-
-  /* AZR-171: Tribute restore phases — edict starting stock, then autobind starts.
-   * Ash autobind unlocks (unlockedAutobindUrns etc.) must be evaluated after
-   * Edict starting stock is applied so thresholds see post-edict counts.
-   */
 
   function frameDt(now) {
     if (!lastFrame) lastFrame = now;
@@ -1391,27 +1326,24 @@
   // constants are copied across so the Node tests can reach everything through one object.
   [
     "GAME_VERSION", "WELL_EARLY_MULT", "WELL_COST_MULT", "WELL_COST_BASE", "FAVOR_SOULS_BASE", "prestigeMult",
-    "chaliceMult", "ossuaryMult", "COST_MULT_FLOOR", "COST_MULT_FAVOR_SCALE", "RENDER_HZ", "RENDER_MS",
-    "BULK_CAP", "TOAST_MS", "TOAST_FAST_MS", "TOAST_QUEUE_MAX", "toastOverflowLabel", "toastOverflowCount",
+    "chaliceMult", "ossuaryMult", "COST_MULT_FLOOR", "RENDER_HZ", "RENDER_MS",
+    "BULK_CAP", "TOAST_MS", "TOAST_FAST_MS", "TOAST_QUEUE_MAX",
     "UNLOCK_AUTOBIND_URNS", "UNLOCK_AUTOBIND_HEARTHS", "UNLOCK_AUTOBIND_BEACONS", "UNLOCK_AUTOBIND_SPIRES",
-    "UNLOCK_AUTOBIND_OBELISKS", "namesCompleteMult", "LONGER_PROCESSION_MAX", "DEEPER_TOLL_MAX",
-    "LONGER_WAKE_MAX", "LONGER_TITHE_MAX", "LONGER_VEIL_MAX", "LONGER_HYMN_MAX", "LONGER_KNELL_MAX", "hymnMult",
+    "UNLOCK_AUTOBIND_OBELISKS", "namesCompleteMult", "hymnMult",
     "vowExtraFavor", "vowsKnownCount", "normalizeVow", "BINDING_TOLL_MAX", "BINDING_TOLL_RATE",
     "BINDING_TOLL_COST_BONUS", "CINDER_COST_BASE", "CINDER_COST_MULT", "URN_RITE_COST_BASE",
     "URN_RITE_COST_MULT", "HEARTH_RITE_COST_BASE", "HEARTH_RITE_COST_MULT", "BEACON_RITE_COST_BASE",
-    "BEACON_RITE_COST_MULT", "SPIRE_RITE_COST_BASE", "SPIRE_RITE_COST_MULT", "HEARTH_RITE_COST",
-    "BEACON_RITE_COST", "SPIRE_RITE_COST", "RITE_MULT_BASE", "SIPHON_COST_BASE", "LEVY_COST_BASE",
-    "CINDER_COST", "URN_RITE_COST", "harvestMult", "bindingMult", "throneWeight", "hollowMult",
+    "BEACON_RITE_COST_MULT", "SPIRE_RITE_COST_BASE", "SPIRE_RITE_COST_MULT", "RITE_MULT_BASE",
+    "harvestMult", "bindingMult", "throneWeight", "hollowMult",
     "stacksWantedFromIdle", "HOLLOW_GRACE", "HOLLOW_INTERVAL", "HOLLOW_MAX", "HOLLOW_PENALTY",
-    "HOLLOW_SOUL_CLEAR_CAP", "HOLLOW_SOUL_CLEAR_FLOOR", "HOLLOW_ASH_CLEAR_FLOOR", "HOLLOW_SHADE_CLEAR_FLOOR",
-    "HOLLOW_CLEAR_FRAC", "MAX_DT", "LIVE_FRAME_MAX", "AWAY_SUMMARY_DT", "normalizeAspect", "titheMult",
-    "nightMult", "veilMult", "tollMult", "TOLL_COST", "TOLL_SECS", "wakeMult", "WAKE_COST", "WAKE_SECS",
-    "processionMult", "PROCESSION_COST", "PROCESSION_SECS", "knellMult", "KNELL_COST", "KNELL_SECS",
-    "BONUS_TO_GIFT", "PEAK_STATS", "SAVE_KEY", "SAVE_BAK1_KEY", "SAVE_BAK2_KEY", "BAK1_MS", "BAK2_MS",
-    "COST_BASE", "COST_MULT", "ANNOUNCE_THROTTLE_MS"
+    "HOLLOW_SOUL_CLEAR_CAP", "MAX_DT", "LIVE_FRAME_MAX", "AWAY_SUMMARY_DT", "titheMult",
+    "veilMult", "tollMult", "wakeMult", "WAKE_COST", "WAKE_SECS",
+    "processionMult", "knellMult", "KNELL_COST", "KNELL_SECS",
+    "BONUS_TO_GIFT", "PEAK_STATS", "SAVE_KEY", "SAVE_BAK1_KEY", "SAVE_BAK2_KEY",
+    "COST_BASE", "COST_MULT"
   ].forEach(function (k) { _eco[k] = C[k]; });
   [
-    "isSaveShape", "isFiniteStock", "loadCount", "loadNum", "freshState", "FIELDS", "FIELDS_KEYS"
+    "isSaveShape", "loadCount", "freshState", "FIELDS", "FIELDS_KEYS"
   ].forEach(function (k) { _eco[k] = S[k]; });
   _eco.vesselCost = vesselCost;
   _eco.throneCost = throneCost;
@@ -1419,8 +1351,6 @@
   _eco.producerCost = producerCost;
   _eco.shadeCost = shadeCost;
   _eco.spiritCost = spiritCost;
-  _eco.ashPerSec = ashPerSec;
-  _eco.currentProducerCostMult = currentProducerCostMult;
   _eco.bulkCost = bulkCost;
   _eco.maxAffordable = maxAffordable;
   _eco.maxAffordableLoop = maxAffordableLoop;
@@ -1428,12 +1358,10 @@
   _eco.setTextWriteCount = U.getSetTextWriteCount;
   _eco.applyEdictStartingStock = applyEdictStartingStock;
   _eco.applyAutobindStarts = applyAutobindStarts;
-  _eco.TRIBUTE_AUTOBIND_STARTS = TRIBUTE_AUTOBIND_STARTS;
+  _eco.TRIBUTE_AUTOBIND_STARTS = globalThis.SoulgatherPrestige.TRIBUTE_AUTOBIND_STARTS;
   _eco.capEnqueueToast = capEnqueueToast;
   _eco.formatGiftBatchSummary = formatGiftBatchSummary;
-  _eco.formatBlessing = formatBlessing;
   _eco.hollowHungerActive = hollowHungerActive;
-  _eco.noteHollowManualSpend = noteHollowManualSpend;
   _eco.applySaveData = applySaveData;
   _eco.tripwireSanity = tripwireSanity;
   _eco.getState = function () { return state; };
@@ -1483,15 +1411,12 @@
   _eco.GIFTS = C.GIFTS;
   _eco.GIFTS_BY_STAT = C.GIFTS_BY_STAT;
   _eco.tryMilestoneGifts = tryMilestoneGifts;
-  _eco.checkUnlock = checkUnlock;
   _eco.rebuildUngrantedCount = rebuildUngrantedCount;
-  _eco.GIFT_STAT_KEYS = C.GIFT_STAT_KEYS;
   _eco.getGiftCmpCount = Pg.getGiftCmpCount;
   _eco.getGiftMeetsCount = Pg.getGiftMeetsCount;
   _eco.getGiftUngrantedCount = Pg.getGiftUngrantedCount;
   _eco.getBumpPeakShadesCount = Pg.getBumpPeakShadesCount;
   _eco.resetGiftLastSeen = Pg.resetGiftLastSeen;
-  _eco.resetToScope = resetToScope;
   _eco.save = save;
   _eco.flushSave = flushSave;
   _eco.markSaveDirty = markSaveDirty;
@@ -1504,16 +1429,12 @@
   _eco.announce = announce;
   _eco.reduceMotionActive = reduceMotionActive;
   _eco.setReduceMotion = setReduceMotion;
-  _eco._getReduceMotion = function () { return _reduceMotion; };
   _eco._getAnnounceQueue = U.getAnnounceQueue;
-  _eco._getAnnounceLastMs = U.getAnnounceLastMs;
   _eco._resetAnnouncer = U.resetAnnouncer;
-  _eco.spawnRipple = spawnRipple;
   _eco._setEls = function (o) { for (var k in o) els[k] = o[k]; };
   _eco.showToast = U.showToast;
   _eco.dismissToastNext = U.dismissToastNext;
   _eco.dismissToastEscape = U.dismissToastEscape;
-  _eco.toastHintText = U.toastHintText;
   _eco._getToastState = U.getToastState;
   _eco._resetToast = U.resetToast;
   _eco.showLoadFailNotice = showLoadFailNotice;
