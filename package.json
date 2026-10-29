@@ -5,6 +5,7 @@
   "scripts": {
     "test": "npm run check && node test-exports.mjs && node test-economy.mjs && node sim-firstrun.mjs && node test-load-safety.mjs && node test-fields.mjs && node test-gifts.mjs && node test-a11y.mjs && node test-browser.mjs && npm run lint",
     "check": "node check-syntax.mjs",
-    "lint": "npx --yes eslint@8 js/"
+    "lint": "npx --yes eslint@8 js/",
+    "trailers": "node check-trailers.mjs"
   }
 }

@@ -26,6 +26,14 @@ never extend an existing bullet. Per-version design notes stay in `README.md`.
 - The Remembrance shop buyers in `js/prestige.js` now share one `buyRemembranceUpgrade(levelKey, costFn, max, chronicleId)`; each public `buy*` name stays as a one-line wrapper. Identical `*EdictCost` functions use one geometric helper and identical start-count helpers use `startsCount(level, max?)`; exported names and numbers are unchanged.
 - Dead-code trim (no behavior change): unread `SoulgatherNum.fromString`/`isZero` and `SoulgatherEconomy.formatGoalNum`/`nextFavorThreshold` export keys (functions stay); unused `siphon-row`/`mark-ember-row` ids; keydown uses `resolveHotkey`; comments that only restated a ticket id plus the next line.
 
+- Tooling: ESLint rules move to `.eslintrc.json` and add `no-undef` and `no-unused-vars` (locals); `ui.js`, `panels.js` and `economy.js` read `global.SoulgatherFormat`; `npm run check` runs `check-syntax.mjs`, so it works without a POSIX shell.
+- Tooling: `test-exports.mjs` fails, naming file and key, when a harness reads a namespace key the game no longer exports.
+- Tooling: release notes move from `README.md` to this file, one bullet per change; `.gitattributes` marks it `merge=union`.
+- Tooling: `test-browser.mjs` smoke-tests `index.html` in headless Chromium (Draw, hotkeys, Memory export copy fallback, save across reload, no page errors); CI installs Playwright.
+- The 30 doubling cost functions and 8 capped Remembrance costs in `js/edicts.js` are generated from `GEOMETRIC_COST_BASE` and `CAPPED_COST_MAX`; every export returns the same values.
+- The Favor and Remembrance shop buyers in `js/prestige.js` are declared in `FAVOR_UPGRADES` and `REMEMBRANCE_UPGRADES`; a differential of all 67 buyers matches the previous code.
+- Tooling: CI fails on AI-tool trailers in commit messages (`check-trailers.mjs`); existing history was cleaned of them.
+
 ## v6.10.0
 
 - Cost-reduction prestige (AZR-181 option 2): Favor lowers core producer `COST_MULT` from `1.15` toward `1.06`; soft compound `prestigeMult`; Crown soft-caps after level 8 with `1.1^n` bonus; `namesCompleteMult` 1.05→1.5. Live: https://azraelgodking.github.io/soulgather/. Footer/CSS **v6.10.0**. Save key `soulgather-v0`.

@@ -4,7 +4,7 @@ Original idle/incremental game. Harvest souls from a void well for the GodKing. 
 
 ## CI
 
-GitHub Actions runs on every push and PR: syntax check (`npm run check`, every file in `js/`), `test-economy.mjs`, `sim-firstrun.mjs`, `test-load-safety.mjs`, `test-fields.mjs`, `test-gifts.mjs`, `test-a11y.mjs`, and ESLint `no-redeclare`/`no-dupe-keys`. Run locally with `npm test` or `python3 run-tests.py`.
+GitHub Actions runs on every push and PR: a check that no commit message carries an AI-tool trailer (`check-trailers.mjs`; `npm run trailers` checks `origin/main..HEAD` locally), syntax check (`npm run check`, every file in `js/`), `test-exports.mjs` (every namespace key a harness reads is exported), `test-economy.mjs`, `sim-firstrun.mjs`, `test-load-safety.mjs`, `test-fields.mjs`, `test-gifts.mjs`, `test-a11y.mjs`, `test-browser.mjs` (headless Chromium smoke test of `index.html`; skipped locally without `npm install --no-save playwright`), and ESLint with the rules in `.eslintrc.json` (`no-undef`, `no-unused-vars`, `no-redeclare`, `no-dupe-keys`). Run locally with `npm test` or `python3 run-tests.py`.
 
 **Branch protection:** After this workflow lands, Azrael should enable "Require status checks to pass before merging" on `main` with the `test` job required (Settings → Branches → Branch protection rules).
 
