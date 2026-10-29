@@ -272,38 +272,42 @@
       markDirty();
     }
 
-    function buyEdict() { buyFavorUpgrade("edictLevel", edictCost); }
-    function buyMemory() { buyFavorUpgrade("memoryLevel", memoryCost); }
+    /** Favor shop buyers: public name -> [levelKey, costFn, chronicleId?]. */
+    var FAVOR_UPGRADES = {
+      buyEdict: ["edictLevel", edictCost],
+      buyMemory: ["memoryLevel", memoryCost],
+      buySeat: ["seatLevel", seatCost, "seat"],
+      buyKindle: ["kindleLevel", kindleCost],
+      buyAshen: ["ashenLevel", ashenCost],
+      buyDepth: ["depthLevel", depthCost],
+      buyChoirEdict: ["choirEdictLevel", choirEdictCost, "choirEdict"],
+      buyHymnEdict: ["hymnEdictLevel", hymnEdictCost, "hymnEdict"],
+      buySmokeEdict: ["smokeEdictLevel", smokeEdictCost, "smokeEdict"],
+      buyEmbersEdict: ["embersEdictLevel", embersEdictCost, "embersEdict"],
+      buyUrnEdict: ["urnEdictLevel", urnEdictCost, "urnEdict"],
+      buyHearthEdict: ["hearthEdictLevel", hearthEdictCost, "hearthEdict"],
+      buyBeaconEdict: ["beaconEdictLevel", beaconEdictCost, "beaconEdict"],
+      buySpireEdict: ["spireEdictLevel", spireEdictCost, "spireEdict"],
+      buyObeliskEdict: ["obeliskEdictLevel", obeliskEdictCost, "obeliskEdict"],
+      buyCinderEdict: ["cinderEdictLevel", cinderEdictCost, "cinderEdict"],
+      buyCutEdict: ["cutEdictLevel", cutEdictCost, "cutEdict"],
+      buyTendingEdict: ["tendingEdictLevel", tendingEdictCost, "tendingEdict"],
+      buyGleamEdict: ["gleamEdictLevel", gleamEdictCost, "gleamEdict"],
+      buyRiseEdict: ["riseEdictLevel", riseEdictCost, "riseEdict"],
+      buyCupEdict: ["cupEdictLevel", cupEdictCost, "cupEdict"],
+      buyDraughtEdict: ["draughtEdictLevel", draughtEdictCost, "draughtEdict"],
+      buyWakeEdict: ["wakeEdictLevel", wakeEdictCost, "wakeEdict"],
+      buyProcessionEdict: ["processionEdictLevel", processionEdictCost, "processionEdict"],
+      buyTollEdict: ["tollEdictLevel", tollEdictCost, "tollEdict"],
+      buyVeilEdict: ["veilEdictLevel", veilEdictCost, "veilEdict"],
+      buyKnellEdict: ["knellEdictLevel", knellEdictCost, "knellEdict"],
+      buyNightEdict: ["nightEdictLevel", nightEdictCost, "nightEdict"]
+    };
+
     function buyEcho() {
       if ((Number(host.getState().echoLevel) || 0) >= 1) return;
       buyFavorUpgrade("echoLevel", echoCost, "echo");
     }
-    function buySeat() { buyFavorUpgrade("seatLevel", seatCost, "seat"); }
-    function buyKindle() { buyFavorUpgrade("kindleLevel", kindleCost); }
-    function buyAshen() { buyFavorUpgrade("ashenLevel", ashenCost); }
-    function buyDepth() { buyFavorUpgrade("depthLevel", depthCost); }
-    function buyChoirEdict() { buyFavorUpgrade("choirEdictLevel", choirEdictCost, "choirEdict"); }
-    function buyHymnEdict() { buyFavorUpgrade("hymnEdictLevel", hymnEdictCost, "hymnEdict"); }
-    function buySmokeEdict() { buyFavorUpgrade("smokeEdictLevel", smokeEdictCost, "smokeEdict"); }
-    function buyEmbersEdict() { buyFavorUpgrade("embersEdictLevel", embersEdictCost, "embersEdict"); }
-    function buyUrnEdict() { buyFavorUpgrade("urnEdictLevel", urnEdictCost, "urnEdict"); }
-    function buyHearthEdict() { buyFavorUpgrade("hearthEdictLevel", hearthEdictCost, "hearthEdict"); }
-    function buyBeaconEdict() { buyFavorUpgrade("beaconEdictLevel", beaconEdictCost, "beaconEdict"); }
-    function buySpireEdict() { buyFavorUpgrade("spireEdictLevel", spireEdictCost, "spireEdict"); }
-    function buyObeliskEdict() { buyFavorUpgrade("obeliskEdictLevel", obeliskEdictCost, "obeliskEdict"); }
-    function buyCinderEdict() { buyFavorUpgrade("cinderEdictLevel", cinderEdictCost, "cinderEdict"); }
-    function buyCutEdict() { buyFavorUpgrade("cutEdictLevel", cutEdictCost, "cutEdict"); }
-    function buyTendingEdict() { buyFavorUpgrade("tendingEdictLevel", tendingEdictCost, "tendingEdict"); }
-    function buyGleamEdict() { buyFavorUpgrade("gleamEdictLevel", gleamEdictCost, "gleamEdict"); }
-    function buyRiseEdict() { buyFavorUpgrade("riseEdictLevel", riseEdictCost, "riseEdict"); }
-    function buyCupEdict() { buyFavorUpgrade("cupEdictLevel", cupEdictCost, "cupEdict"); }
-    function buyDraughtEdict() { buyFavorUpgrade("draughtEdictLevel", draughtEdictCost, "draughtEdict"); }
-    function buyWakeEdict() { buyFavorUpgrade("wakeEdictLevel", wakeEdictCost, "wakeEdict"); }
-    function buyProcessionEdict() { buyFavorUpgrade("processionEdictLevel", processionEdictCost, "processionEdict"); }
-    function buyTollEdict() { buyFavorUpgrade("tollEdictLevel", tollEdictCost, "tollEdict"); }
-    function buyVeilEdict() { buyFavorUpgrade("veilEdictLevel", veilEdictCost, "veilEdict"); }
-    function buyKnellEdict() { buyFavorUpgrade("knellEdictLevel", knellEdictCost, "knellEdict"); }
-    function buyNightEdict() { buyFavorUpgrade("nightEdictLevel", nightEdictCost, "nightEdict"); }
 
     function buyCrownWeight() {
       var state = host.getState();
@@ -384,16 +388,30 @@
       markDirty();
     }
 
-    function buyDeeperNight() { buyRemembranceUpgrade("deeperNightLevel", deeperNightCost); }
-    function buyLongerProcession() { buyRemembranceUpgrade("longerProcessionLevel", longerProcessionCost, LONGER_PROCESSION_MAX, "longerProcession"); }
-    function buyDeeperToll() { buyRemembranceUpgrade("deeperTollLevel", deeperTollCost, DEEPER_TOLL_MAX, "deeperToll"); }
-    function buyLongerWake() { buyRemembranceUpgrade("longerWakeLevel", longerWakeCost, LONGER_WAKE_MAX, "longerWake"); }
-    function buyLongerTithe() { buyRemembranceUpgrade("longerTitheLevel", longerTitheCost, LONGER_TITHE_MAX, "longerTithe"); }
-    function buyLongerVeil() { buyRemembranceUpgrade("longerVeilLevel", longerVeilCost, LONGER_VEIL_MAX, "longerVeil"); }
-    function buyLongerHymn() { buyRemembranceUpgrade("longerHymnLevel", longerHymnCost, LONGER_HYMN_MAX, "longerHymn"); }
-    function buyLongerKnell() { buyRemembranceUpgrade("longerKnellLevel", longerKnellCost, LONGER_KNELL_MAX, "longerKnell"); }
-    function buyAshenTide() { buyRemembranceUpgrade("ashenTideLevel", ashenTideCost, ASHEN_TIDE_MAX); }
-    function buyOssuary() { buyRemembranceUpgrade("ossuaryLevel", ossuaryCost, OSSUARY_MAX, "ossuary"); }
+    /** Remembrance buyers: public name -> [levelKey, costFn, max?, chronicleId?]. */
+    var REMEMBRANCE_UPGRADES = {
+      buyDeeperNight: ["deeperNightLevel", deeperNightCost],
+      buyLongerProcession: ["longerProcessionLevel", longerProcessionCost, LONGER_PROCESSION_MAX, "longerProcession"],
+      buyDeeperToll: ["deeperTollLevel", deeperTollCost, DEEPER_TOLL_MAX, "deeperToll"],
+      buyLongerWake: ["longerWakeLevel", longerWakeCost, LONGER_WAKE_MAX, "longerWake"],
+      buyLongerTithe: ["longerTitheLevel", longerTitheCost, LONGER_TITHE_MAX, "longerTithe"],
+      buyLongerVeil: ["longerVeilLevel", longerVeilCost, LONGER_VEIL_MAX, "longerVeil"],
+      buyLongerHymn: ["longerHymnLevel", longerHymnCost, LONGER_HYMN_MAX, "longerHymn"],
+      buyLongerKnell: ["longerKnellLevel", longerKnellCost, LONGER_KNELL_MAX, "longerKnell"],
+      buyAshenTide: ["ashenTideLevel", ashenTideCost, ASHEN_TIDE_MAX],
+      buyOssuary: ["ossuaryLevel", ossuaryCost, OSSUARY_MAX, "ossuary"]
+    };
+
+    var upgradeBuyers = {};
+    Object.keys(FAVOR_UPGRADES).forEach(function (name) {
+      var u = FAVOR_UPGRADES[name];
+      upgradeBuyers[name] = function () { buyFavorUpgrade(u[0], u[1], u[2]); };
+    });
+    Object.keys(REMEMBRANCE_UPGRADES).forEach(function (name) {
+      var u = REMEMBRANCE_UPGRADES[name];
+      upgradeBuyers[name] = function () { buyRemembranceUpgrade(u[0], u[1], u[2], u[3]); };
+    });
+
 
     function applyEdictStartingStock(s) {
       var state = host.getState();
@@ -608,54 +626,16 @@
       announce("Hymn active.");
     }
 
-    return {
-      buyEdict: buyEdict,
-      buyMemory: buyMemory,
+    return Object.assign(upgradeBuyers, {
       buyEcho: buyEcho,
-      buySeat: buySeat,
-      buyKindle: buyKindle,
-      buyAshen: buyAshen,
-      buyDepth: buyDepth,
-      buyChoirEdict: buyChoirEdict,
-      buyHymnEdict: buyHymnEdict,
-      buySmokeEdict: buySmokeEdict,
-      buyEmbersEdict: buyEmbersEdict,
-      buyUrnEdict: buyUrnEdict,
-      buyHearthEdict: buyHearthEdict,
-      buyBeaconEdict: buyBeaconEdict,
-      buySpireEdict: buySpireEdict,
-      buyObeliskEdict: buyObeliskEdict,
-      buyCinderEdict: buyCinderEdict,
-      buyCutEdict: buyCutEdict,
-      buyTendingEdict: buyTendingEdict,
-      buyGleamEdict: buyGleamEdict,
-      buyRiseEdict: buyRiseEdict,
-      buyCupEdict: buyCupEdict,
-      buyDraughtEdict: buyDraughtEdict,
-      buyWakeEdict: buyWakeEdict,
-      buyProcessionEdict: buyProcessionEdict,
-      buyTollEdict: buyTollEdict,
-      buyVeilEdict: buyVeilEdict,
-      buyKnellEdict: buyKnellEdict,
-      buyNightEdict: buyNightEdict,
       buyCrownWeight: buyCrownWeight,
       buyLongMemory: buyLongMemory,
       buyQuietCourt: buyQuietCourt,
       layRemembrance: layRemembrance,
-      buyDeeperNight: buyDeeperNight,
-      buyLongerProcession: buyLongerProcession,
-      buyDeeperToll: buyDeeperToll,
-      buyLongerWake: buyLongerWake,
-      buyLongerTithe: buyLongerTithe,
-      buyLongerVeil: buyLongerVeil,
-      buyLongerHymn: buyLongerHymn,
-      buyLongerKnell: buyLongerKnell,
-      buyAshenTide: buyAshenTide,
-      buyOssuary: buyOssuary,
       applyEdictStartingStock: applyEdictStartingStock,
       applyAutobindStarts: applyAutobindStarts,
       layTribute: layTribute
-    };
+    });
   }
 
   global.SoulgatherPrestige = {
