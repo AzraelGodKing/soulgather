@@ -158,11 +158,11 @@
     }
 
     function fmt(n) {
-      return SoulgatherFormat.formatNumber(n);
+      return global.SoulgatherFormat.formatNumber(n);
     }
 
     function formatBlessing(m) {
-      return SoulgatherFormat.formatBlessing(m);
+      return global.SoulgatherFormat.formatBlessing(m);
     }
 
     function formatMult(m) {
@@ -665,7 +665,7 @@
 
     function render() {
       var state = host.getState();
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       if (!els.soulsCount) return;
       setTextWriteCount = 0;
 
@@ -1149,7 +1149,7 @@
     function hotSoulsUpdate() {
       var state = host.getState();
       if (!els.soulsCount) return;
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       setText(els.soulsCount, F.formatNumber(state.souls));
       setText(els.soulsRate, F.formatRate(soulsPerSec()));
     }

@@ -3,7 +3,9 @@
   "private": true,
   "version": "6.10.1",
   "scripts": {
-    "test": "npm run check && node test-economy.mjs && node sim-firstrun.mjs && node test-load-safety.mjs && node test-fields.mjs && node test-gifts.mjs && node test-a11y.mjs && npx --yes eslint@8 js/ --no-eslintrc --env browser,es6 --parser-options ecmaVersion:2020 --rule \"no-dupe-keys: error\" --rule \"no-redeclare: error\"",
-    "check": "for f in js/*.js; do node --check \"$f\" || exit 1; done"
+    "test": "npm run check && node test-exports.mjs && node test-economy.mjs && node sim-firstrun.mjs && node test-load-safety.mjs && node test-fields.mjs && node test-gifts.mjs && node test-a11y.mjs && node test-browser.mjs && npm run lint",
+    "check": "node check-syntax.mjs",
+    "lint": "npx --yes eslint@8 js/",
+    "trailers": "node check-trailers.mjs"
   }
 }

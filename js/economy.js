@@ -644,7 +644,7 @@
   /* ── Goal text ───────────────────────────────────────────────────── */
 
   function formatGoalNum(n) {
-    return SoulgatherFormat.formatNumber(n);
+    return global.SoulgatherFormat.formatNumber(n);
   }
 
   function nextGoal(view, format) {

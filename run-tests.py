@@ -6,21 +6,18 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent
 
-checks = [["node", "--check", str(f.relative_to(root))] for f in sorted((root / "js").glob("*.js"))]
+checks = [["node", str(root / "check-syntax.mjs")]]
 suites = [
+    root / "test-exports.mjs",
     root / "test-economy.mjs",
     root / "sim-firstrun.mjs",
     root / "test-load-safety.mjs",
     root / "test-fields.mjs",
     root / "test-gifts.mjs",
     root / "test-a11y.mjs",
+    root / "test-browser.mjs",
 ]
-eslint = [
-    "npx", "--yes", "eslint@8", "js/",
-    "--no-eslintrc", "--env", "browser,es6",
-    "--parser-options", "ecmaVersion:2020",
-    "--rule", '{"no-dupe-keys":"error","no-redeclare":"error"}',
-]
+eslint = ["npx", "--yes", "eslint@8", "js/"]
 try:
     for cmd in checks:
         print("==>", " ".join(cmd))
