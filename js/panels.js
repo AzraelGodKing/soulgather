@@ -138,7 +138,7 @@
 
     function renderRites() {
       var state = ui.getState();
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       var ritesOpen = !!state.unlockedWell || N.cmp(state.shades, 1) >= 0 || !!state.wellDraws || !!state.unlockedChoir || !!state.unlockedVeil || !!state.unlockedToll || !!state.unlockedWake || !!state.unlockedPyres || !!state.unlockedUrns;
       if (els.ritesPanel) {
         els.ritesPanel.classList.toggle("is-hidden", !ritesOpen);
@@ -668,7 +668,7 @@
 
     function renderMarks() {
       var state = ui.getState();
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       var marksOpen = !!state.unlockedMarks;
       if (els.marksPanel) {
         els.marksPanel.classList.toggle("is-hidden", !marksOpen);
@@ -792,7 +792,7 @@
 
     function renderReliquary() {
       var state = ui.getState();
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       var reliquaryOpen = state.favorEarned >= 1;
       if (els.reliquaryPanel) {
         els.reliquaryPanel.classList.toggle("is-hidden", !reliquaryOpen);
@@ -1139,7 +1139,7 @@
 
     function renderCrown() {
       var state = ui.getState();
-      var F = SoulgatherFormat;
+      var F = global.SoulgatherFormat;
       var crownOpen = crownUnlocked();
       if (els.crownPanel) {
         els.crownPanel.classList.toggle("is-hidden", !crownOpen);
