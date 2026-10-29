@@ -178,14 +178,12 @@
     "The Name He Keeps"
   ];
 
-  var ASPECT_IDS = { harvest: "harvest", binding: "binding", dominion: "dominion" };
   var ASPECT_NAMES = {
     harvest: "Harvest",
     binding: "Binding",
     dominion: "Dominion"
   };
 
-  var VOW_IDS = { stillness: "stillness", poverty: "poverty", hunger: "hunger", ember: "ember" };
   var VOW_NAMES = {
     stillness: "Stillness",
     poverty: "Poverty",
@@ -939,14 +937,11 @@
     UNLOCK_CHOIR_LANTERNS: UNLOCK_CHOIR_LANTERNS,
     UNLOCK_CHOIR_ASH: UNLOCK_CHOIR_ASH,
     HYMN_SECS: HYMN_SECS,
-    HYMN_MULT: HYMN_MULT,
     ANNOUNCE_THROTTLE_MS: ANNOUNCE_THROTTLE_MS,
     REDUCE_MOTION_KEY: REDUCE_MOTION_KEY,
     NAME_THRESHOLDS: NAME_THRESHOLDS,
     BOUND_NAMES: BOUND_NAMES,
-    ASPECT_IDS: ASPECT_IDS,
     ASPECT_NAMES: ASPECT_NAMES,
-    VOW_IDS: VOW_IDS,
     VOW_NAMES: VOW_NAMES,
     VOW_HUD_STRINGS: VOW_HUD_STRINGS,
     CHRONICLE_ORDER: CHRONICLE_ORDER,

@@ -604,7 +604,6 @@
     FIELDS: FIELDS,
     FIELDS_KEYS: FIELDS_KEYS,
     hasChronicle: hasChronicle,
-    normalizeChronicle: normalizeChronicle,
     freshState: freshState,
     resetToScope: resetToScope,
     serializeState: serializeState,

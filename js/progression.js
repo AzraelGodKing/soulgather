@@ -779,20 +779,11 @@
     }
 
     return {
-      hasChronicle: hasChronicle,
-      chronicleAt: chronicleAt,
       markChronicle: markChronicle,
       syncChronicle: syncChronicle,
       checkUnlock: checkUnlock,
       rebuildUngrantedCount: rebuildUngrantedCount,
-      snapshotGiftStats: snapshotGiftStats,
-      giftStatValue: giftStatValue,
-      giftStatChanged: giftStatChanged,
-      giftMeetsThreshold: giftMeetsThreshold,
-      grantGift: grantGift,
       tryMilestoneGifts: tryMilestoneGifts,
-      tryNamesBoundNeeded: tryNamesBoundNeeded,
-      tryNamesBound: tryNamesBound,
       resetGiftCache: resetGiftCache,
       getGiftCmpCount: function () { return _giftCmpCount; },
       getGiftMeetsCount: function () { return _giftMeetsCount; },
