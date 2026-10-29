@@ -83,8 +83,8 @@
   var memoryCost = E.memoryCost;
   var nightEdictCost = E.nightEdictCost;
   var nightEdictSecs = E.nightEdictSecs;
-  var nightSecs = E.nightSecs;
   var nightTitheCost = E.nightTitheCost;
+  var nightTitheSecs = E.nightTitheSecs;
   var obeliskEdictCost = E.obeliskEdictCost;
   var obeliskEdictStartsObelisks = E.obeliskEdictStartsObelisks;
   var ossuaryCost = E.ossuaryCost;
@@ -97,7 +97,7 @@
   var processionEdictCost = E.processionEdictCost;
   var processionSecs = E.processionSecs;
   var quietCourtCost = E.quietCourtCost;
-  var remembranceFavorCost = E.remembranceFavorCost;
+  var remembranceCostFavor = E.remembranceCostFavor;
   var riseEdictCost = E.riseEdictCost;
   var seatCost = E.seatCost;
   var siphonCost = E.siphonCost;
@@ -309,7 +309,7 @@
           var nLeft = Number(state.nightLeft) || 0;
           var nCost = nightTitheCost(state.ash);
           if (els.nightTitheEffect) {
-            setText(els.nightTitheEffect, nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 " + nightSecs(state.deeperNightLevel) + "s");
+            setText(els.nightTitheEffect, nightActive() ? "Burst \u00d73" : "Burst \u00d73 \u00b7 " + nightTitheSecs(state.deeperNightLevel) + "s");
           }
           if (els.nightTitheCost) {
             setText(els.nightTitheCost, F.formatNumber(nCost) + " Ash");
@@ -1169,12 +1169,9 @@
         }
 
         var qcCost = quietCourtCost(state.quietCourtLevel);
-        var qcN = Number(state.quietCourtLevel) || 0;
         if (els.crownCourtEffect) {
           setText(els.crownCourtEffect,
-            autobindStartsPredicate(qcN)
-              ? "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute"
-              : "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute");
+            "Autobind Shades, Lanterns, Fetters, Pyres, Chalices, Urns, Hearths, Beacons, Spires, and Obelisks at tribute");
         }
         setText(els.crownCourtCost, F.formatNumber(qcCost) + " Favor");
         if (els.crownCourtBuy) {
@@ -1206,14 +1203,14 @@
         if (els.longerHymnRow) els.longerHymnRow.classList.toggle("is-hidden", !remOpen);
         if (els.longerKnellRow) els.longerKnellRow.classList.toggle("is-hidden", !remOpen);
         if (remOpen) {
-          var rCost = remembranceFavorCost();
+          var rCost = remembranceCostFavor();
           setText(els.remembranceLayCost, F.formatNumber(rCost) + " Favor");
           if (els.remembranceLayBuy) {
             els.remembranceLayBuy.disabled = state.favor < rCost;
           }
 
           var dnCost = deeperNightCost(state.deeperNightLevel);
-          var dnSecs = nightSecs(state.deeperNightLevel);
+          var dnSecs = nightTitheSecs(state.deeperNightLevel);
           if (els.deeperNightEffect) {
             setText(els.deeperNightEffect, "Night's Tithe " + dnSecs + "s");
           }

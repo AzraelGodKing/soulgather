@@ -32,11 +32,7 @@
     var abs = Math.abs(m);
     var sign = m < 0 ? "-" : "";
     if (!isFinite(abs) || abs === 0) return "0";
-    var str = abs.toFixed(1);
-    if (str.charAt(str.length - 2) === "." && str.charAt(str.length - 1) === "0") {
-      str = str.slice(0, -2);
-    }
-    return sign + str + "e" + e;
+    return sign + trimFixed1(abs) + "e" + e;
   }
 
   /**
@@ -91,11 +87,7 @@
     }
 
     var val = n / Math.pow(1000, exp);
-    var str = val.toFixed(1);
-    if (str.charAt(str.length - 2) === "." && str.charAt(str.length - 1) === "0") {
-      str = str.slice(0, -2);
-    }
-    return str + SUFFIXES[exp];
+    return trimFixed1(val) + SUFFIXES[exp];
   }
 
   function formatRate(n) {
