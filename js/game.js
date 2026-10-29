@@ -1080,6 +1080,8 @@
   }
 
   function fillFallback(json, focusEl) {
+    /* Open the panel first: a textarea inside a closed <details> cannot take focus. */
+    if (els.memoryPanel) els.memoryPanel.open = true;
     if (focusEl) {
       focusEl.value = json;
       focusEl.focus();
@@ -1090,7 +1092,6 @@
         /* textarea still holds the memory */
       }
     }
-    if (els.memoryPanel) els.memoryPanel.open = true;
     if (els.memoryText && els.memoryText !== focusEl) {
       els.memoryText.value = json;
     }
