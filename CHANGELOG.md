@@ -25,6 +25,7 @@ never extend an existing bullet. Per-version design notes stay in `README.md`.
 - Also dropped unread `SoulgatherEconomy` test-dump keys (no test reads them) and dead `resetToScope`.
 - The Remembrance shop buyers in `js/prestige.js` now share one `buyRemembranceUpgrade(levelKey, costFn, max, chronicleId)`; each public `buy*` name stays as a one-line wrapper. Identical `*EdictCost` functions use one geometric helper and identical start-count helpers use `startsCount(level, max?)`; exported names and numbers are unchanged.
 - Dead-code trim (no behavior change): unread `SoulgatherNum.fromString`/`isZero` and `SoulgatherEconomy.formatGoalNum`/`nextFavorThreshold` export keys (functions stay); unused `siphon-row`/`mark-ember-row` ids; keydown uses `resolveHotkey`; comments that only restated a ticket id plus the next line.
+- Dead-code trim (no behavior change): unread `SoulgatherEconomy.currentMult`, `SoulgatherState.isFiniteStock`/`loadNum`, and `SoulgatherUI.create` keys `formatBlessing`/`toastHintText`/`getAnnounceLastMs` (functions stay); unused `createTestSandbox().loadScript`.
 
 - Tooling: ESLint rules move to `.eslintrc.json` and add `no-undef` and `no-unused-vars` (locals); `ui.js`, `panels.js` and `economy.js` read `global.SoulgatherFormat`; `npm run check` runs `check-syntax.mjs`, so it works without a POSIX shell.
 - Tooling: `test-exports.mjs` fails, naming file and key, when a harness reads a namespace key the game no longer exports.

@@ -597,9 +597,7 @@
     freshState: freshState,
     serializeState: serializeState,
     loadCount: loadCount,
-    loadNum: loadNum,
     coreCurrenciesBroken: coreCurrenciesBroken,
-    isFiniteStock: isFiniteStock,
     isSaveShape: isSaveShape,
     applySaveData: applySaveData
   };

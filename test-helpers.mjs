@@ -128,10 +128,5 @@ export function createTestSandbox(root, opts) {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
 
-  function loadScript(rel) {
-    var code = fs.readFileSync(path.join(root, rel), "utf8");
-    vm.runInContext(code, sandbox, { filename: rel });
-  }
-
-  return { sandbox: sandbox, elsById: elsById, storage: storage, documentMock: documentMock, loadScript: loadScript };
+  return { sandbox: sandbox, elsById: elsById, storage: storage, documentMock: documentMock };
 }

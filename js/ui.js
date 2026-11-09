@@ -1216,7 +1216,6 @@
       setText: setText,
       announce: announce,
       fmt: fmt,
-      formatBlessing: formatBlessing,
       pulseGather: pulseGather,
       spawnRipple: spawnRipple,
       revealWell: revealWell,
@@ -1244,7 +1243,6 @@
       hideToast: hideToast,
       dismissToastNext: dismissToastNext,
       dismissToastEscape: dismissToastEscape,
-      toastHintText: toastHintText,
       setToastReturnFocus: function (el) { toastReturnFocus = el; },
       getToastState: function () {
         return { active: toastActive, queue: toastQueue.slice(), armed: toastEscapeArmed, hintSeen: toastHintSeen };
@@ -1263,8 +1261,7 @@
       resetFavorReady: resetFavorReady,
       resetAnnouncer: resetAnnouncer,
       getSetTextWriteCount: function () { return setTextWriteCount; },
-      getAnnounceQueue: function () { return _announceQueue; },
-      getAnnounceLastMs: function () { return _announceLastMs; }
+      getAnnounceQueue: function () { return _announceQueue; }
     };
   }
 
