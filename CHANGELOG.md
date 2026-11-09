@@ -33,6 +33,7 @@ never extend an existing bullet. Per-version design notes stay in `README.md`.
 - The 30 doubling cost functions and 8 capped Remembrance costs in `js/edicts.js` are generated from `GEOMETRIC_COST_BASE` and `CAPPED_COST_MAX`; every export returns the same values.
 - The Favor and Remembrance shop buyers in `js/prestige.js` are declared in `FAVOR_UPGRADES` and `REMEMBRANCE_UPGRADES`; a differential of all 67 buyers matches the previous code.
 - Tooling: CI fails on AI-tool trailers in commit messages (`check-trailers.mjs`); existing history was cleaned of them.
+- Table-drive leftovers (no behavior change): paid burst durations share `paidSecs`; start-count exports alias `startsCount`; the six Tribute-start timers share `leftAfterTribute`; rite/half-step mults alias `siphonMult`/`emberMult`/`lanternMult`; `choirAshRate` dropped in favor of `ashFromShadeFrac`.
 
 ## v6.10.0
 

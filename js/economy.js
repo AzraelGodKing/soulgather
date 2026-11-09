@@ -553,29 +553,12 @@
     return N.pow(N.fromNumber(RITE_MULT_BASE), n);
   }
 
-  function levyMult(level) {
-    return siphonMult(level);
-  }
-
-  function cinderMult(level) {
-    return siphonMult(level);
-  }
-
-  function urnRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function hearthRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function beaconRiteMult(level) {
-    return siphonMult(level);
-  }
-
-  function spireRiteMult(level) {
-    return siphonMult(level);
-  }
+  var levyMult = siphonMult;
+  var cinderMult = siphonMult;
+  var urnRiteMult = siphonMult;
+  var hearthRiteMult = siphonMult;
+  var beaconRiteMult = siphonMult;
+  var spireRiteMult = siphonMult;
 
   function lanternMult(lanterns) {
     if (lanterns && typeof lanterns === "object" && typeof lanterns.m === "number") {
@@ -587,15 +570,7 @@
     return N.fromNumber(1 + 0.05 * (Number(lanterns) || 0));
   }
 
-  function fetterMult(fetters) {
-    if (fetters && typeof fetters === "object" && typeof fetters.m === "number") {
-      if (fetters.e < 12) {
-        return N.fromNumber(1 + 0.05 * (N.toNumber(fetters) || 0));
-      }
-      return N.add(1, N.mul(0.05, fetters));
-    }
-    return N.fromNumber(1 + 0.05 * (Number(fetters) || 0));
-  }
+  var fetterMult = lanternMult;
 
   function emberMult(level) {
     var n = Math.max(0, Math.floor(Number(level) || 0));
@@ -603,9 +578,7 @@
     return N.pow(N.fromNumber(1.25), n);
   }
 
-  function chainMult(level) {
-    return emberMult(level);
-  }
+  var chainMult = emberMult;
 
   /* ── Hollow ──────────────────────────────────────────────────────── */
 

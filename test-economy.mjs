@@ -467,8 +467,8 @@ assertEqual("nightTitheSecs(1)", G.nightTitheSecs(1), 40);
 assertEqual("nightTitheSecs(2)", G.nightTitheSecs(2), 50);
 assertEqual("prodMult namesComplete", G.prodMult(0, 0, 0, 0.1, 0, true), 1.5);
 
-assertEqual("choirAshRate base", G.choirAshRate(0), 0.01);
-assertEqual("choirAshRate choir 2 no tide", G.choirAshRate(2), 0.02);
+assertEqual("ashFromShadeFrac base", G.ashFromShadeFrac(0), 0.01);
+assertEqual("ashFromShadeFrac choir 2 no tide", G.ashFromShadeFrac(0, 2), 0.02);
 assertEqual("formatBlessing(1.05)", F.formatBlessing(1.05), "\u00d71.05");
 assertEqual("formatBlessing(1.5)", F.formatBlessing(1.5), "\u00d71.5");
 assertTrue("formatBlessing(1.05) is not x1.1", F.formatBlessing(1.05) !== "\u00d71.1");
