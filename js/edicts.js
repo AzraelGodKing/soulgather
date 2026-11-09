@@ -91,9 +91,13 @@
     return (Number(level) || 0) >= 1;
   }
 
-  function wakeLeftAfterTribute(level) {
+  function leftAfterTribute(secsFn, level) {
     if (!autobindStartsPredicate(level)) return 0;
-    return wakeSecs(level);
+    return secsFn(level);
+  }
+
+  function wakeLeftAfterTribute(level) {
+    return leftAfterTribute(wakeSecs, level);
   }
 
   function processionSecs(level) {
@@ -102,8 +106,7 @@
   }
 
   function processionLeftAfterTribute(level) {
-    if (!autobindStartsPredicate(level)) return 0;
-    return processionSecs(level);
+    return leftAfterTribute(processionSecs, level);
   }
 
   function tollSecs(level) {
@@ -112,8 +115,7 @@
   }
 
   function tollLeftAfterTribute(level) {
-    if (!autobindStartsPredicate(level)) return 0;
-    return tollSecs(level);
+    return leftAfterTribute(tollSecs, level);
   }
 
   function veilSecs(level) {
@@ -122,8 +124,7 @@
   }
 
   function veilLeftAfterTribute(level) {
-    if (!autobindStartsPredicate(level)) return 0;
-    return veilSecs(level);
+    return leftAfterTribute(veilSecs, level);
   }
 
   function knellSecs(level) {
@@ -132,8 +133,7 @@
   }
 
   function knellLeftAfterTribute(level) {
-    if (!autobindStartsPredicate(level)) return 0;
-    return knellSecs(level);
+    return leftAfterTribute(knellSecs, level);
   }
 
   function nightEdictSecs(level) {
@@ -142,8 +142,7 @@
   }
 
   function nightLeftAfterTribute(level) {
-    if (!autobindStartsPredicate(level)) return 0;
-    return nightEdictSecs(level);
+    return leftAfterTribute(nightEdictSecs, level);
   }
 
   /* ── Favor / Remembrance cost tables ─────────────────────────────── */
@@ -214,52 +213,38 @@
     return 3;
   }
 
-  function embersStartsPyres(level) { return startsCount(level); }
-  function urnEdictStartsUrns(level) { return startsCount(level); }
-  function hearthEdictStartsHearths(level) { return startsCount(level); }
-  function beaconEdictStartsBeacons(level) { return startsCount(level); }
-  function spireEdictStartsSpires(level) { return startsCount(level); }
-  function obeliskEdictStartsObelisks(level) { return startsCount(level); }
   function cupStartsChalices(level) { return startsCount(level, CHALICE_MAX); }
 
   function remembranceCostFavor() {
     return REMEMBRANCE_FAVOR_COST;
   }
 
+  function paidSecs(base, max, level) {
+    return base + 10 * startsCount(level, max);
+  }
+
   function paidProcessionSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_PROCESSION_MAX) n = LONGER_PROCESSION_MAX;
-    return PROCESSION_SECS + 10 * n;
+    return paidSecs(PROCESSION_SECS, LONGER_PROCESSION_MAX, level);
   }
 
   function paidTollSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > DEEPER_TOLL_MAX) n = DEEPER_TOLL_MAX;
-    return TOLL_SECS + 10 * n;
+    return paidSecs(TOLL_SECS, DEEPER_TOLL_MAX, level);
   }
 
   function paidWakeSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_WAKE_MAX) n = LONGER_WAKE_MAX;
-    return WAKE_SECS + 10 * n;
+    return paidSecs(WAKE_SECS, LONGER_WAKE_MAX, level);
   }
 
   function paidTitheSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_TITHE_MAX) n = LONGER_TITHE_MAX;
-    return TITHE_SECS + 10 * n;
+    return paidSecs(TITHE_SECS, LONGER_TITHE_MAX, level);
   }
 
   function paidVeilSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_VEIL_MAX) n = LONGER_VEIL_MAX;
-    return VEIL_SECS + 10 * n;
+    return paidSecs(VEIL_SECS, LONGER_VEIL_MAX, level);
   }
 
   function paidKnellSecs(level) {
-    var n = Math.max(0, Math.floor(Number(level) || 0));
-    if (n > LONGER_KNELL_MAX) n = LONGER_KNELL_MAX;
-    return KNELL_SECS + 10 * n;
+    return paidSecs(KNELL_SECS, LONGER_KNELL_MAX, level);
   }
 
   function ossuaryCost(level) {
@@ -281,10 +266,6 @@
     var c = Math.max(0, Math.floor(Number(choirLevel) || 0));
     if (c > CHOIR_MAX) c = CHOIR_MAX;
     return ASH_FROM_SHADE_FRAC + 0.005 * n + 0.005 * c;
-  }
-
-  function choirAshRate(choirLevel, ashenTide) {
-    return ashFromShadeFrac(ashenTide, choirLevel);
   }
 
   function namesFromPeak(peak) {
@@ -319,12 +300,12 @@
     nightEdictSecs: nightEdictSecs,
     nightLeftAfterTribute: nightLeftAfterTribute,
     echoCost: echoCost,
-    embersStartsPyres: embersStartsPyres,
-    urnEdictStartsUrns: urnEdictStartsUrns,
-    hearthEdictStartsHearths: hearthEdictStartsHearths,
-    beaconEdictStartsBeacons: beaconEdictStartsBeacons,
-    spireEdictStartsSpires: spireEdictStartsSpires,
-    obeliskEdictStartsObelisks: obeliskEdictStartsObelisks,
+    embersStartsPyres: startsCount,
+    urnEdictStartsUrns: startsCount,
+    hearthEdictStartsHearths: startsCount,
+    beaconEdictStartsBeacons: startsCount,
+    spireEdictStartsSpires: startsCount,
+    obeliskEdictStartsObelisks: startsCount,
     cupStartsChalices: cupStartsChalices,
     remembranceCostFavor: remembranceCostFavor,
     paidProcessionSecs: paidProcessionSecs,
@@ -336,7 +317,6 @@
     ossuaryCost: ossuaryCost,
     nightTitheSecs: nightTitheSecs,
     ashFromShadeFrac: ashFromShadeFrac,
-    choirAshRate: choirAshRate,
     namesFromPeak: namesFromPeak
   });
 })(typeof window !== "undefined" ? window : globalThis);

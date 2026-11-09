@@ -41,7 +41,6 @@
   var bindingTollCost = E.bindingTollCost;
   var bindingTollRateMult = E.bindingTollRateMult;
   var chainMult = E.chainMult;
-  var choirAshRate = E.choirAshRate;
   var choirEdictCost = E.choirEdictCost;
   var cinderCost = E.cinderCost;
   var cinderEdictCost = E.cinderEdictCost;
@@ -642,7 +641,7 @@
         }
         if (choirOpen) {
           var choirN = Math.max(0, Math.min(CHOIR_MAX, Math.floor(Number(state.choirLevel) || 0)));
-          var choirFrac = choirAshRate(choirN, state.ashenTideLevel);
+          var choirFrac = ashFromShadeFrac(state.ashenTideLevel, choirN);
           var choirPct = choirFrac * 100;
           var choirPctStr =
             Math.abs(choirPct - Math.round(choirPct)) < 0.05 ? String(Math.round(choirPct)) : choirPct.toFixed(1);
