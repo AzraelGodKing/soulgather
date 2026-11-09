@@ -1086,7 +1086,6 @@
     ashPerSec: ashPerSec,
     clickPower: clickPower,
     rateMult: rateMult,
-    currentMult: currentMult,
     chalicePlan: chalicePlan
   });
 })(typeof window !== "undefined" ? window : globalThis);
